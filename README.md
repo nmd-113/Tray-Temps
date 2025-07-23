@@ -30,10 +30,10 @@ A lightweight and customizable Windows utility that displays your **CPU and GPU 
 *(Replace these with your actual screenshots. You can drag and drop images directly into your GitHub repository and then link them here, or use image hosting services.)*
 
 **Main Window:**
-![TrayTemps Main Window](https://raw.githubusercontent.com/nmd-113/Tray-Temps/main/screenshots/main_window.png)
+![TrayTemps Main Window](https://naetech.ro/wp-content/uploads/2024/traytemps/traytemps.jpg)
 
 **CPU & GPU in Tray:**
-![TrayTemps CPU GPU Tray](https://raw.githubusercontent.com/nmd-113/Tray-Temps/main/screenshots/tray_icons.png)
+![TrayTemps CPU GPU Tray](https://naetech.ro/wp-content/uploads/2024/traytemps/traytemps-tray.jpg)
 
 ---
 
