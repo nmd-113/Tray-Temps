@@ -27,8 +27,6 @@ A lightweight and customizable Windows utility that displays your **CPU and GPU 
 
 ## 📸 Screenshots
 
-*(Replace these with your actual screenshots. You can drag and drop images directly into your GitHub repository and then link them here, or use image hosting services.)*
-
 **Main Window:**
 ![TrayTemps Main Window](https://naetech.ro/wp-content/uploads/2024/traytemps/traytemps.jpg)
 
