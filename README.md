@@ -1,9 +1,9 @@
 # TrayTemps
 
-[![GitHub license](https://img.shields.io/github/license/YourUsername/TrayTemps?style=flat-square)](LICENSE)
-[![GitHub stars](https://img.shields.io/github/stars/YourUsername/TrayTemps?style=flat-square)](https://github.com/YourUsername/TrayTemps/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/YourUsername/TrayTemps?style=flat-square)](https://github.com/YourUsername/TrayTemps/network/members)
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/YourUsername/TrayTemps?style=flat-square)](https://github.com/YourUsername/TrayTemps/releases/latest)
+[![GitHub license](https://img.shields.io/github/license/nmd-113/Tray-Temps?style=flat-square)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/nmd-113/Tray-Temps?style=flat-square)](https://github.com/nmd-113/Tray-Temps/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/nmd-113/Tray-Temps?style=flat-square)](https://github.com/nmd-113/Tray-Temps/network/members)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/nmd-113/Tray-Temps?style=flat-square)](https://github.com/nmd-113/Tray-Temps/releases/latest)
 
 A lightweight and customizable Windows utility that displays your **CPU and GPU temperatures** directly in your system's **notification area (system tray)**. Keep an eye on your hardware's health at a glance without cluttering your desktop!
 
@@ -30,10 +30,10 @@ A lightweight and customizable Windows utility that displays your **CPU and GPU 
 *(Replace these with your actual screenshots. You can drag and drop images directly into your GitHub repository and then link them here, or use image hosting services.)*
 
 **Main Window:**
-![TrayTemps Main Window](https://raw.githubusercontent.com/YourUsername/TrayTemps/main/screenshots/main_window.png)
+![TrayTemps Main Window](https://raw.githubusercontent.com/nmd-113/Tray-Temps/main/screenshots/main_window.png)
 
 **CPU & GPU in Tray:**
-![TrayTemps CPU GPU Tray](https://raw.githubusercontent.com/YourUsername/TrayTemps/main/screenshots/tray_icons.png)
+![TrayTemps CPU GPU Tray](https://raw.githubusercontent.com/nmd-113/Tray-Temps/main/screenshots/tray_icons.png)
 
 ---
 
@@ -48,7 +48,7 @@ A lightweight and customizable Windows utility that displays your **CPU and GPU 
 
 The easiest way to get TrayTemps running is to download the latest release:
 
-1.  Go to the [Releases page](https://github.com/YourUsername/TrayTemps/releases).
+1.  Go to the [Releases page](https://github.com/nmd-113/Tray-Temps/releases).
 2.  Download the `TrayTemps.zip` file from the latest release.
 3.  Extract the contents of the zip file to a folder of your choice (e.g., `C:\Program Files\TrayTemps`).
 4.  Run `TrayTemps.exe`.
