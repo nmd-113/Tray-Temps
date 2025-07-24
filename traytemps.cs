@@ -182,11 +182,17 @@ namespace TrayTemps
                     foreach (var hardware in _computer.Hardware)
                         hardware.Update();
 
-                    float? cTemp = _computer.Hardware.FirstOrDefault(h => h.HardwareType == HardwareType.Cpu)?
-                                            .Sensors.FirstOrDefault(s => s.SensorType == SensorType.Temperature)?.Value;
+                    // Find CPU hardware and its most relevant temperature sensor.
+                    var cpu = _computer.Hardware.FirstOrDefault(h => h.HardwareType == HardwareType.Cpu);
+                    float? cTemp = cpu?.Sensors
+                        .FirstOrDefault(s => s.SensorType == SensorType.Temperature && s.Name.Contains("Package"))?.Value
+                        ?? cpu?.Sensors.FirstOrDefault(s => s.SensorType == SensorType.Temperature)?.Value;
 
-                    float? gTemp = _computer.Hardware.FirstOrDefault(h => h.HardwareType == HardwareType.GpuAmd || h.HardwareType == HardwareType.GpuNvidia)?
-                                            .Sensors.FirstOrDefault(s => s.SensorType == SensorType.Temperature)?.Value;
+                    // Find GPU hardware and its most relevant temperature sensor.
+                    var gpu = _computer.Hardware.FirstOrDefault(h => h.HardwareType == HardwareType.GpuAmd || h.HardwareType == HardwareType.GpuNvidia);
+                    float? gTemp = gpu?.Sensors
+                        .FirstOrDefault(s => s.SensorType == SensorType.Temperature && s.Name.Contains("Core"))?.Value
+                        ?? gpu?.Sensors.FirstOrDefault(s => s.SensorType == SensorType.Temperature)?.Value;
 
                     return (cTemp, gTemp);
                 });
