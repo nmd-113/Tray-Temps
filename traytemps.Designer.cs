@@ -69,7 +69,11 @@ namespace TrayTemps
             this.autostartApp = new System.Windows.Forms.CheckBox();
             this.FontFamilyTray = new System.Windows.Forms.ComboBox();
             this.label2 = new System.Windows.Forms.Label();
+            this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.ShowForm = new System.Windows.Forms.ToolStripMenuItem();
+            this.ExitForm = new System.Windows.Forms.ToolStripMenuItem();
             ((System.ComponentModel.ISupportInitialize)(this.Logo)).BeginInit();
+            this.contextMenuStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
             // max
@@ -381,11 +385,13 @@ namespace TrayTemps
             // 
             // cpuTrayIcon
             // 
+            this.cpuTrayIcon.ContextMenuStrip = this.contextMenuStrip1;
             this.cpuTrayIcon.Text = "CPU Temp";
             this.cpuTrayIcon.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.cpuTrayIcon_MouseDoubleClick);
             // 
             // gpuTrayIcon
             // 
+            this.gpuTrayIcon.ContextMenuStrip = this.contextMenuStrip1;
             this.gpuTrayIcon.Text = "GPU Temp";
             this.gpuTrayIcon.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.gpuTrayIcon_MouseDoubleClick);
             // 
@@ -471,13 +477,13 @@ namespace TrayTemps
             this.exit.BackColor = System.Drawing.Color.Chocolate;
             this.exit.FlatAppearance.BorderSize = 0;
             this.exit.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.exit.Font = new System.Drawing.Font("Arial", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.exit.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.exit.ForeColor = System.Drawing.Color.White;
             this.exit.Location = new System.Drawing.Point(400, 15);
             this.exit.Name = "exit";
             this.exit.Size = new System.Drawing.Size(35, 20);
             this.exit.TabIndex = 31;
-            this.exit.Text = "X";
+            this.exit.Text = "✖";
             this.exit.UseVisualStyleBackColor = false;
             this.exit.Click += new System.EventHandler(this.exit_Click);
             // 
@@ -486,13 +492,13 @@ namespace TrayTemps
             this.minimize.BackColor = System.Drawing.Color.MediumSeaGreen;
             this.minimize.FlatAppearance.BorderSize = 0;
             this.minimize.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.minimize.Font = new System.Drawing.Font("Arial", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.minimize.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.minimize.ForeColor = System.Drawing.Color.White;
             this.minimize.Location = new System.Drawing.Point(355, 15);
             this.minimize.Name = "minimize";
             this.minimize.Size = new System.Drawing.Size(35, 20);
             this.minimize.TabIndex = 32;
-            this.minimize.Text = "--";
+            this.minimize.Text = "➖";
             this.minimize.UseVisualStyleBackColor = false;
             this.minimize.Click += new System.EventHandler(this.minimize_Click);
             // 
@@ -510,6 +516,7 @@ namespace TrayTemps
             // NotifyIcon
             // 
             this.NotifyIcon.BalloonTipText = "Double click to show.";
+            this.NotifyIcon.ContextMenuStrip = this.contextMenuStrip1;
             this.NotifyIcon.Icon = ((System.Drawing.Icon)(resources.GetObject("NotifyIcon.Icon")));
             this.NotifyIcon.Text = "TrayTemps";
             this.NotifyIcon.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.NotifyIcon_MouseDoubleClick);
@@ -571,6 +578,28 @@ namespace TrayTemps
             this.label2.Text = "Font Size:";
             this.label2.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
+            // contextMenuStrip1
+            // 
+            this.contextMenuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.ShowForm,
+            this.ExitForm});
+            this.contextMenuStrip1.Name = "contextMenuStrip1";
+            this.contextMenuStrip1.Size = new System.Drawing.Size(104, 48);
+            // 
+            // ShowForm
+            // 
+            this.ShowForm.Name = "ShowForm";
+            this.ShowForm.Size = new System.Drawing.Size(180, 22);
+            this.ShowForm.Text = "Show";
+            this.ShowForm.Click += new System.EventHandler(this.ShowForm_Click);
+            // 
+            // ExitForm
+            // 
+            this.ExitForm.Name = "ExitForm";
+            this.ExitForm.Size = new System.Drawing.Size(180, 22);
+            this.ExitForm.Text = "Exit";
+            this.ExitForm.Click += new System.EventHandler(this.ExitForm_Click);
+            // 
             // TrayTemps
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
@@ -621,6 +650,7 @@ namespace TrayTemps
             this.Load += new System.EventHandler(this.TrayTemps_Load);
             this.MouseDown += new System.Windows.Forms.MouseEventHandler(this.TrayTemps_MouseDown);
             ((System.ComponentModel.ISupportInitialize)(this.Logo)).EndInit();
+            this.contextMenuStrip1.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }
@@ -661,6 +691,9 @@ namespace TrayTemps
         private System.Windows.Forms.CheckBox autostartApp;
         private System.Windows.Forms.ComboBox FontFamilyTray;
         private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.ContextMenuStrip contextMenuStrip1;
+        private System.Windows.Forms.ToolStripMenuItem ShowForm;
+        private System.Windows.Forms.ToolStripMenuItem ExitForm;
     }
 }
 

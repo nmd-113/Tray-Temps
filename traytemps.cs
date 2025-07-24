@@ -497,16 +497,21 @@ namespace TrayTemps
 
         private async Task SelfDeleteAndCleanupAsync()
         {
+            string serviceName = "R0TrayTemps";
+
             await Task.Run(() =>
             {
-                // Remove Startup Task
-                var psiDeleteTask = new System.Diagnostics.ProcessStartInfo("schtasks", "/Delete /TN TrayTemps /F") { Verb = "runas", CreateNoWindow = true };
+                var psiDeleteTask = new System.Diagnostics.ProcessStartInfo("schtasks", "/Delete /TN TrayTemps /F")
+                {
+                    Verb = "runas",
+                    UseShellExecute = true,
+                    CreateNoWindow = true,
+                    WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden
+                };
                 System.Diagnostics.Process.Start(psiDeleteTask)?.WaitForExit();
 
-                // Remove Registry Settings
                 Registry.CurrentUser.DeleteSubKeyTree(RegistryPath, false);
 
-                // Create a batch file for self-deletion
                 string installFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "TrayTemps");
                 string shortcutPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "TrayTemps.lnk");
                 string batPath = Path.Combine(Path.GetTempPath(), "DeleteTrayTemps.bat");
@@ -514,22 +519,30 @@ namespace TrayTemps
                 using (var sw = new StreamWriter(batPath, false))
                 {
                     sw.WriteLine("@echo off");
-                    sw.WriteLine("timeout /t 2 /nobreak >nul"); // Wait for main app to close
+                    sw.WriteLine("timeout /t 2 /nobreak > nul");
+                    sw.WriteLine($"sc stop {serviceName} > nul 2> nul");
+                    sw.WriteLine($"sc delete {serviceName} > nul 2> nul");
+                    sw.WriteLine("timeout /t 2 /nobreak > nul");
                     if (File.Exists(shortcutPath)) sw.WriteLine($"del /f /q \"{shortcutPath}\"");
                     if (Directory.Exists(installFolder)) sw.WriteLine($"rmdir /s /q \"{installFolder}\"");
-                    sw.WriteLine($"(goto) 2>nul & del \"%~f0\""); // Delete self
+                    sw.WriteLine($"(goto) 2>nul & del \"%~f0\"");
                 }
 
-                // Run the batch file and exit
-                var psiRunBat = new System.Diagnostics.ProcessStartInfo("cmd.exe", $"/c \"{batPath}\"")
+                var psiRunBat = new System.Diagnostics.ProcessStartInfo(batPath)
                 {
+                    Verb = "runas",
+                    UseShellExecute = true,
                     CreateNoWindow = true,
-                    UseShellExecute = false,
                     WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden
                 };
                 System.Diagnostics.Process.Start(psiRunBat);
             });
+
             Application.Exit();
         }
+
+        private void ShowForm_Click(object sender, EventArgs e) => NormalWindow();
+
+        private void ExitForm_Click(object sender, EventArgs e) => Application.Exit();
     }
 }
