@@ -56,6 +56,9 @@ namespace TrayTemps
             this.GpuTrayColor = new System.Windows.Forms.ComboBox();
             this.GpuTrayEnable = new System.Windows.Forms.CheckBox();
             this.cpuTrayIcon = new System.Windows.Forms.NotifyIcon(this.components);
+            this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.ShowForm = new System.Windows.Forms.ToolStripMenuItem();
+            this.ExitForm = new System.Windows.Forms.ToolStripMenuItem();
             this.gpuTrayIcon = new System.Windows.Forms.NotifyIcon(this.components);
             this.FontSizeTray = new System.Windows.Forms.ComboBox();
             this.label1 = new System.Windows.Forms.Label();
@@ -69,11 +72,8 @@ namespace TrayTemps
             this.autostartApp = new System.Windows.Forms.CheckBox();
             this.FontFamilyTray = new System.Windows.Forms.ComboBox();
             this.label2 = new System.Windows.Forms.Label();
-            this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
-            this.ShowForm = new System.Windows.Forms.ToolStripMenuItem();
-            this.ExitForm = new System.Windows.Forms.ToolStripMenuItem();
-            ((System.ComponentModel.ISupportInitialize)(this.Logo)).BeginInit();
             this.contextMenuStrip1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.Logo)).BeginInit();
             this.SuspendLayout();
             // 
             // max
@@ -299,18 +299,25 @@ namespace TrayTemps
             this.CpuTrayColor.FormattingEnabled = true;
             this.CpuTrayColor.Items.AddRange(new object[] {
             "White",
-            "Orange",
-            "DarkOrange",
-            "Red",
-            "Blue",
-            "DeepSkyBlue",
-            "Yellow",
-            "LightGreen",
-            "Green",
-            "Violet",
-            "Purple",
             "Black",
-            "LightGray"});
+            "Silver",
+            "Gray",
+            "Red",
+            "OrangeRed",
+            "DarkOrange",
+            "Gold",
+            "LawnGreen",
+            "MediumSeaGreen",
+            "Teal",
+            "Aqua",
+            "DeepSkyBlue",
+            "DodgerBlue",
+            "RoyalBlue",
+            "HotPink",
+            "Fuchsia",
+            "Orchid",
+            "DarkViolet",
+            "Indigo"});
             this.CpuTrayColor.Location = new System.Drawing.Point(127, 187);
             this.CpuTrayColor.MaxDropDownItems = 20;
             this.CpuTrayColor.Name = "CpuTrayColor";
@@ -351,18 +358,25 @@ namespace TrayTemps
             this.GpuTrayColor.FormattingEnabled = true;
             this.GpuTrayColor.Items.AddRange(new object[] {
             "White",
-            "Orange",
-            "DarkOrange",
-            "Red",
-            "Blue",
-            "DeepSkyBlue",
-            "Yellow",
-            "LightGreen",
-            "Green",
-            "Violet",
-            "Purple",
             "Black",
-            "LightGray"});
+            "Silver",
+            "Gray",
+            "Red",
+            "OrangeRed",
+            "DarkOrange",
+            "Gold",
+            "LawnGreen",
+            "MediumSeaGreen",
+            "Teal",
+            "Aqua",
+            "DeepSkyBlue",
+            "DodgerBlue",
+            "RoyalBlue",
+            "HotPink",
+            "Fuchsia",
+            "Orchid",
+            "DarkViolet",
+            "Indigo"});
             this.GpuTrayColor.Location = new System.Drawing.Point(127, 214);
             this.GpuTrayColor.MaxDropDownItems = 20;
             this.GpuTrayColor.Name = "GpuTrayColor";
@@ -388,6 +402,28 @@ namespace TrayTemps
             this.cpuTrayIcon.ContextMenuStrip = this.contextMenuStrip1;
             this.cpuTrayIcon.Text = "CPU Temp";
             this.cpuTrayIcon.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.cpuTrayIcon_MouseDoubleClick);
+            // 
+            // contextMenuStrip1
+            // 
+            this.contextMenuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.ShowForm,
+            this.ExitForm});
+            this.contextMenuStrip1.Name = "contextMenuStrip1";
+            this.contextMenuStrip1.Size = new System.Drawing.Size(104, 48);
+            // 
+            // ShowForm
+            // 
+            this.ShowForm.Name = "ShowForm";
+            this.ShowForm.Size = new System.Drawing.Size(103, 22);
+            this.ShowForm.Text = "Show";
+            this.ShowForm.Click += new System.EventHandler(this.ShowForm_Click);
+            // 
+            // ExitForm
+            // 
+            this.ExitForm.Name = "ExitForm";
+            this.ExitForm.Size = new System.Drawing.Size(103, 22);
+            this.ExitForm.Text = "Exit";
+            this.ExitForm.Click += new System.EventHandler(this.ExitForm_Click);
             // 
             // gpuTrayIcon
             // 
@@ -554,11 +590,17 @@ namespace TrayTemps
             this.FontFamilyTray.FormattingEnabled = true;
             this.FontFamilyTray.Items.AddRange(new object[] {
             "Arial",
-            "Tahoma",
-            "Verdana",
-            "Microsoft Sans Serif",
+            "Arial Black",
+            "Calibri",
             "Consolas",
-            "Segoe UI"});
+            "Courier New",
+            "Franklin Gothic Medium",
+            "Lucida Console",
+            "Microsoft Sans Serif",
+            "Segoe UI",
+            "Tahoma",
+            "Trebuchet MS",
+            "Verdana"});
             this.FontFamilyTray.Location = new System.Drawing.Point(280, 187);
             this.FontFamilyTray.MaxDropDownItems = 20;
             this.FontFamilyTray.Name = "FontFamilyTray";
@@ -577,28 +619,6 @@ namespace TrayTemps
             this.label2.TabIndex = 37;
             this.label2.Text = "Font Size:";
             this.label2.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            // 
-            // contextMenuStrip1
-            // 
-            this.contextMenuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.ShowForm,
-            this.ExitForm});
-            this.contextMenuStrip1.Name = "contextMenuStrip1";
-            this.contextMenuStrip1.Size = new System.Drawing.Size(104, 48);
-            // 
-            // ShowForm
-            // 
-            this.ShowForm.Name = "ShowForm";
-            this.ShowForm.Size = new System.Drawing.Size(180, 22);
-            this.ShowForm.Text = "Show";
-            this.ShowForm.Click += new System.EventHandler(this.ShowForm_Click);
-            // 
-            // ExitForm
-            // 
-            this.ExitForm.Name = "ExitForm";
-            this.ExitForm.Size = new System.Drawing.Size(180, 22);
-            this.ExitForm.Text = "Exit";
-            this.ExitForm.Click += new System.EventHandler(this.ExitForm_Click);
             // 
             // TrayTemps
             // 
@@ -649,8 +669,8 @@ namespace TrayTemps
             this.Text = "Tray Temps";
             this.Load += new System.EventHandler(this.TrayTemps_Load);
             this.MouseDown += new System.Windows.Forms.MouseEventHandler(this.TrayTemps_MouseDown);
-            ((System.ComponentModel.ISupportInitialize)(this.Logo)).EndInit();
             this.contextMenuStrip1.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.Logo)).EndInit();
             this.ResumeLayout(false);
 
         }
@@ -696,4 +716,3 @@ namespace TrayTemps
         private System.Windows.Forms.ToolStripMenuItem ExitForm;
     }
 }
-

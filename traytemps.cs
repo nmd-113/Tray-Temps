@@ -1,43 +1,66 @@
-﻿using System;
-using System.Runtime.InteropServices;
-using System.Windows.Forms;
-using System.Management;
-using LibreHardwareMonitor.Hardware;
+﻿using LibreHardwareMonitor.Hardware;
+using Microsoft.Win32;
+using System;
 using System.Drawing;
 using System.Drawing.Text;
-using Microsoft.Win32;
-using System.Linq;
 using System.IO;
+using System.Linq;
+using System.Management;
+using System.Runtime.InteropServices;
+using System.ServiceProcess;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace TrayTemps
 {
     public partial class TrayTemps : Form
     {
-        // ----- Fields -----
+        #region Fields & Constants
+
         private const int WM_NCLBUTTONDOWN = 0xA1;
         private const int HTCAPTION = 0x2;
         private const string RegistryPath = @"Software\TrayTemps";
+        private const string AppName = "TrayTemps";
+        private const string StartupTaskName = "TrayTemps";
+        private const int IconSize = 16;
 
         private Computer _computer;
-        private readonly Timer TempTimer = new Timer();
-        private float cpuMaxTemp = 0;
-        private float gpuMaxTemp = 0;
+        private IHardware _cpuHardware;
+        private IHardware _gpuHardware;
+        private ISensor _cpuTempSensor;
+        private ISensor _gpuTempSensor;
+        private readonly Timer _tempTimer = new Timer();
+        private float _cpuMaxTemp = 0;
+        private float _gpuMaxTemp = 0;
+
         private string _lastCpuTempText;
         private string _lastGpuTempText;
-        private bool isInternalCheckChange = false;
-        private bool settingsLoaded = false;
-        private bool _isUpdating = false; // Flag to prevent timer re-entrancy
+        private bool _settingsLoaded = false;
+        private bool _isUpdating = false;
+        private bool _isInternalCheckChange = false;
 
-        // ----- P/Invoke Imports -----
+        private Color _cpuTrayColor;
+        private Color _gpuTrayColor;
+        private float _trayFontSize;
+        private string _trayFontFamily;
+
+        #endregion
+
+        #region P/Invoke Imports
+
         [DllImport("user32.dll")]
         private static extern bool ReleaseCapture();
+
         [DllImport("user32.dll")]
         private static extern int SendMessage(IntPtr hWnd, int Msg, int wParam, int lParam);
+
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool DestroyIcon(IntPtr hIcon);
 
-        // ----- Constructor & Form Events -----
+        #endregion
+
+        #region Constructor & Form Events
+
         public TrayTemps()
         {
             InitializeComponent();
@@ -45,47 +68,31 @@ namespace TrayTemps
 
         private async void TrayTemps_Load(object sender, EventArgs e)
         {
-            // Set control defaults
-            UpdateInterval.SelectedIndex = 2;
-            CpuTrayColor.SelectedIndex = 0;
-            GpuTrayColor.SelectedIndex = 4;
-            FontSizeTray.SelectedIndex = 7;
-            FontFamilyTray.SelectedIndex = 0;
-
-            // Load settings and hardware info asynchronously
+            SetDefaultControlValues();
             LoadSettings();
-            await LoadHardwareInfoAsync();
-            await InitializeHardwareMonitorAsync();
-
-            // Configure and start the timer after all initialization
-            if (double.TryParse(UpdateInterval.Text, out double seconds))
-            {
-                TempTimer.Interval = (int)(seconds * 1000);
-            }
-            else
-            {
-                TempTimer.Interval = 2000; // Default to 2 seconds
-            }
-            TempTimer.Tick += TempTimer_Tick;
-            TempTimer.Start();
-
-            // Trigger an initial update
+            await InitializeHardwareAsync();
+            SetupTimer();
             UpdateTrayIcons();
             TempTimer_Tick(this, EventArgs.Empty);
         }
 
         private void TrayTemps_FormClosing(object sender, FormClosingEventArgs e)
         {
-            TempTimer.Stop();
-            TempTimer.Dispose();
+            _tempTimer.Stop();
+            _tempTimer.Dispose();
             _computer?.Close();
             cpuTrayIcon?.Dispose();
             gpuTrayIcon?.Dispose();
             NotifyIcon?.Dispose();
         }
 
-        // ----- UI Event Handlers -----
+        #endregion
+
+        #region UI Event Handlers
+
         private void exit_Click(object sender, EventArgs e) => Application.Exit();
+        private void ExitForm_Click(object sender, EventArgs e) => Application.Exit();
+        private void ShowForm_Click(object sender, EventArgs e) => ShowWindow();
 
         private void minimize_Click(object sender, EventArgs e)
         {
@@ -102,12 +109,96 @@ namespace TrayTemps
             }
         }
 
-        private void NotifyIcon_MouseDoubleClick(object sender, MouseEventArgs e) => NormalWindow();
-        private void gpuTrayIcon_MouseDoubleClick(object sender, MouseEventArgs e) => NormalWindow();
-        private void cpuTrayIcon_MouseDoubleClick(object sender, MouseEventArgs e) => NormalWindow();
+        private void TrayIcon_MouseDoubleClick(object sender, MouseEventArgs e) => ShowWindow();
 
-        // ----- Core Logic -----
-        private void NormalWindow()
+        // Compatibility wrappers for Designer
+        private void NotifyIcon_MouseDoubleClick(object sender, MouseEventArgs e) => TrayIcon_MouseDoubleClick(sender, e);
+        private void cpuTrayIcon_MouseDoubleClick(object sender, MouseEventArgs e) => TrayIcon_MouseDoubleClick(sender, e);
+        private void gpuTrayIcon_MouseDoubleClick(object sender, MouseEventArgs e) => TrayIcon_MouseDoubleClick(sender, e);
+        private void CpuTrayEnable_CheckedChanged(object sender, EventArgs e) => Setting_CheckedChanged(sender, e);
+        private void GpuTrayEnable_CheckedChanged(object sender, EventArgs e) => Setting_CheckedChanged(sender, e);
+        private void CpuTrayColor_SelectedIndexChanged(object sender, EventArgs e) => Setting_SelectedIndexChanged(sender, e);
+        private void GpuTrayColor_SelectedIndexChanged(object sender, EventArgs e) => Setting_SelectedIndexChanged(sender, e);
+        private void FontSizeTray_SelectedIndexChanged(object sender, EventArgs e) => Setting_SelectedIndexChanged(sender, e);
+        private void FontFamilyTray_SelectedIndexChanged(object sender, EventArgs e) => Setting_SelectedIndexChanged(sender, e);
+
+        #endregion
+
+        #region Core Logic
+
+        private void SetDefaultControlValues()
+        {
+            UpdateInterval.SelectedIndex = 2;
+            CpuTrayColor.SelectedIndex = 0;
+            GpuTrayColor.SelectedIndex = 4;
+            FontSizeTray.SelectedIndex = 7;
+            FontFamilyTray.SelectedIndex = 0;
+        }
+
+        private async Task InitializeHardwareAsync()
+        {
+            var cpuNameTask = GetHardwareNameAsync("Win32_Processor", "Unknown CPU");
+            var gpuNameTask = GetHardwareNameAsync("Win32_VideoController", "Unknown GPU");
+
+            CpuName.Text = await cpuNameTask;
+            GpuName.Text = await gpuNameTask;
+
+            await InitializeHardwareMonitorAsync();
+        }
+
+        private Task InitializeHardwareMonitorAsync()
+        {
+            return Task.Run(() =>
+            {
+                _computer = new Computer { IsCpuEnabled = true, IsGpuEnabled = true };
+                _computer.Open();
+
+                _cpuHardware = _computer.Hardware.FirstOrDefault(h => h.HardwareType == HardwareType.Cpu);
+                _gpuHardware = _computer.Hardware.FirstOrDefault(h => h.HardwareType == HardwareType.GpuAmd || h.HardwareType == HardwareType.GpuNvidia);
+
+                _cpuTempSensor = _cpuHardware?.Sensors.FirstOrDefault(s => s.SensorType == SensorType.Temperature && s.Name.Contains("Package"))
+                                 ?? _cpuHardware?.Sensors.FirstOrDefault(s => s.SensorType == SensorType.Temperature);
+
+                _gpuTempSensor = _gpuHardware?.Sensors.FirstOrDefault(s => s.SensorType == SensorType.Temperature && s.Name.Contains("Core"))
+                                 ?? _gpuHardware?.Sensors.FirstOrDefault(s => s.SensorType == SensorType.Temperature);
+            });
+        }
+
+        private void SetupTimer()
+        {
+            UpdateTimerInterval();
+            _tempTimer.Tick += TempTimer_Tick;
+            _tempTimer.Start();
+        }
+
+        private async void TempTimer_Tick(object sender, EventArgs e)
+        {
+            if (_isUpdating) return;
+            _isUpdating = true;
+
+            try
+            {
+                (float? cpuTemp, float? gpuTemp) = await Task.Run(() =>
+                {
+                    _cpuHardware?.Update();
+                    _gpuHardware?.Update();
+                    return (_cpuTempSensor?.Value, _gpuTempSensor?.Value);
+                });
+
+                UpdateTemperatures(cpuTemp, gpuTemp);
+                UpdateAllTrayIcons(cpuTemp, gpuTemp);
+            }
+            finally
+            {
+                _isUpdating = false;
+            }
+        }
+
+        #endregion
+
+        #region UI & Icon Updates
+
+        private void ShowWindow()
         {
             this.Show();
             this.WindowState = FormWindowState.Normal;
@@ -121,173 +212,93 @@ namespace TrayTemps
 
             cpuTrayIcon.Visible = cpuChecked;
             gpuTrayIcon.Visible = gpuChecked;
-
-            // Show main icon only if window is hidden and no other icons are active
             NotifyIcon.Visible = !this.Visible && !cpuChecked && !gpuChecked;
         }
 
-        private async Task LoadHardwareInfoAsync()
+        private void UpdateTemperatures(float? cpuTemp, float? gpuTemp)
         {
-            CpuName.Text = await GetCpuNameAsync();
-            GpuName.Text = await GetGpuNameAsync();
+            if (cpuTemp.HasValue && cpuTemp.Value > _cpuMaxTemp) _cpuMaxTemp = cpuTemp.Value;
+            if (gpuTemp.HasValue && gpuTemp.Value > _gpuMaxTemp) _gpuMaxTemp = gpuTemp.Value;
+
+            CpuTemp.Text = cpuTemp.HasValue ? $"{cpuTemp.Value:F0}°C" : "N/A";
+            GpuTemp.Text = gpuTemp.HasValue ? $"{gpuTemp.Value:F0}°C" : "N/A";
+            CpuMax.Text = $"{_cpuMaxTemp:F0}°C";
+            GpuMax.Text = $"{_gpuMaxTemp:F0}°C";
         }
 
-        private Task<string> GetCpuNameAsync()
+        private void UpdateAllTrayIcons(float? cpuTemp, float? gpuTemp)
         {
-            return Task.Run(() =>
+            if (CpuTrayEnable.Checked && cpuTemp.HasValue)
             {
-                using (var searcher = new ManagementObjectSearcher("select Name from Win32_Processor"))
-                {
-                    var firstObj = searcher.Get().OfType<ManagementObject>().FirstOrDefault();
-                    return firstObj?["Name"]?.ToString() ?? "Unknown CPU";
-                }
-            });
-        }
-
-        private Task<string> GetGpuNameAsync()
-        {
-            return Task.Run(() =>
-            {
-                using (var searcher = new ManagementObjectSearcher("select Name from Win32_VideoController"))
-                {
-                    var firstObj = searcher.Get().OfType<ManagementObject>().FirstOrDefault();
-                    return firstObj?["Name"]?.ToString() ?? "Unknown GPU";
-                }
-            });
-        }
-
-        private Task InitializeHardwareMonitorAsync()
-        {
-            return Task.Run(() =>
-            {
-                _computer = new Computer
-                {
-                    IsCpuEnabled = true,
-                    IsGpuEnabled = true
-                };
-                _computer.Open();
-            });
-        }
-
-        private async void TempTimer_Tick(object sender, EventArgs e)
-        {
-            if (_isUpdating) return; // Prevent overlapping updates
-            _isUpdating = true;
-
-            try
-            {
-                // Offload hardware polling to a background thread
-                var (cpuTemp, gpuTemp) = await Task.Run(() =>
-                {
-                    foreach (var hardware in _computer.Hardware)
-                        hardware.Update();
-
-                    // Find CPU hardware and its most relevant temperature sensor.
-                    var cpu = _computer.Hardware.FirstOrDefault(h => h.HardwareType == HardwareType.Cpu);
-                    float? cTemp = cpu?.Sensors
-                        .FirstOrDefault(s => s.SensorType == SensorType.Temperature && s.Name.Contains("Package"))?.Value
-                        ?? cpu?.Sensors.FirstOrDefault(s => s.SensorType == SensorType.Temperature)?.Value;
-
-                    // Find GPU hardware and its most relevant temperature sensor.
-                    var gpu = _computer.Hardware.FirstOrDefault(h => h.HardwareType == HardwareType.GpuAmd || h.HardwareType == HardwareType.GpuNvidia);
-                    float? gTemp = gpu?.Sensors
-                        .FirstOrDefault(s => s.SensorType == SensorType.Temperature && s.Name.Contains("Core"))?.Value
-                        ?? gpu?.Sensors.FirstOrDefault(s => s.SensorType == SensorType.Temperature)?.Value;
-
-                    return (cTemp, gTemp);
-                });
-
-                // --- UI updates (back on the main thread) ---
-                if (cpuTemp.HasValue && cpuTemp.Value > cpuMaxTemp) cpuMaxTemp = cpuTemp.Value;
-                if (gpuTemp.HasValue && gpuTemp.Value > gpuMaxTemp) gpuMaxTemp = gpuTemp.Value;
-
-                CpuTemp.Text = cpuTemp.HasValue ? $"{cpuTemp.Value:F0}°C" : "N/A";
-                GpuTemp.Text = gpuTemp.HasValue ? $"{gpuTemp.Value:F0}°C" : "N/A";
-                CpuMax.Text = $"{cpuMaxTemp:F0}°C";
-                GpuMax.Text = $"{gpuMaxTemp:F0}°C";
-
-                string fontFamily = FontFamilyTray.Text.Trim();
-                float fontSize = float.Parse(FontSizeTray.Text);
-
-                // Update CPU tray icon if needed
-                if (CpuTrayEnable.Checked && cpuTemp.HasValue)
-                {
-                    string cpuText = $"{cpuTemp.Value:F0}";
-                    if (cpuText != _lastCpuTempText)
-                    {
-                        Color color = ColorTranslator.FromHtml(CpuTrayColor.Text);
-                        Icon newIcon = CreateTempIcon(cpuText, color, fontSize, fontFamily);
-                        cpuTrayIcon.Icon?.Dispose();
-                        cpuTrayIcon.Icon = newIcon;
-                        _lastCpuTempText = cpuText;
-                    }
-                }
-
-                // Update GPU tray icon if needed
-                if (GpuTrayEnable.Checked && gpuTemp.HasValue)
-                {
-                    string gpuText = $"{gpuTemp.Value:F0}";
-                    if (gpuText != _lastGpuTempText)
-                    {
-                        Color color = ColorTranslator.FromHtml(GpuTrayColor.Text);
-                        Icon newIcon = CreateTempIcon(gpuText, color, fontSize, fontFamily);
-                        gpuTrayIcon.Icon?.Dispose();
-                        gpuTrayIcon.Icon = newIcon;
-                        _lastGpuTempText = gpuText;
-                    }
-                }
-
-                // Update hover text for the main icon
-                if (!CpuTrayEnable.Checked && !GpuTrayEnable.Checked)
-                {
-                    string cpuHoverText = cpuTemp.HasValue ? $"{cpuTemp.Value:F0}°C" : "N/A";
-                    string gpuHoverText = gpuTemp.HasValue ? $"{gpuTemp.Value:F0}°C" : "N/A";
-                    NotifyIcon.Text = $"CPU: {cpuHoverText} | GPU: {gpuHoverText}";
-                }
-                else
-                {
-                    NotifyIcon.Text = "TrayTemps";
-                }
+                UpdateSingleTrayIcon(cpuTrayIcon, cpuTemp.Value, ref _lastCpuTempText, _cpuTrayColor);
             }
-            finally
+            if (GpuTrayEnable.Checked && gpuTemp.HasValue)
             {
-                _isUpdating = false; // Release the lock
+                UpdateSingleTrayIcon(gpuTrayIcon, gpuTemp.Value, ref _lastGpuTempText, _gpuTrayColor);
+            }
+
+            if (!CpuTrayEnable.Checked && !GpuTrayEnable.Checked)
+            {
+                string cpuHover = cpuTemp.HasValue ? $"{cpuTemp.Value:F0}°C" : "N/A";
+                string gpuHover = gpuTemp.HasValue ? $"{gpuTemp.Value:F0}°C" : "N/A";
+                NotifyIcon.Text = $"CPU: {cpuHover} | GPU: {gpuHover}";
+            }
+            else
+            {
+                NotifyIcon.Text = AppName;
+            }
+        }
+
+        private void UpdateSingleTrayIcon(NotifyIcon icon, float temp, ref string lastText, Color color)
+        {
+            string newText = $"{temp:F0}";
+            if (newText != lastText)
+            {
+                Icon oldIcon = icon.Icon;
+                icon.Icon = CreateTempIcon(newText, color, _trayFontSize, _trayFontFamily);
+                oldIcon?.Dispose();
+                lastText = newText;
             }
         }
 
         private Icon CreateTempIcon(string text, Color color, float fontSize, string fontFamily)
         {
-            const int iconSize = 16;
-            using (var bmp = new Bitmap(iconSize, iconSize))
+            const int IconSize = 16;
+
+            using (var bmp = new Bitmap(IconSize, IconSize, System.Drawing.Imaging.PixelFormat.Format32bppArgb))
             using (var g = Graphics.FromImage(bmp))
             {
-                // Fallback font if the selected one isn't available
-                using (var installedFonts = new InstalledFontCollection())
-                {
-                    if (!installedFonts.Families.Any(f => f.Name.Equals(fontFamily, StringComparison.OrdinalIgnoreCase)))
-                        fontFamily = "Tahoma";
-                }
+                float dpiScale = g.DpiX / 96f;
+                float scaledFontSize = fontSize * dpiScale;
 
-                using (var font = new Font(fontFamily, fontSize, FontStyle.Bold, GraphicsUnit.Pixel))
+                using (var font = new Font(fontFamily, scaledFontSize, FontStyle.Bold, GraphicsUnit.Pixel))
                 {
-                    g.TextRenderingHint = TextRenderingHint.SingleBitPerPixelGridFit;
+                    g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                    g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
                     g.Clear(Color.Transparent);
 
-                    Size textSize = TextRenderer.MeasureText(g, text, font, new Size(iconSize, iconSize), TextFormatFlags.NoPadding);
-                    int x = (iconSize - textSize.Width) / 2;
-                    int y = (iconSize - textSize.Height) / 2;
+                    var textSize = g.MeasureString(text, font);
 
-                    TextRenderer.DrawText(g, text, font, new Point(x, y), color, TextFormatFlags.NoPadding | TextFormatFlags.NoClipping);
+                    float x = (IconSize - textSize.Width) / 2f;
+                    float y = (IconSize - textSize.Height) / 2f;
+
+                    using (var brush = new SolidBrush(color))
+                    {
+                        g.DrawString(text, font, brush, x, y);
+                    }
 
                     IntPtr hIcon = bmp.GetHicon();
-                    Icon icon = (Icon)Icon.FromHandle(hIcon).Clone();
-                    DestroyIcon(hIcon); // Important: release the unmanaged handle
-                    return icon;
+                    Icon newIcon = (Icon)Icon.FromHandle(hIcon).Clone();
+                    DestroyIcon(hIcon);
+                    return newIcon;
                 }
             }
         }
 
-        // ----- Settings and Autostart -----
+        #endregion
+
+        #region Settings Management
+
         private void LoadSettings()
         {
             try
@@ -296,26 +307,33 @@ namespace TrayTemps
                 {
                     if (key == null) return;
 
-                    // Simple helper to load values
-                    object GetValue(string name, object defaultValue) => key.GetValue(name, defaultValue);
+                    object GetValue(string name, object def) => key.GetValue(name, def);
 
-                    CpuTrayEnable.Checked = (int)GetValue(nameof(CpuTrayEnable), 0) == 1;
-                    GpuTrayEnable.Checked = (int)GetValue(nameof(GpuTrayEnable), 0) == 1;
-                    autostartApp.Checked = (int)GetValue(nameof(autostartApp), 0) == 1;
+                    CpuTrayEnable.Checked = Convert.ToBoolean(GetValue(nameof(CpuTrayEnable), 0));
+                    GpuTrayEnable.Checked = Convert.ToBoolean(GetValue(nameof(GpuTrayEnable), 0));
+                    autostartApp.Checked = Convert.ToBoolean(GetValue(nameof(autostartApp), 0));
 
-                    CpuTrayColor.SelectedItem = GetValue(nameof(CpuTrayColor), CpuTrayColor.Text) as string;
-                    GpuTrayColor.SelectedItem = GetValue(nameof(GpuTrayColor), GpuTrayColor.Text) as string;
-                    FontSizeTray.SelectedItem = GetValue(nameof(FontSizeTray), FontSizeTray.Text) as string;
-                    FontFamilyTray.SelectedItem = GetValue(nameof(FontFamilyTray), FontFamilyTray.Text) as string;
-                    UpdateInterval.SelectedItem = GetValue(nameof(UpdateInterval), UpdateInterval.Text) as string;
+                    CpuTrayColor.SelectedItem = GetValue(nameof(CpuTrayColor), CpuTrayColor.Text);
+                    GpuTrayColor.SelectedItem = GetValue(nameof(GpuTrayColor), GpuTrayColor.Text);
+                    FontSizeTray.SelectedItem = GetValue(nameof(FontSizeTray), FontSizeTray.Text);
+                    FontFamilyTray.SelectedItem = GetValue(nameof(FontFamilyTray), FontFamilyTray.Text);
+                    UpdateInterval.SelectedItem = GetValue(nameof(UpdateInterval), UpdateInterval.Text);
                 }
             }
-            catch (Exception ex) { Console.WriteLine($"Error loading settings: {ex.Message}"); }
-            finally { settingsLoaded = true; }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading settings: {ex.Message}");
+            }
+            finally
+            {
+                CacheDisplaySettings();
+                _settingsLoaded = true;
+            }
         }
 
         private void SaveSetting(string name, object value)
         {
+            if (!_settingsLoaded) return;
             try
             {
                 using (RegistryKey key = Registry.CurrentUser.CreateSubKey(RegistryPath))
@@ -323,232 +341,270 @@ namespace TrayTemps
                     if (value is bool b)
                         key.SetValue(name, b ? 1 : 0, RegistryValueKind.DWord);
                     else
-                        key.SetValue(name, value.ToString(), RegistryValueKind.String);
+                        key.SetValue(name, value, RegistryValueKind.String);
                 }
             }
-            catch (Exception ex) { Console.WriteLine($"Error saving setting: {ex.Message}"); }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error saving setting '{name}': {ex.Message}");
+            }
         }
 
-        // --- Event handlers for settings changes ---
-        private void CpuTrayEnable_CheckedChanged(object sender, EventArgs e)
+        private void CacheDisplaySettings()
         {
-            if (!settingsLoaded) return;
-            SaveSetting(nameof(CpuTrayEnable), CpuTrayEnable.Checked);
-            UpdateTrayIcons();
-            _lastCpuTempText = null; // Force redraw
+            _cpuTrayColor = ColorTranslator.FromHtml(CpuTrayColor.Text);
+            _gpuTrayColor = ColorTranslator.FromHtml(GpuTrayColor.Text);
+            _trayFontFamily = FontFamilyTray.Text.Trim();
+            float.TryParse(FontSizeTray.Text, out _trayFontSize);
         }
 
-        private void GpuTrayEnable_CheckedChanged(object sender, EventArgs e)
+        private void Setting_CheckedChanged(object sender, EventArgs e)
         {
-            if (!settingsLoaded) return;
-            SaveSetting(nameof(GpuTrayEnable), GpuTrayEnable.Checked);
-            UpdateTrayIcons();
-            _lastGpuTempText = null; // Force redraw
+            if (sender is CheckBox chk)
+            {
+                SaveSetting(chk.Name, chk.Checked);
+                UpdateTrayIcons();
+                if (chk.Name == nameof(CpuTrayEnable)) _lastCpuTempText = null;
+                if (chk.Name == nameof(GpuTrayEnable)) _lastGpuTempText = null;
+            }
         }
 
-        private void CpuTrayColor_SelectedIndexChanged(object sender, EventArgs e)
+        private void Setting_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (!settingsLoaded) return;
-            SaveSetting(nameof(CpuTrayColor), CpuTrayColor.Text);
-            _lastCpuTempText = null;
-        }
+            if (sender is ComboBox cmb)
+            {
+                SaveSetting(cmb.Name, cmb.Text);
+                CacheDisplaySettings();
+                _lastCpuTempText = null;
+                _lastGpuTempText = null;
 
-        private void GpuTrayColor_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            if (!settingsLoaded) return;
-            SaveSetting(nameof(GpuTrayColor), GpuTrayColor.Text);
-            _lastGpuTempText = null;
-        }
-
-        private void FontSizeTray_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            if (!settingsLoaded) return;
-            SaveSetting(nameof(FontSizeTray), FontSizeTray.Text);
-            _lastCpuTempText = null;
-            _lastGpuTempText = null;
-        }
-
-        private void FontFamilyTray_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            if (!settingsLoaded) return;
-            SaveSetting(nameof(FontFamilyTray), FontFamilyTray.Text);
-            _lastCpuTempText = null;
-            _lastGpuTempText = null;
+                TempTimer_Tick(this, EventArgs.Empty);
+            }
         }
 
         private void UpdateInterval_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (!settingsLoaded) return;
+            SaveSetting(nameof(UpdateInterval), UpdateInterval.Text);
+            UpdateTimerInterval();
+        }
+
+        private void UpdateTimerInterval()
+        {
             if (double.TryParse(UpdateInterval.Text, out double seconds))
             {
-                TempTimer.Interval = (int)(seconds * 1000);
-                SaveSetting(nameof(UpdateInterval), UpdateInterval.Text);
+                _tempTimer.Interval = Math.Max(500, (int)(seconds * 1000));
             }
         }
+
+        #endregion
+
+        #region Autostart & Cleanup
 
         private async void autostartApp_CheckedChanged(object sender, EventArgs e)
         {
-            if (!settingsLoaded || isInternalCheckChange) return;
+            if (!_settingsLoaded || _isInternalCheckChange) return;
 
             var control = (CheckBox)sender;
-            control.Enabled = false; // Disable control during operation
+            control.Enabled = false;
 
-            if (autostartApp.Checked)
+            if (control.Checked)
+                await HandleAutostartEnable();
+            else
+                await HandleAutostartDisable();
+
+            if (control.IsHandleCreated) control.Enabled = true;
+        }
+
+        private async Task HandleAutostartEnable()
+        {
+            var result = MessageBox.Show("Add app to run silently at Windows startup?", "Startup", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (result == DialogResult.Yes)
             {
-                var result = MessageBox.Show("Add app to run silently at Windows startup?", "Startup", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-                if (result == DialogResult.Yes)
-                {
-                    SaveSetting(nameof(autostartApp), true);
-                    await AutostartAppAsync(); // Will handle restart and exit
-                }
-                else
-                {
-                    // User cancelled, revert checkbox state
-                    isInternalCheckChange = true;
-                    autostartApp.Checked = false;
-                    isInternalCheckChange = false;
-                }
+                SaveSetting(nameof(autostartApp), true);
+                await InstallAndRestartAsync();
             }
             else
             {
-                var result = MessageBox.Show("Remove installed app, shortcut, and startup entry?\n\nYes = Remove all\nNo = Remove only startup entry\nCancel = Do nothing",
-                                             "Confirm Remove", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning);
-
-                if (result == DialogResult.Yes)
-                {
-                    SaveSetting(nameof(autostartApp), false);
-                    await SelfDeleteAndCleanupAsync(); // Will handle cleanup and exit
-                }
-                else if (result == DialogResult.No)
-                {
-                    SaveSetting(nameof(autostartApp), false);
-                    await RemoveStartupEntryOnlyAsync();
-                }
-                else
-                {
-                    // User cancelled, revert checkbox state
-                    isInternalCheckChange = true;
-                    autostartApp.Checked = true;
-                    isInternalCheckChange = false;
-                }
+                RevertCheckbox(autostartApp, false);
             }
-
-            if (control.IsHandleCreated) control.Enabled = true; // Re-enable control
         }
 
-        private async Task AutostartAppAsync()
+        private async Task HandleAutostartDisable()
+        {
+            var result = MessageBox.Show("Remove installed app, shortcut, and startup entry?\n\nYes = Remove all\nNo = Remove only startup entry\nCancel = Do nothing",
+                                        "Confirm Remove", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning);
+            switch (result)
+            {
+                case DialogResult.Yes:
+                    SaveSetting(nameof(autostartApp), false);
+                    UninstallAndExit(); // Această metodă va închide aplicația
+                    break;
+                case DialogResult.No:
+                    SaveSetting(nameof(autostartApp), false);
+                    await RemoveStartupTaskAsync();
+                    MessageBox.Show("Startup entry removed.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    break;
+                case DialogResult.Cancel:
+                    RevertCheckbox(autostartApp, true);
+                    break;
+            }
+        }
+
+        private void RevertCheckbox(CheckBox chk, bool state)
+        {
+            _isInternalCheckChange = true;
+            chk.Checked = state;
+            _isInternalCheckChange = false;
+        }
+
+        private Task InstallAndRestartAsync()
         {
             MessageBox.Show("TrayTemps will now be installed and restarted from the new location.", "Installation", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-            await Task.Run(() =>
-            {
-                string sourceFolder = AppDomain.CurrentDomain.BaseDirectory;
-                string destFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "TrayTemps");
-                Directory.CreateDirectory(destFolder);
+            string destFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), AppName);
+            string destExe = Path.Combine(destFolder, "TrayTemps.exe");
 
-                string[] filesToCopy = { "TrayTemps.exe", "HidSharp.dll", "LibreHardwareMonitorLib.dll" /* Add others if necessary */ };
-                foreach (var file in filesToCopy)
+            return Task.Run(() =>
+            {
+                Directory.CreateDirectory(destFolder);
+                string sourceFolder = AppDomain.CurrentDomain.BaseDirectory;
+                string[] filesToCopy = { "TrayTemps.exe", "HidSharp.dll", "LibreHardwareMonitorLib.dll" };
+                foreach (var file in filesToCopy.Where(f => File.Exists(Path.Combine(sourceFolder, f))))
                 {
-                    string src = Path.Combine(sourceFolder, file);
-                    string dst = Path.Combine(destFolder, file);
-                    if (File.Exists(src)) File.Copy(src, dst, true);
+                    File.Copy(Path.Combine(sourceFolder, file), Path.Combine(destFolder, file), true);
                 }
 
-                string destExe = Path.Combine(destFolder, "TrayTemps.exe");
-                var psi = new System.Diagnostics.ProcessStartInfo("schtasks", $"/Create /F /RL HIGHEST /SC ONLOGON /TN TrayTemps /TR \"\\\"{destExe}\\\" -silent\"")
-                {
-                    Verb = "runas",
-                    UseShellExecute = true,
-                    CreateNoWindow = true
-                };
-                System.Diagnostics.Process.Start(psi)?.WaitForExit();
-
+                string arguments = $"/Create /F /RL HIGHEST /SC ONLOGON /TN {StartupTaskName} /TR \"\\\"{destExe}\\\" -silent\"";
+                RunProcessAndWait("schtasks", arguments);
                 CreateShortcutOnDesktop(destExe);
-            });
 
-            // Start new process and exit
-            string newExePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "TrayTemps", "TrayTemps.exe");
-            System.Diagnostics.Process.Start(newExePath);
+            }).ContinueWith(t => {
+                System.Diagnostics.Process.Start(destExe);
+                Application.Exit();
+            }, TaskScheduler.FromCurrentSynchronizationContext());
+        }
+
+        private void UninstallAndExit()
+        {
+            string installFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), AppName);
+            string shortcutPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), $"{AppName}.lnk");
+            string registryKeyPath = $@"HKEY_CURRENT_USER\{RegistryPath}";
+            string batPath = Path.Combine(Path.GetTempPath(), "DeleteTrayTemps.bat");
+
+            string script = $@"@echo off
+                            setlocal
+                            rem Change working directory to a neutral location to unlock the install folder.
+                            cd /d ""%~dp0""
+
+                            rem Delete system entries first.
+                            schtasks /Delete /TN ""{StartupTaskName}"" /F > nul 2>&1
+                            reg delete ""{registryKeyPath}"" /f > nul 2>&1
+
+                            rem Begin loop to wait for the main app to close.
+                            set ""install_folder={installFolder}""
+                            set ""attempts=0""
+
+                            :delete_loop
+                            if %attempts% geq 15 goto cleanup
+                            if not exist ""%install_folder%"" goto folder_deleted
+
+                            rmdir /s /q ""%install_folder%""
+                            if not exist ""%install_folder%"" goto folder_deleted
+
+                            set /a attempts=attempts+1
+                            ping 127.0.0.1 -n 2 > nul
+                            goto delete_loop
+
+                            :folder_deleted
+                            rem Folder was deleted, now clean up the rest.
+
+                            :cleanup
+                            if exist ""{shortcutPath}"" (
+                                del /f /q ""{shortcutPath}""
+                            )
+
+                            rem Self-delete the batch file.
+                            (goto) 2>nul & del ""%~f0""
+                            ";
+
+            File.WriteAllText(batPath, script);
+
+            var psi = new System.Diagnostics.ProcessStartInfo(batPath)
+            {
+                UseShellExecute = true,
+                CreateNoWindow = true,
+                WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden
+            };
+            System.Diagnostics.Process.Start(psi);
+
             Application.Exit();
+        }
+
+        private Task RemoveStartupTaskAsync()
+        {
+            return Task.Run(() => RunProcessAndWait("schtasks", $"/Delete /TN {StartupTaskName} /F"));
+        }
+
+        #endregion
+
+        #region Helper Methods
+
+        private Task<string> GetHardwareNameAsync(string wmiClass, string defaultName)
+        {
+            return Task.Run(() =>
+            {
+                try
+                {
+                    using (var searcher = new ManagementObjectSearcher($"select Name from {wmiClass}"))
+                    {
+                        var firstObj = searcher.Get().OfType<ManagementObject>().FirstOrDefault();
+                        return firstObj?["Name"]?.ToString()?.Trim() ?? defaultName;
+                    }
+                }
+                catch { return defaultName; }
+            });
         }
 
         private void CreateShortcutOnDesktop(string targetPath)
         {
-            string deskPath = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
-            string shortcutPath = Path.Combine(deskPath, "TrayTemps.lnk");
-
-            Type shellType = Type.GetTypeFromProgID("WScript.Shell");
-            dynamic shell = Activator.CreateInstance(shellType);
-            dynamic shortcut = shell.CreateShortcut(shortcutPath);
-            shortcut.TargetPath = targetPath;
-            shortcut.WorkingDirectory = Path.GetDirectoryName(targetPath);
-            shortcut.Description = "TrayTemps";
-            shortcut.Save();
-        }
-
-        private Task RemoveStartupEntryOnlyAsync()
-        {
-            return Task.Run(() =>
+            try
             {
-                var psiDeleteTask = new System.Diagnostics.ProcessStartInfo("schtasks", "/Delete /TN TrayTemps /F")
-                {
-                    Verb = "runas",
-                    UseShellExecute = true,
-                    CreateNoWindow = true
-                };
-                System.Diagnostics.Process.Start(psiDeleteTask)?.WaitForExit();
-                MessageBox.Show("Startup entry removed.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            });
-        }
+                string deskPath = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+                string shortcutPath = Path.Combine(deskPath, $"{AppName}.lnk");
 
-        private async Task SelfDeleteAndCleanupAsync()
-        {
-            string serviceName = "R0TrayTemps";
-
-            await Task.Run(() =>
+                Type shellType = Type.GetTypeFromProgID("WScript.Shell");
+                dynamic shell = Activator.CreateInstance(shellType);
+                dynamic shortcut = shell.CreateShortcut(shortcutPath);
+                shortcut.TargetPath = targetPath;
+                shortcut.WorkingDirectory = Path.GetDirectoryName(targetPath);
+                shortcut.Description = "Launch TrayTemps";
+                shortcut.Save();
+            }
+            catch (Exception ex)
             {
-                var psiDeleteTask = new System.Diagnostics.ProcessStartInfo("schtasks", "/Delete /TN TrayTemps /F")
-                {
-                    Verb = "runas",
-                    UseShellExecute = true,
-                    CreateNoWindow = true,
-                    WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden
-                };
-                System.Diagnostics.Process.Start(psiDeleteTask)?.WaitForExit();
-
-                Registry.CurrentUser.DeleteSubKeyTree(RegistryPath, false);
-
-                string installFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "TrayTemps");
-                string shortcutPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "TrayTemps.lnk");
-                string batPath = Path.Combine(Path.GetTempPath(), "DeleteTrayTemps.bat");
-
-                using (var sw = new StreamWriter(batPath, false))
-                {
-                    sw.WriteLine("@echo off");
-                    sw.WriteLine("timeout /t 2 /nobreak > nul");
-                    sw.WriteLine($"sc stop {serviceName} > nul 2> nul");
-                    sw.WriteLine($"sc delete {serviceName} > nul 2> nul");
-                    sw.WriteLine("timeout /t 2 /nobreak > nul");
-                    if (File.Exists(shortcutPath)) sw.WriteLine($"del /f /q \"{shortcutPath}\"");
-                    if (Directory.Exists(installFolder)) sw.WriteLine($"rmdir /s /q \"{installFolder}\"");
-                    sw.WriteLine($"(goto) 2>nul & del \"%~f0\"");
-                }
-
-                var psiRunBat = new System.Diagnostics.ProcessStartInfo(batPath)
-                {
-                    Verb = "runas",
-                    UseShellExecute = true,
-                    CreateNoWindow = true,
-                    WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden
-                };
-                System.Diagnostics.Process.Start(psiRunBat);
-            });
-
-            Application.Exit();
+                Console.WriteLine($"Could not create shortcut: {ex.Message}");
+            }
         }
 
-        private void ShowForm_Click(object sender, EventArgs e) => NormalWindow();
+        private void RunProcessAndWait(string fileName, string arguments)
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo(fileName, arguments)
+            {
+                UseShellExecute = true,
+                CreateNoWindow = true,
+                WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden
+            };
+            try
+            {
+                System.Diagnostics.Process.Start(psi)?.WaitForExit();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to run process '{fileName}': {ex.Message}");
+                MessageBox.Show($"An error occurred while running a required command:\n{ex.Message}", "Execution Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
 
-        private void ExitForm_Click(object sender, EventArgs e) => Application.Exit();
+        #endregion
     }
 }

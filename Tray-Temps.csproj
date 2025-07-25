@@ -68,7 +68,7 @@
     <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
   </PropertyGroup>
   <PropertyGroup>
-    <ApplicationIcon>traytemps.ico</ApplicationIcon>
+    <ApplicationIcon>TrayTemps.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="HidSharp, Version=2.1.0.0, Culture=neutral, processorArchitecture=MSIL">
@@ -89,6 +89,7 @@
     <Reference Include="System.Management">
       <EmbedInteropTypes>False</EmbedInteropTypes>
     </Reference>
+    <Reference Include="System.ServiceProcess" />
     <Reference Include="System.Xml.Linq">
       <EmbedInteropTypes>False</EmbedInteropTypes>
     </Reference>
@@ -118,16 +119,16 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="traytemps.cs">
+    <Compile Include="TrayTemps.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="traytemps.Designer.cs">
-      <DependentUpon>traytemps.cs</DependentUpon>
+    <Compile Include="TrayTemps.Designer.cs">
+      <DependentUpon>TrayTemps.cs</DependentUpon>
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <EmbeddedResource Include="traytemps.resx">
-      <DependentUpon>traytemps.cs</DependentUpon>
+    <EmbeddedResource Include="TrayTemps.resx">
+      <DependentUpon>TrayTemps.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
@@ -167,7 +168,7 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="traytemps.ico" />
+    <Content Include="TrayTemps.ico" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Resources\" />
