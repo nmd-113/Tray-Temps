@@ -1,6 +1,7 @@
 ﻿using LibreHardwareMonitor.Hardware;
 using Microsoft.Win32;
 using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Text;
 using System.IO;
@@ -90,8 +91,19 @@ namespace TrayTemps
 
         #region UI Event Handlers
 
-        private void exit_Click(object sender, EventArgs e) => Application.Exit();
-        private void ExitForm_Click(object sender, EventArgs e) => Application.Exit();
+        private void exit_Click(object sender, EventArgs e)
+        {
+            Task.Run(() => ServiceManager.StopServiceAsync("R0TrayTemps"));
+            Application.Exit();
+        }
+
+        private void ExitForm_Click(object sender, EventArgs e)
+
+        {
+            Task.Run(() => ServiceManager.StopServiceAsync("R0TrayTemps"));
+            Application.Exit();
+        }
+
         private void ShowForm_Click(object sender, EventArgs e) => ShowWindow();
 
         private void minimize_Click(object sender, EventArgs e)
@@ -417,7 +429,7 @@ namespace TrayTemps
 
         private async Task HandleAutostartEnable()
         {
-            var result = MessageBox.Show("Add app to run silently at Windows startup?", "Startup", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            var result = MessageBox.Show(this,"Add app to run silently at Windows startup?", "Startup", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (result == DialogResult.Yes)
             {
                 SaveSetting(nameof(autostartApp), true);
@@ -431,7 +443,7 @@ namespace TrayTemps
 
         private async Task HandleAutostartDisable()
         {
-            var result = MessageBox.Show("Remove installed app, shortcut, and startup entry?\n\nYes = Remove all\nNo = Remove only startup entry\nCancel = Do nothing",
+            var result = MessageBox.Show(this, "Remove installed app, shortcut, and startup entry?\n\nYes = Remove all\nNo = Remove only startup entry\nCancel = Do nothing",
                                         "Confirm Remove", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning);
             switch (result)
             {
@@ -442,7 +454,7 @@ namespace TrayTemps
                 case DialogResult.No:
                     SaveSetting(nameof(autostartApp), false);
                     await RemoveStartupTaskAsync();
-                    MessageBox.Show("Startup entry removed.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(this, "Startup entry removed.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     break;
                 case DialogResult.Cancel:
                     RevertCheckbox(autostartApp, true);
@@ -459,8 +471,6 @@ namespace TrayTemps
 
         private Task InstallAndRestartAsync()
         {
-            MessageBox.Show("TrayTemps will now be installed and restarted from the new location.", "Installation", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
             string destFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), AppName);
             string destExe = Path.Combine(destFolder, "TrayTemps.exe");
 
@@ -477,11 +487,10 @@ namespace TrayTemps
                 string arguments = $"/Create /F /RL HIGHEST /SC ONLOGON /TN {StartupTaskName} /TR \"\\\"{destExe}\\\" -silent\"";
                 RunProcessAndWait("schtasks", arguments);
                 CreateShortcutOnDesktop(destExe);
-
-            }).ContinueWith(t => {
-                System.Diagnostics.Process.Start(destExe);
+                MessageBox.Show(this, "TrayTemps has been installed successfully. App will now close. Restart it from the desktop shortcut.", "Installation Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                Task.Run(() => ServiceManager.StopServiceAsync("R0TrayTemps"));
                 Application.Exit();
-            }, TaskScheduler.FromCurrentSynchronizationContext());
+            });
         }
 
         private void UninstallAndExit()
@@ -535,8 +544,8 @@ namespace TrayTemps
                 CreateNoWindow = true,
                 WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden
             };
-            System.Diagnostics.Process.Start(psi);
-
+            System.Diagnostics.Process.Start(psi); 
+            Task.Run(() => ServiceManager.StopServiceAsync("R0TrayTemps"));
             Application.Exit();
         }
 
