@@ -1,6 +1,7 @@
 ﻿using LibreHardwareMonitor.Hardware;
 using Microsoft.Win32;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Text;
@@ -22,7 +23,6 @@ namespace TrayTemps
         private const int HTCAPTION = 0x2;
         private const string RegistryPath = @"Software\TrayTemps";
         private const string AppName = "TrayTemps";
-        private const string StartupTaskName = "TrayTemps";
         private const int IconSize = 16;
 
         private Computer _computer;
@@ -31,14 +31,17 @@ namespace TrayTemps
         private ISensor _cpuTempSensor;
         private ISensor _gpuTempSensor;
         private readonly Timer _tempTimer = new Timer();
-        private float _cpuMaxTemp = 0;
-        private float _gpuMaxTemp = 0;
+        private float _cpuMaxTemp = float.MinValue;
+        private float _cpuMinTemp = float.MaxValue;
+        private float _gpuMaxTemp = float.MinValue;
+        private float _gpuMinTemp = float.MaxValue;
 
         private string _lastCpuTempText;
         private string _lastGpuTempText;
         private bool _settingsLoaded = false;
         private bool _isUpdating = false;
         private bool _isInternalCheckChange = false;
+        private bool isShutdownInitiated = false;
 
         private Color _cpuTrayColor;
         private Color _gpuTrayColor;
@@ -77,31 +80,52 @@ namespace TrayTemps
             TempTimer_Tick(this, EventArgs.Empty);
         }
 
-        private void TrayTemps_FormClosing(object sender, FormClosingEventArgs e)
+        private void ExecuteShutdownSequence()
         {
+            if (isShutdownInitiated)
+            {
+                return;
+            }
+            isShutdownInitiated = true;
+
             _tempTimer.Stop();
             _tempTimer.Dispose();
-            _computer?.Close();
             cpuTrayIcon?.Dispose();
             gpuTrayIcon?.Dispose();
             NotifyIcon?.Dispose();
+
+            Task.Run(() => ServiceManager.StopServiceAsync("R0TrayTemps"));
+            _computer?.Close();
+        }
+
+        private void TrayTemps_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            ExecuteShutdownSequence();
         }
 
         #endregion
 
         #region UI Event Handlers
 
+
         private void exit_Click(object sender, EventArgs e)
         {
-            Task.Run(() => ServiceManager.StopServiceAsync("R0TrayTemps"));
-            Application.Exit();
+            if (MessageBox.Show(this, "Are you sure you want to exit TrayTemps?\nClick \"No\" to hide the app to tray.", "Exit Confirmation", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.No)
+            {
+                this.Hide();
+                UpdateTrayIcons();
+            }
+            else
+            {
+                ExecuteShutdownSequence();
+                this.Close();
+            }
         }
 
         private void ExitForm_Click(object sender, EventArgs e)
-
         {
-            Task.Run(() => ServiceManager.StopServiceAsync("R0TrayTemps"));
-            Application.Exit();
+            ExecuteShutdownSequence();
+            this.Close();
         }
 
         private void ShowForm_Click(object sender, EventArgs e) => ShowWindow();
@@ -151,9 +175,13 @@ namespace TrayTemps
         {
             var cpuNameTask = GetHardwareNameAsync("Win32_Processor", "Unknown CPU");
             var gpuNameTask = GetHardwareNameAsync("Win32_VideoController", "Unknown GPU");
+            var mboNameTask = GetMotherboardNameAsync();
+            var ramInfoTask = GetRamInfoAsync();
 
             CpuName.Text = await cpuNameTask;
             GpuName.Text = await gpuNameTask;
+            MboName.Text = await mboNameTask;
+            RamAmount.Text = await ramInfoTask;
 
             await InitializeHardwareMonitorAsync();
         }
@@ -229,13 +257,35 @@ namespace TrayTemps
 
         private void UpdateTemperatures(float? cpuTemp, float? gpuTemp)
         {
-            if (cpuTemp.HasValue && cpuTemp.Value > _cpuMaxTemp) _cpuMaxTemp = cpuTemp.Value;
-            if (gpuTemp.HasValue && gpuTemp.Value > _gpuMaxTemp) _gpuMaxTemp = gpuTemp.Value;
+            if (cpuTemp.HasValue)
+            {
+                float currentCpuTemp = cpuTemp.Value;
+                _cpuMinTemp = Math.Min(_cpuMinTemp, currentCpuTemp);
+                _cpuMaxTemp = Math.Max(_cpuMaxTemp, currentCpuTemp);
 
-            CpuTemp.Text = cpuTemp.HasValue ? $"{cpuTemp.Value:F0}°C" : "N/A";
-            GpuTemp.Text = gpuTemp.HasValue ? $"{gpuTemp.Value:F0}°C" : "N/A";
-            CpuMax.Text = $"{_cpuMaxTemp:F0}°C";
-            GpuMax.Text = $"{_gpuMaxTemp:F0}°C";
+                CpuTemp.Text = $"{currentCpuTemp:F0}°C";
+                CpuMin.Text = $"{_cpuMinTemp:F0}°C";
+                CpuMax.Text = $"{_cpuMaxTemp:F0}°C";
+            }
+            else
+            {
+                CpuTemp.Text = "N/A";
+            }
+
+            if (gpuTemp.HasValue)
+            {
+                float currentGpuTemp = gpuTemp.Value;
+                _gpuMinTemp = Math.Min(_gpuMinTemp, currentGpuTemp);
+                _gpuMaxTemp = Math.Max(_gpuMaxTemp, currentGpuTemp);
+
+                GpuTemp.Text = $"{currentGpuTemp:F0}°C";
+                GpuMin.Text = $"{_gpuMinTemp:F0}°C";
+                GpuMax.Text = $"{_gpuMaxTemp:F0}°C";
+            }
+            else
+            {
+                GpuTemp.Text = "N/A";
+            }
         }
 
         private void UpdateAllTrayIcons(float? cpuTemp, float? gpuTemp)
@@ -484,12 +534,12 @@ namespace TrayTemps
                     File.Copy(Path.Combine(sourceFolder, file), Path.Combine(destFolder, file), true);
                 }
 
-                string arguments = $"/Create /F /RL HIGHEST /SC ONLOGON /TN {StartupTaskName} /TR \"\\\"{destExe}\\\" -silent\"";
+                string arguments = $"/Create /F /RL HIGHEST /SC ONLOGON /TN {AppName} /TR \"\\\"{destExe}\\\" -silent\"";
                 RunProcessAndWait("schtasks", arguments);
                 CreateShortcutOnDesktop(destExe);
                 MessageBox.Show(this, "TrayTemps has been installed successfully. App will now close. Restart it from the desktop shortcut.", "Installation Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                Task.Run(() => ServiceManager.StopServiceAsync("R0TrayTemps"));
-                Application.Exit();
+                ExecuteShutdownSequence();
+                this.Close();
             });
         }
 
@@ -506,7 +556,7 @@ namespace TrayTemps
                             cd /d ""%~dp0""
 
                             rem Delete system entries first.
-                            schtasks /Delete /TN ""{StartupTaskName}"" /F > nul 2>&1
+                            schtasks /Delete /TN ""{AppName}"" /F > nul 2>&1
                             reg delete ""{registryKeyPath}"" /f > nul 2>&1
 
                             rem Begin loop to wait for the main app to close.
@@ -544,19 +594,97 @@ namespace TrayTemps
                 CreateNoWindow = true,
                 WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden
             };
-            System.Diagnostics.Process.Start(psi); 
-            Task.Run(() => ServiceManager.StopServiceAsync("R0TrayTemps"));
-            Application.Exit();
+            System.Diagnostics.Process.Start(psi);
+            ExecuteShutdownSequence();
+            this.Close();
         }
 
         private Task RemoveStartupTaskAsync()
         {
-            return Task.Run(() => RunProcessAndWait("schtasks", $"/Delete /TN {StartupTaskName} /F"));
+            return Task.Run(() => RunProcessAndWait("schtasks", $"/Delete /TN {AppName} /F"));
         }
 
         #endregion
 
         #region Helper Methods
+
+        private Task<string> GetMotherboardNameAsync()
+        {
+            return Task.Run(() =>
+            {
+                try
+                {
+                    string query = "select Manufacturer, Product from Win32_BaseBoard";
+                    using (var searcher = new ManagementObjectSearcher(query))
+                    {
+                        var firstObj = searcher.Get().OfType<ManagementObject>().FirstOrDefault();
+                        if (firstObj != null)
+                        {
+                            string manufacturer = firstObj["Manufacturer"]?.ToString().Trim() ?? "";
+                            string product = firstObj["Product"]?.ToString().Trim() ?? "";
+                            string fullName = $"{manufacturer} {product}".Trim();
+                            return string.IsNullOrEmpty(fullName) ? "Unknown Motherboard" : fullName;
+                        }
+                    }
+                }
+                catch { return "Unknown Motherboard"; }
+                return "Unknown Motherboard";
+            });
+        }
+
+        private Task<string> GetRamInfoAsync()
+        {
+            return Task.Run(() =>
+            {
+                try
+                {
+                    string query = "select Capacity, SMBIOSMemoryType, ConfiguredClockSpeed from Win32_PhysicalMemory";
+                    using (var searcher = new ManagementObjectSearcher(query))
+                    {
+                        var sticks = searcher.Get().OfType<ManagementObject>().ToList();
+                        if (sticks.Count == 0) return "Unknown RAM";
+
+                        long totalCapacityBytes = sticks.Sum(mo => Convert.ToInt64(mo["Capacity"]));
+                        var individualCapacities = sticks.Select(mo => Convert.ToInt64(mo["Capacity"])).ToList();
+
+                        uint memoryType = Convert.ToUInt32(sticks[0]["SMBIOSMemoryType"]);
+                        uint speed = Convert.ToUInt32(sticks[0]["ConfiguredClockSpeed"]);
+
+                        long totalCapacityGB = totalCapacityBytes / (1024 * 1024 * 1024);
+                        string configString = FormatRamConfiguration(individualCapacities);
+                        string typeString = GetMemoryTypeString(memoryType);
+
+                        return $"{totalCapacityGB}GB {configString} {typeString} {speed}MHz";
+                    }
+                }
+                catch { return "Unknown RAM"; }
+            });
+        }
+
+        private string FormatRamConfiguration(List<long> capacities)
+        {
+            if (capacities == null || capacities.Count == 0) return "";
+
+            var stickGroups = capacities.GroupBy(c => c / (1024 * 1024 * 1024))
+                                        .Select(g => new { CapacityGB = g.Key, Count = g.Count() })
+                                        .OrderByDescending(g => g.CapacityGB);
+
+            string config = string.Join(" + ", stickGroups.Select(g => $"{g.Count}x{g.CapacityGB}GB"));
+            return $"({config})";
+        }
+
+        private string GetMemoryTypeString(uint memoryTypeCode)
+        {
+            switch (memoryTypeCode)
+            {
+                case 20: return "DDR";
+                case 21: return "DDR2";
+                case 24: return "DDR3";
+                case 26: return "DDR4";
+                case 34: return "DDR5";
+                default: return "RAM";
+            }
+        }
 
         private Task<string> GetHardwareNameAsync(string wmiClass, string defaultName)
         {
