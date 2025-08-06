@@ -73,8 +73,15 @@ namespace TrayTemps
 
         private async void TrayTemps_Load(object sender, EventArgs e)
         {
+            this.UpdateInterval.ValueChanged -= this.UpdateInterval_ValueChanged;
+            this.FontSizeTray.ValueChanged -= this.FontSizeTray_ValueChanged;
+
             SetDefaultControlValues();
             LoadSettings();
+
+            this.UpdateInterval.ValueChanged += this.UpdateInterval_ValueChanged;
+            this.FontSizeTray.ValueChanged += this.FontSizeTray_ValueChanged;
+
             await InitializeHardwareAsync();
             SetupTimer();
             UpdateTrayIcons();
@@ -377,13 +384,13 @@ namespace TrayTemps
                     GpuTrayColor.SelectedItem = GetValue(nameof(GpuTrayColor), GpuTrayColor.Text);
                     FontFamilyTray.SelectedItem = GetValue(nameof(FontFamilyTray), FontFamilyTray.Text);
 
-                    if (decimal.TryParse(GetValue(nameof(FontSizeTray), "9").ToString(), out decimal fontSizeValue))
+                    if (decimal.TryParse(GetValue(nameof(FontSizeTray), "12").ToString(), out decimal fontSizeValue))
                     {
                         if (fontSizeValue >= FontSizeTray.Minimum && fontSizeValue <= FontSizeTray.Maximum)
                             FontSizeTray.Value = fontSizeValue;
                     }
 
-                    if (decimal.TryParse(GetValue(nameof(UpdateInterval), "1.00").ToString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal intervalValue))
+                    if (decimal.TryParse(GetValue(nameof(UpdateInterval), "0.50").ToString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal intervalValue))
                     {
                         if (intervalValue >= UpdateInterval.Minimum && intervalValue <= UpdateInterval.Maximum)
                             UpdateInterval.Value = intervalValue;
