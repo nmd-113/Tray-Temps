@@ -12,6 +12,7 @@ using System.Runtime.InteropServices;
 using System.ServiceProcess;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using SystemInformation = System.Windows.Forms.SystemInformation;
 
 namespace TrayTemps
 {
@@ -155,7 +156,6 @@ namespace TrayTemps
         private void GpuTrayEnable_CheckedChanged(object sender, EventArgs e) => Setting_CheckedChanged(sender, e);
         private void CpuTrayColor_SelectedIndexChanged(object sender, EventArgs e) => Setting_SelectedIndexChanged(sender, e);
         private void GpuTrayColor_SelectedIndexChanged(object sender, EventArgs e) => Setting_SelectedIndexChanged(sender, e);
-        private void FontSizeTray_SelectedIndexChanged(object sender, EventArgs e) => Setting_SelectedIndexChanged(sender, e);
         private void FontFamilyTray_SelectedIndexChanged(object sender, EventArgs e) => Setting_SelectedIndexChanged(sender, e);
 
         #endregion
@@ -164,10 +164,10 @@ namespace TrayTemps
 
         private void SetDefaultControlValues()
         {
-            UpdateInterval.SelectedIndex = 2;
+            UpdateInterval.Value = 0.50M;
+            FontSizeTray.Value = 12M;
             CpuTrayColor.SelectedIndex = 0;
             GpuTrayColor.SelectedIndex = 4;
-            FontSizeTray.SelectedIndex = 7;
             FontFamilyTray.SelectedIndex = 0;
         }
 
@@ -323,30 +323,28 @@ namespace TrayTemps
             }
         }
 
-        private Icon CreateTempIcon(string text, Color color, float fontSize, string fontFamily)
+        private Icon CreateTempIcon(string text, Color color, float baseFontSize, string fontFamily)
         {
-            const int IconSize = 16;
+            Size iconSize = SystemInformation.SmallIconSize;
 
-            using (var bmp = new Bitmap(IconSize, IconSize, System.Drawing.Imaging.PixelFormat.Format32bppArgb))
+            using (var bmp = new Bitmap(iconSize.Width, iconSize.Height))
             using (var g = Graphics.FromImage(bmp))
             {
                 float dpiScale = g.DpiX / 96f;
-                float scaledFontSize = fontSize * dpiScale;
+                float scaledFontSize = baseFontSize * dpiScale;
+
+                g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+                g.Clear(Color.Transparent);
 
                 using (var font = new Font(fontFamily, scaledFontSize, FontStyle.Bold, GraphicsUnit.Pixel))
                 {
-                    g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                    g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
-                    g.Clear(Color.Transparent);
-
-                    var textSize = g.MeasureString(text, font);
-
-                    float x = (IconSize - textSize.Width) / 2f;
-                    float y = (IconSize - textSize.Height) / 2f;
+                    SizeF textSize = g.MeasureString(text, font);
+                    float x = (iconSize.Width - textSize.Width) / 2;
+                    float y = (iconSize.Height - textSize.Height) / 2 + (dpiScale * 0.5f);
 
                     using (var brush = new SolidBrush(color))
                     {
-                        g.DrawString(text, font, brush, x, y);
+                        g.DrawString(text, font, brush, new PointF(x, y));
                     }
 
                     IntPtr hIcon = bmp.GetHicon();
@@ -377,9 +375,19 @@ namespace TrayTemps
 
                     CpuTrayColor.SelectedItem = GetValue(nameof(CpuTrayColor), CpuTrayColor.Text);
                     GpuTrayColor.SelectedItem = GetValue(nameof(GpuTrayColor), GpuTrayColor.Text);
-                    FontSizeTray.SelectedItem = GetValue(nameof(FontSizeTray), FontSizeTray.Text);
                     FontFamilyTray.SelectedItem = GetValue(nameof(FontFamilyTray), FontFamilyTray.Text);
-                    UpdateInterval.SelectedItem = GetValue(nameof(UpdateInterval), UpdateInterval.Text);
+
+                    if (decimal.TryParse(GetValue(nameof(FontSizeTray), "9").ToString(), out decimal fontSizeValue))
+                    {
+                        if (fontSizeValue >= FontSizeTray.Minimum && fontSizeValue <= FontSizeTray.Maximum)
+                            FontSizeTray.Value = fontSizeValue;
+                    }
+
+                    if (decimal.TryParse(GetValue(nameof(UpdateInterval), "1.00").ToString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal intervalValue))
+                    {
+                        if (intervalValue >= UpdateInterval.Minimum && intervalValue <= UpdateInterval.Maximum)
+                            UpdateInterval.Value = intervalValue;
+                    }
                 }
             }
             catch (Exception ex)
@@ -417,7 +425,7 @@ namespace TrayTemps
             _cpuTrayColor = ColorTranslator.FromHtml(CpuTrayColor.Text);
             _gpuTrayColor = ColorTranslator.FromHtml(GpuTrayColor.Text);
             _trayFontFamily = FontFamilyTray.Text.Trim();
-            float.TryParse(FontSizeTray.Text, out _trayFontSize);
+            _trayFontSize = (float)this.FontSizeTray.Value;
         }
 
         private void Setting_CheckedChanged(object sender, EventArgs e)
@@ -444,18 +452,27 @@ namespace TrayTemps
             }
         }
 
-        private void UpdateInterval_SelectedIndexChanged(object sender, EventArgs e)
+        private void FontSizeTray_ValueChanged(object sender, EventArgs e)
         {
-            SaveSetting(nameof(UpdateInterval), UpdateInterval.Text);
+            decimal fontSize = this.FontSizeTray.Value;
+            SaveSetting(nameof(FontSizeTray), fontSize.ToString());
+            CacheDisplaySettings();
+            _lastCpuTempText = null;
+            _lastGpuTempText = null;
+            TempTimer_Tick(this, EventArgs.Empty);
+        }
+
+        private void UpdateInterval_ValueChanged(object sender, EventArgs e)
+        {
+            decimal interval = this.UpdateInterval.Value;
+            SaveSetting(nameof(UpdateInterval), interval.ToString("F2", System.Globalization.CultureInfo.InvariantCulture));
             UpdateTimerInterval();
         }
 
         private void UpdateTimerInterval()
         {
-            if (double.TryParse(UpdateInterval.Text, out double seconds))
-            {
-                _tempTimer.Interval = Math.Max(500, (int)(seconds * 1000));
-            }
+            decimal intervalSeconds = this.UpdateInterval.Value;
+            _tempTimer.Interval = Math.Max(100, (int)(intervalSeconds * 1000));
         }
 
         #endregion
@@ -743,5 +760,6 @@ namespace TrayTemps
         }
 
         #endregion
+
     }
 }

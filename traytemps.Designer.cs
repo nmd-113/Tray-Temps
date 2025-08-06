@@ -60,9 +60,9 @@ namespace TrayTemps
             this.ShowForm = new System.Windows.Forms.ToolStripMenuItem();
             this.ExitForm = new System.Windows.Forms.ToolStripMenuItem();
             this.gpuTrayIcon = new System.Windows.Forms.NotifyIcon(this.components);
-            this.FontSizeTray = new System.Windows.Forms.ComboBox();
+            this.FontSizeTray = new System.Windows.Forms.NumericUpDown();
             this.fontStyleLbl = new System.Windows.Forms.Label();
-            this.UpdateInterval = new System.Windows.Forms.ComboBox();
+            this.UpdateInterval = new System.Windows.Forms.NumericUpDown();
             this.frequencyLbl = new System.Windows.Forms.Label();
             this.exitBtn = new System.Windows.Forms.Button();
             this.minimizeBtn = new System.Windows.Forms.Button();
@@ -82,6 +82,8 @@ namespace TrayTemps
             this.cpugpuBack = new System.Windows.Forms.PictureBox();
             this.mboramBack = new System.Windows.Forms.PictureBox();
             this.contextMenuStrip1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.FontSizeTray)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.UpdateInterval)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.Logo)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.cpugpuBack)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.mboramBack)).BeginInit();
@@ -295,9 +297,9 @@ namespace TrayTemps
             this.CpuTrayEnable.ForeColor = System.Drawing.Color.White;
             this.CpuTrayEnable.Location = new System.Drawing.Point(15, 257);
             this.CpuTrayEnable.Name = "CpuTrayEnable";
-            this.CpuTrayEnable.Size = new System.Drawing.Size(71, 18);
+            this.CpuTrayEnable.Size = new System.Drawing.Size(50, 18);
             this.CpuTrayEnable.TabIndex = 17;
-            this.CpuTrayEnable.Text = "CPU Tray";
+            this.CpuTrayEnable.Text = "CPU";
             this.CpuTrayEnable.UseVisualStyleBackColor = false;
             this.CpuTrayEnable.CheckedChanged += new System.EventHandler(this.CpuTrayEnable_CheckedChanged);
             // 
@@ -329,10 +331,10 @@ namespace TrayTemps
             "Orchid",
             "DarkViolet",
             "Indigo"});
-            this.CpuTrayColor.Location = new System.Drawing.Point(123, 255);
+            this.CpuTrayColor.Location = new System.Drawing.Point(108, 255);
             this.CpuTrayColor.MaxDropDownItems = 20;
             this.CpuTrayColor.Name = "CpuTrayColor";
-            this.CpuTrayColor.Size = new System.Drawing.Size(91, 22);
+            this.CpuTrayColor.Size = new System.Drawing.Size(105, 22);
             this.CpuTrayColor.TabIndex = 18;
             this.CpuTrayColor.SelectedIndexChanged += new System.EventHandler(this.CpuTrayColor_SelectedIndexChanged);
             // 
@@ -341,9 +343,9 @@ namespace TrayTemps
             this.cpucolorLbl.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(14)))), ((int)(((byte)(15)))), ((int)(((byte)(20)))));
             this.cpucolorLbl.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.cpucolorLbl.ForeColor = System.Drawing.Color.White;
-            this.cpucolorLbl.Location = new System.Drawing.Point(88, 257);
+            this.cpucolorLbl.Location = new System.Drawing.Point(69, 257);
             this.cpucolorLbl.Name = "cpucolorLbl";
-            this.cpucolorLbl.Size = new System.Drawing.Size(36, 18);
+            this.cpucolorLbl.Size = new System.Drawing.Size(35, 18);
             this.cpucolorLbl.TabIndex = 19;
             this.cpucolorLbl.Text = "Color:";
             this.cpucolorLbl.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -353,7 +355,7 @@ namespace TrayTemps
             this.gpucolorLbl.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(14)))), ((int)(((byte)(15)))), ((int)(((byte)(20)))));
             this.gpucolorLbl.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.gpucolorLbl.ForeColor = System.Drawing.Color.White;
-            this.gpucolorLbl.Location = new System.Drawing.Point(88, 285);
+            this.gpucolorLbl.Location = new System.Drawing.Point(69, 285);
             this.gpucolorLbl.Name = "gpucolorLbl";
             this.gpucolorLbl.Size = new System.Drawing.Size(35, 18);
             this.gpucolorLbl.TabIndex = 24;
@@ -388,10 +390,10 @@ namespace TrayTemps
             "Orchid",
             "DarkViolet",
             "Indigo"});
-            this.GpuTrayColor.Location = new System.Drawing.Point(123, 283);
+            this.GpuTrayColor.Location = new System.Drawing.Point(108, 283);
             this.GpuTrayColor.MaxDropDownItems = 20;
             this.GpuTrayColor.Name = "GpuTrayColor";
-            this.GpuTrayColor.Size = new System.Drawing.Size(91, 22);
+            this.GpuTrayColor.Size = new System.Drawing.Size(105, 22);
             this.GpuTrayColor.TabIndex = 23;
             this.GpuTrayColor.SelectedIndexChanged += new System.EventHandler(this.GpuTrayColor_SelectedIndexChanged);
             // 
@@ -402,9 +404,9 @@ namespace TrayTemps
             this.GpuTrayEnable.ForeColor = System.Drawing.Color.White;
             this.GpuTrayEnable.Location = new System.Drawing.Point(15, 285);
             this.GpuTrayEnable.Name = "GpuTrayEnable";
-            this.GpuTrayEnable.Size = new System.Drawing.Size(71, 18);
+            this.GpuTrayEnable.Size = new System.Drawing.Size(50, 18);
             this.GpuTrayEnable.TabIndex = 22;
-            this.GpuTrayEnable.Text = "GPU Tray";
+            this.GpuTrayEnable.Text = "GPU";
             this.GpuTrayEnable.UseVisualStyleBackColor = false;
             this.GpuTrayEnable.CheckedChanged += new System.EventHandler(this.GpuTrayEnable_CheckedChanged);
             // 
@@ -444,41 +446,36 @@ namespace TrayTemps
             // 
             // FontSizeTray
             // 
-            this.FontSizeTray.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(14)))), ((int)(((byte)(15)))), ((int)(((byte)(20)))));
-            this.FontSizeTray.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.FontSizeTray.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.FontSizeTray.ForeColor = System.Drawing.Color.White;
-            this.FontSizeTray.FormattingEnabled = true;
-            this.FontSizeTray.Items.AddRange(new object[] {
-            "5",
-            "6",
-            "7",
-            "8",
-            "9",
-            "10",
-            "11",
-            "12",
-            "13",
-            "14",
-            "15",
-            "16",
-            "17",
-            "18",
-            "19",
-            "20"});
-            this.FontSizeTray.Location = new System.Drawing.Point(280, 283);
-            this.FontSizeTray.MaxDropDownItems = 20;
+            this.FontSizeTray.BackColor = System.Drawing.Color.White;
+            this.FontSizeTray.Font = new System.Drawing.Font("Arial", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.FontSizeTray.ForeColor = System.Drawing.Color.Black;
+            this.FontSizeTray.Location = new System.Drawing.Point(280, 284);
+            this.FontSizeTray.Maximum = new decimal(new int[] {
+            20,
+            0,
+            0,
+            0});
+            this.FontSizeTray.Minimum = new decimal(new int[] {
+            5,
+            0,
+            0,
+            0});
             this.FontSizeTray.Name = "FontSizeTray";
-            this.FontSizeTray.Size = new System.Drawing.Size(40, 22);
+            this.FontSizeTray.Size = new System.Drawing.Size(42, 21);
             this.FontSizeTray.TabIndex = 25;
-            this.FontSizeTray.SelectedIndexChanged += new System.EventHandler(this.FontSizeTray_SelectedIndexChanged);
+            this.FontSizeTray.Value = new decimal(new int[] {
+            12,
+            0,
+            0,
+            0});
+            this.FontSizeTray.ValueChanged += new System.EventHandler(this.FontSizeTray_ValueChanged);
             // 
             // fontStyleLbl
             // 
             this.fontStyleLbl.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(14)))), ((int)(((byte)(15)))), ((int)(((byte)(20)))));
             this.fontStyleLbl.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.fontStyleLbl.ForeColor = System.Drawing.Color.White;
-            this.fontStyleLbl.Location = new System.Drawing.Point(223, 257);
+            this.fontStyleLbl.Location = new System.Drawing.Point(220, 257);
             this.fontStyleLbl.Name = "fontStyleLbl";
             this.fontStyleLbl.Size = new System.Drawing.Size(58, 18);
             this.fontStyleLbl.TabIndex = 26;
@@ -487,32 +484,42 @@ namespace TrayTemps
             // 
             // UpdateInterval
             // 
-            this.UpdateInterval.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(14)))), ((int)(((byte)(15)))), ((int)(((byte)(20)))));
-            this.UpdateInterval.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.UpdateInterval.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.UpdateInterval.ForeColor = System.Drawing.Color.White;
-            this.UpdateInterval.FormattingEnabled = true;
-            this.UpdateInterval.Items.AddRange(new object[] {
-            "0.10",
-            "0.25",
-            "0.50",
-            "0.75",
-            "1.00",
-            "1.50",
-            "2.00"});
-            this.UpdateInterval.Location = new System.Drawing.Point(382, 283);
-            this.UpdateInterval.MaxDropDownItems = 10;
+            this.UpdateInterval.BackColor = System.Drawing.Color.White;
+            this.UpdateInterval.DecimalPlaces = 2;
+            this.UpdateInterval.Font = new System.Drawing.Font("Arial", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.UpdateInterval.ForeColor = System.Drawing.Color.Black;
+            this.UpdateInterval.Increment = new decimal(new int[] {
+            5,
+            0,
+            0,
+            131072});
+            this.UpdateInterval.Location = new System.Drawing.Point(386, 284);
+            this.UpdateInterval.Maximum = new decimal(new int[] {
+            10,
+            0,
+            0,
+            0});
+            this.UpdateInterval.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            65536});
             this.UpdateInterval.Name = "UpdateInterval";
-            this.UpdateInterval.Size = new System.Drawing.Size(53, 22);
+            this.UpdateInterval.Size = new System.Drawing.Size(49, 21);
             this.UpdateInterval.TabIndex = 29;
-            this.UpdateInterval.SelectedIndexChanged += new System.EventHandler(this.UpdateInterval_SelectedIndexChanged);
+            this.UpdateInterval.Value = new decimal(new int[] {
+            5,
+            0,
+            0,
+            65536});
+            this.UpdateInterval.ValueChanged += new System.EventHandler(this.UpdateInterval_ValueChanged);
             // 
             // frequencyLbl
             // 
             this.frequencyLbl.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(14)))), ((int)(((byte)(15)))), ((int)(((byte)(20)))));
             this.frequencyLbl.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.frequencyLbl.ForeColor = System.Drawing.Color.White;
-            this.frequencyLbl.Location = new System.Drawing.Point(325, 285);
+            this.frequencyLbl.Location = new System.Drawing.Point(326, 285);
             this.frequencyLbl.Name = "frequencyLbl";
             this.frequencyLbl.Size = new System.Drawing.Size(58, 18);
             this.frequencyLbl.TabIndex = 30;
@@ -625,7 +632,7 @@ namespace TrayTemps
             this.fontSizeLbl.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(14)))), ((int)(((byte)(15)))), ((int)(((byte)(20)))));
             this.fontSizeLbl.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.fontSizeLbl.ForeColor = System.Drawing.Color.White;
-            this.fontSizeLbl.Location = new System.Drawing.Point(223, 285);
+            this.fontSizeLbl.Location = new System.Drawing.Point(220, 285);
             this.fontSizeLbl.Name = "fontSizeLbl";
             this.fontSizeLbl.Size = new System.Drawing.Size(58, 18);
             this.fontSizeLbl.TabIndex = 37;
@@ -800,6 +807,8 @@ namespace TrayTemps
             this.Load += new System.EventHandler(this.TrayTemps_Load);
             this.MouseDown += new System.Windows.Forms.MouseEventHandler(this.TrayTemps_MouseDown);
             this.contextMenuStrip1.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.FontSizeTray)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.UpdateInterval)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.Logo)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.cpugpuBack)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.mboramBack)).EndInit();
@@ -831,9 +840,9 @@ namespace TrayTemps
         private System.Windows.Forms.CheckBox GpuTrayEnable;
         private System.Windows.Forms.NotifyIcon cpuTrayIcon;
         private System.Windows.Forms.NotifyIcon gpuTrayIcon;
-        private System.Windows.Forms.ComboBox FontSizeTray;
+        private System.Windows.Forms.NumericUpDown FontSizeTray;
         private System.Windows.Forms.Label fontStyleLbl;
-        private System.Windows.Forms.ComboBox UpdateInterval;
+        private System.Windows.Forms.NumericUpDown UpdateInterval;
         private System.Windows.Forms.Label frequencyLbl;
         private System.Windows.Forms.Button exitBtn;
         private System.Windows.Forms.Button minimizeBtn;
