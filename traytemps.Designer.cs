@@ -81,12 +81,19 @@ namespace TrayTemps
             this.minLbl = new System.Windows.Forms.Label();
             this.cpugpuBack = new System.Windows.Forms.PictureBox();
             this.mboramBack = new System.Windows.Forms.PictureBox();
+            this.comNoLbl = new System.Windows.Forms.Label();
+            this.GpuSelector = new System.Windows.Forms.ComboBox();
+            this.CpuSelector = new System.Windows.Forms.ComboBox();
+            this.nameamount2Lbl = new System.Windows.Forms.Label();
+            this.type2Lbl = new System.Windows.Forms.Label();
+            this.tempsBack = new System.Windows.Forms.PictureBox();
             this.contextMenuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.FontSizeTray)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.UpdateInterval)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.Logo)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.cpugpuBack)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.mboramBack)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.tempsBack)).BeginInit();
             this.SuspendLayout();
             // 
             // maxLbl
@@ -95,7 +102,7 @@ namespace TrayTemps
             this.maxLbl.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.maxLbl.ForeColor = System.Drawing.Color.White;
             this.maxLbl.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.maxLbl.Location = new System.Drawing.Point(393, 91);
+            this.maxLbl.Location = new System.Drawing.Point(443, 93);
             this.maxLbl.Name = "maxLbl";
             this.maxLbl.Size = new System.Drawing.Size(33, 18);
             this.maxLbl.TabIndex = 1;
@@ -108,7 +115,7 @@ namespace TrayTemps
             this.currentLbl.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.currentLbl.ForeColor = System.Drawing.Color.White;
             this.currentLbl.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.currentLbl.Location = new System.Drawing.Point(314, 91);
+            this.currentLbl.Location = new System.Drawing.Point(364, 93);
             this.currentLbl.Name = "currentLbl";
             this.currentLbl.Size = new System.Drawing.Size(33, 18);
             this.currentLbl.TabIndex = 2;
@@ -121,9 +128,9 @@ namespace TrayTemps
             this.typeLbl.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.typeLbl.ForeColor = System.Drawing.Color.White;
             this.typeLbl.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.typeLbl.Location = new System.Drawing.Point(20, 91);
+            this.typeLbl.Location = new System.Drawing.Point(20, 93);
             this.typeLbl.Name = "typeLbl";
-            this.typeLbl.Size = new System.Drawing.Size(40, 18);
+            this.typeLbl.Size = new System.Drawing.Size(35, 18);
             this.typeLbl.TabIndex = 3;
             this.typeLbl.Text = "Type";
             this.typeLbl.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -134,9 +141,9 @@ namespace TrayTemps
             this.cpuLbl.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.cpuLbl.ForeColor = System.Drawing.Color.White;
             this.cpuLbl.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.cpuLbl.Location = new System.Drawing.Point(20, 114);
+            this.cpuLbl.Location = new System.Drawing.Point(20, 119);
             this.cpuLbl.Name = "cpuLbl";
-            this.cpuLbl.Size = new System.Drawing.Size(40, 18);
+            this.cpuLbl.Size = new System.Drawing.Size(35, 18);
             this.cpuLbl.TabIndex = 7;
             this.cpuLbl.Text = "CPU:";
             this.cpuLbl.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -147,7 +154,7 @@ namespace TrayTemps
             this.CpuTemp.Font = new System.Drawing.Font("Arial", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.CpuTemp.ForeColor = System.Drawing.Color.White;
             this.CpuTemp.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.CpuTemp.Location = new System.Drawing.Point(314, 114);
+            this.CpuTemp.Location = new System.Drawing.Point(364, 119);
             this.CpuTemp.Name = "CpuTemp";
             this.CpuTemp.Size = new System.Drawing.Size(33, 18);
             this.CpuTemp.TabIndex = 6;
@@ -160,7 +167,7 @@ namespace TrayTemps
             this.CpuMax.Font = new System.Drawing.Font("Arial", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.CpuMax.ForeColor = System.Drawing.Color.White;
             this.CpuMax.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.CpuMax.Location = new System.Drawing.Point(393, 114);
+            this.CpuMax.Location = new System.Drawing.Point(443, 119);
             this.CpuMax.Name = "CpuMax";
             this.CpuMax.Size = new System.Drawing.Size(33, 18);
             this.CpuMax.TabIndex = 5;
@@ -173,9 +180,9 @@ namespace TrayTemps
             this.nameamountLbl.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.nameamountLbl.ForeColor = System.Drawing.Color.White;
             this.nameamountLbl.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.nameamountLbl.Location = new System.Drawing.Point(67, 91);
+            this.nameamountLbl.Location = new System.Drawing.Point(112, 93);
             this.nameamountLbl.Name = "nameamountLbl";
-            this.nameamountLbl.Size = new System.Drawing.Size(80, 18);
+            this.nameamountLbl.Size = new System.Drawing.Size(45, 18);
             this.nameamountLbl.TabIndex = 8;
             this.nameamountLbl.Text = "Name";
             this.nameamountLbl.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -186,7 +193,7 @@ namespace TrayTemps
             this.CpuName.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.CpuName.ForeColor = System.Drawing.Color.White;
             this.CpuName.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.CpuName.Location = new System.Drawing.Point(67, 114);
+            this.CpuName.Location = new System.Drawing.Point(112, 119);
             this.CpuName.Name = "CpuName";
             this.CpuName.Size = new System.Drawing.Size(233, 18);
             this.CpuName.TabIndex = 9;
@@ -199,7 +206,7 @@ namespace TrayTemps
             this.GpuName.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.GpuName.ForeColor = System.Drawing.Color.White;
             this.GpuName.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.GpuName.Location = new System.Drawing.Point(67, 134);
+            this.GpuName.Location = new System.Drawing.Point(112, 146);
             this.GpuName.Name = "GpuName";
             this.GpuName.Size = new System.Drawing.Size(233, 18);
             this.GpuName.TabIndex = 13;
@@ -212,9 +219,9 @@ namespace TrayTemps
             this.gpuLbl.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.gpuLbl.ForeColor = System.Drawing.Color.White;
             this.gpuLbl.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.gpuLbl.Location = new System.Drawing.Point(20, 134);
+            this.gpuLbl.Location = new System.Drawing.Point(20, 146);
             this.gpuLbl.Name = "gpuLbl";
-            this.gpuLbl.Size = new System.Drawing.Size(40, 18);
+            this.gpuLbl.Size = new System.Drawing.Size(35, 18);
             this.gpuLbl.TabIndex = 12;
             this.gpuLbl.Text = "GPU:";
             this.gpuLbl.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -225,7 +232,7 @@ namespace TrayTemps
             this.GpuTemp.Font = new System.Drawing.Font("Arial", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.GpuTemp.ForeColor = System.Drawing.Color.White;
             this.GpuTemp.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.GpuTemp.Location = new System.Drawing.Point(314, 134);
+            this.GpuTemp.Location = new System.Drawing.Point(364, 146);
             this.GpuTemp.Name = "GpuTemp";
             this.GpuTemp.Size = new System.Drawing.Size(33, 18);
             this.GpuTemp.TabIndex = 11;
@@ -238,7 +245,7 @@ namespace TrayTemps
             this.GpuMax.Font = new System.Drawing.Font("Arial", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.GpuMax.ForeColor = System.Drawing.Color.White;
             this.GpuMax.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.GpuMax.Location = new System.Drawing.Point(393, 134);
+            this.GpuMax.Location = new System.Drawing.Point(443, 146);
             this.GpuMax.Name = "GpuMax";
             this.GpuMax.Size = new System.Drawing.Size(33, 18);
             this.GpuMax.TabIndex = 10;
@@ -251,11 +258,10 @@ namespace TrayTemps
             this.componentsLbl.Font = new System.Drawing.Font("Arial", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.componentsLbl.ForeColor = System.Drawing.Color.White;
             this.componentsLbl.Location = new System.Drawing.Point(15, 50);
-            this.componentsLbl.MaximumSize = new System.Drawing.Size(285, 20);
             this.componentsLbl.MinimumSize = new System.Drawing.Size(285, 25);
             this.componentsLbl.Name = "componentsLbl";
             this.componentsLbl.Padding = new System.Windows.Forms.Padding(5, 0, 0, 0);
-            this.componentsLbl.Size = new System.Drawing.Size(285, 25);
+            this.componentsLbl.Size = new System.Drawing.Size(335, 25);
             this.componentsLbl.TabIndex = 14;
             this.componentsLbl.Text = "Components";
             this.componentsLbl.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -265,7 +271,7 @@ namespace TrayTemps
             this.temperaturesLbl.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(40)))), ((int)(((byte)(80)))));
             this.temperaturesLbl.Font = new System.Drawing.Font("Arial", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.temperaturesLbl.ForeColor = System.Drawing.Color.White;
-            this.temperaturesLbl.Location = new System.Drawing.Point(310, 50);
+            this.temperaturesLbl.Location = new System.Drawing.Point(360, 50);
             this.temperaturesLbl.MaximumSize = new System.Drawing.Size(125, 25);
             this.temperaturesLbl.MinimumSize = new System.Drawing.Size(125, 25);
             this.temperaturesLbl.Name = "temperaturesLbl";
@@ -280,12 +286,11 @@ namespace TrayTemps
             this.traysettingsLbl.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(40)))), ((int)(((byte)(80)))));
             this.traysettingsLbl.Font = new System.Drawing.Font("Arial", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.traysettingsLbl.ForeColor = System.Drawing.Color.White;
-            this.traysettingsLbl.Location = new System.Drawing.Point(15, 218);
-            this.traysettingsLbl.MaximumSize = new System.Drawing.Size(420, 25);
+            this.traysettingsLbl.Location = new System.Drawing.Point(15, 278);
             this.traysettingsLbl.MinimumSize = new System.Drawing.Size(420, 25);
             this.traysettingsLbl.Name = "traysettingsLbl";
             this.traysettingsLbl.Padding = new System.Windows.Forms.Padding(5, 0, 0, 0);
-            this.traysettingsLbl.Size = new System.Drawing.Size(420, 25);
+            this.traysettingsLbl.Size = new System.Drawing.Size(470, 25);
             this.traysettingsLbl.TabIndex = 16;
             this.traysettingsLbl.Text = "Tray Settings";
             this.traysettingsLbl.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -295,7 +300,7 @@ namespace TrayTemps
             this.CpuTrayEnable.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(14)))), ((int)(((byte)(15)))), ((int)(((byte)(20)))));
             this.CpuTrayEnable.Font = new System.Drawing.Font("Arial Narrow", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.CpuTrayEnable.ForeColor = System.Drawing.Color.White;
-            this.CpuTrayEnable.Location = new System.Drawing.Point(15, 257);
+            this.CpuTrayEnable.Location = new System.Drawing.Point(15, 317);
             this.CpuTrayEnable.Name = "CpuTrayEnable";
             this.CpuTrayEnable.Size = new System.Drawing.Size(50, 18);
             this.CpuTrayEnable.TabIndex = 17;
@@ -305,7 +310,7 @@ namespace TrayTemps
             // 
             // CpuTrayColor
             // 
-            this.CpuTrayColor.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(14)))), ((int)(((byte)(15)))), ((int)(((byte)(20)))));
+            this.CpuTrayColor.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
             this.CpuTrayColor.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.CpuTrayColor.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.CpuTrayColor.ForeColor = System.Drawing.Color.White;
@@ -331,10 +336,10 @@ namespace TrayTemps
             "Orchid",
             "DarkViolet",
             "Indigo"});
-            this.CpuTrayColor.Location = new System.Drawing.Point(108, 255);
+            this.CpuTrayColor.Location = new System.Drawing.Point(108, 315);
             this.CpuTrayColor.MaxDropDownItems = 20;
             this.CpuTrayColor.Name = "CpuTrayColor";
-            this.CpuTrayColor.Size = new System.Drawing.Size(105, 22);
+            this.CpuTrayColor.Size = new System.Drawing.Size(155, 22);
             this.CpuTrayColor.TabIndex = 18;
             this.CpuTrayColor.SelectedIndexChanged += new System.EventHandler(this.CpuTrayColor_SelectedIndexChanged);
             // 
@@ -343,7 +348,7 @@ namespace TrayTemps
             this.cpucolorLbl.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(14)))), ((int)(((byte)(15)))), ((int)(((byte)(20)))));
             this.cpucolorLbl.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.cpucolorLbl.ForeColor = System.Drawing.Color.White;
-            this.cpucolorLbl.Location = new System.Drawing.Point(69, 257);
+            this.cpucolorLbl.Location = new System.Drawing.Point(69, 317);
             this.cpucolorLbl.Name = "cpucolorLbl";
             this.cpucolorLbl.Size = new System.Drawing.Size(35, 18);
             this.cpucolorLbl.TabIndex = 19;
@@ -355,7 +360,7 @@ namespace TrayTemps
             this.gpucolorLbl.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(14)))), ((int)(((byte)(15)))), ((int)(((byte)(20)))));
             this.gpucolorLbl.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.gpucolorLbl.ForeColor = System.Drawing.Color.White;
-            this.gpucolorLbl.Location = new System.Drawing.Point(69, 285);
+            this.gpucolorLbl.Location = new System.Drawing.Point(69, 345);
             this.gpucolorLbl.Name = "gpucolorLbl";
             this.gpucolorLbl.Size = new System.Drawing.Size(35, 18);
             this.gpucolorLbl.TabIndex = 24;
@@ -364,7 +369,7 @@ namespace TrayTemps
             // 
             // GpuTrayColor
             // 
-            this.GpuTrayColor.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(14)))), ((int)(((byte)(15)))), ((int)(((byte)(20)))));
+            this.GpuTrayColor.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
             this.GpuTrayColor.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.GpuTrayColor.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.GpuTrayColor.ForeColor = System.Drawing.Color.White;
@@ -390,10 +395,10 @@ namespace TrayTemps
             "Orchid",
             "DarkViolet",
             "Indigo"});
-            this.GpuTrayColor.Location = new System.Drawing.Point(108, 283);
+            this.GpuTrayColor.Location = new System.Drawing.Point(108, 343);
             this.GpuTrayColor.MaxDropDownItems = 20;
             this.GpuTrayColor.Name = "GpuTrayColor";
-            this.GpuTrayColor.Size = new System.Drawing.Size(105, 22);
+            this.GpuTrayColor.Size = new System.Drawing.Size(155, 22);
             this.GpuTrayColor.TabIndex = 23;
             this.GpuTrayColor.SelectedIndexChanged += new System.EventHandler(this.GpuTrayColor_SelectedIndexChanged);
             // 
@@ -402,7 +407,7 @@ namespace TrayTemps
             this.GpuTrayEnable.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(14)))), ((int)(((byte)(15)))), ((int)(((byte)(20)))));
             this.GpuTrayEnable.Font = new System.Drawing.Font("Arial Narrow", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.GpuTrayEnable.ForeColor = System.Drawing.Color.White;
-            this.GpuTrayEnable.Location = new System.Drawing.Point(15, 285);
+            this.GpuTrayEnable.Location = new System.Drawing.Point(15, 345);
             this.GpuTrayEnable.Name = "GpuTrayEnable";
             this.GpuTrayEnable.Size = new System.Drawing.Size(50, 18);
             this.GpuTrayEnable.TabIndex = 22;
@@ -414,7 +419,7 @@ namespace TrayTemps
             // 
             this.cpuTrayIcon.ContextMenuStrip = this.contextMenuStrip1;
             this.cpuTrayIcon.Text = "CPU Temp";
-            this.cpuTrayIcon.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.cpuTrayIcon_MouseDoubleClick);
+            this.cpuTrayIcon.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.CpuTrayIcon_MouseDoubleClick);
             // 
             // contextMenuStrip1
             // 
@@ -442,14 +447,14 @@ namespace TrayTemps
             // 
             this.gpuTrayIcon.ContextMenuStrip = this.contextMenuStrip1;
             this.gpuTrayIcon.Text = "GPU Temp";
-            this.gpuTrayIcon.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.gpuTrayIcon_MouseDoubleClick);
+            this.gpuTrayIcon.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.GpuTrayIcon_MouseDoubleClick);
             // 
             // FontSizeTray
             // 
-            this.FontSizeTray.BackColor = System.Drawing.Color.White;
+            this.FontSizeTray.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
             this.FontSizeTray.Font = new System.Drawing.Font("Arial", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.FontSizeTray.ForeColor = System.Drawing.Color.Black;
-            this.FontSizeTray.Location = new System.Drawing.Point(280, 284);
+            this.FontSizeTray.ForeColor = System.Drawing.Color.White;
+            this.FontSizeTray.Location = new System.Drawing.Point(330, 344);
             this.FontSizeTray.Maximum = new decimal(new int[] {
             20,
             0,
@@ -475,7 +480,7 @@ namespace TrayTemps
             this.fontStyleLbl.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(14)))), ((int)(((byte)(15)))), ((int)(((byte)(20)))));
             this.fontStyleLbl.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.fontStyleLbl.ForeColor = System.Drawing.Color.White;
-            this.fontStyleLbl.Location = new System.Drawing.Point(220, 257);
+            this.fontStyleLbl.Location = new System.Drawing.Point(270, 317);
             this.fontStyleLbl.Name = "fontStyleLbl";
             this.fontStyleLbl.Size = new System.Drawing.Size(58, 18);
             this.fontStyleLbl.TabIndex = 26;
@@ -484,16 +489,16 @@ namespace TrayTemps
             // 
             // UpdateInterval
             // 
-            this.UpdateInterval.BackColor = System.Drawing.Color.White;
+            this.UpdateInterval.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
             this.UpdateInterval.DecimalPlaces = 2;
             this.UpdateInterval.Font = new System.Drawing.Font("Arial", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.UpdateInterval.ForeColor = System.Drawing.Color.Black;
+            this.UpdateInterval.ForeColor = System.Drawing.Color.White;
             this.UpdateInterval.Increment = new decimal(new int[] {
             5,
             0,
             0,
             131072});
-            this.UpdateInterval.Location = new System.Drawing.Point(386, 284);
+            this.UpdateInterval.Location = new System.Drawing.Point(436, 344);
             this.UpdateInterval.Maximum = new decimal(new int[] {
             10,
             0,
@@ -519,7 +524,7 @@ namespace TrayTemps
             this.frequencyLbl.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(14)))), ((int)(((byte)(15)))), ((int)(((byte)(20)))));
             this.frequencyLbl.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.frequencyLbl.ForeColor = System.Drawing.Color.White;
-            this.frequencyLbl.Location = new System.Drawing.Point(326, 285);
+            this.frequencyLbl.Location = new System.Drawing.Point(376, 345);
             this.frequencyLbl.Name = "frequencyLbl";
             this.frequencyLbl.Size = new System.Drawing.Size(58, 18);
             this.frequencyLbl.TabIndex = 30;
@@ -533,13 +538,13 @@ namespace TrayTemps
             this.exitBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.exitBtn.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.exitBtn.ForeColor = System.Drawing.Color.White;
-            this.exitBtn.Location = new System.Drawing.Point(400, 15);
+            this.exitBtn.Location = new System.Drawing.Point(450, 15);
             this.exitBtn.Name = "exitBtn";
             this.exitBtn.Size = new System.Drawing.Size(35, 20);
             this.exitBtn.TabIndex = 31;
             this.exitBtn.Text = "✖";
             this.exitBtn.UseVisualStyleBackColor = false;
-            this.exitBtn.Click += new System.EventHandler(this.exit_Click);
+            this.exitBtn.Click += new System.EventHandler(this.Exit_Click);
             // 
             // minimizeBtn
             // 
@@ -548,13 +553,13 @@ namespace TrayTemps
             this.minimizeBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.minimizeBtn.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.minimizeBtn.ForeColor = System.Drawing.Color.White;
-            this.minimizeBtn.Location = new System.Drawing.Point(355, 15);
+            this.minimizeBtn.Location = new System.Drawing.Point(405, 15);
             this.minimizeBtn.Name = "minimizeBtn";
             this.minimizeBtn.Size = new System.Drawing.Size(35, 20);
             this.minimizeBtn.TabIndex = 32;
             this.minimizeBtn.Text = "➖";
             this.minimizeBtn.UseVisualStyleBackColor = false;
-            this.minimizeBtn.Click += new System.EventHandler(this.minimize_Click);
+            this.minimizeBtn.Click += new System.EventHandler(this.Minimize_Click);
             // 
             // AppTitle
             // 
@@ -591,18 +596,18 @@ namespace TrayTemps
             this.autostartApp.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.autostartApp.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.autostartApp.ForeColor = System.Drawing.Color.White;
-            this.autostartApp.Location = new System.Drawing.Point(353, 221);
+            this.autostartApp.Location = new System.Drawing.Point(405, 281);
             this.autostartApp.Name = "autostartApp";
             this.autostartApp.Size = new System.Drawing.Size(75, 20);
             this.autostartApp.TabIndex = 35;
             this.autostartApp.Text = "Autostart";
             this.autostartApp.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.autostartApp.UseVisualStyleBackColor = false;
-            this.autostartApp.CheckedChanged += new System.EventHandler(this.autostartApp_CheckedChanged);
+            this.autostartApp.CheckedChanged += new System.EventHandler(this.AutostartApp_CheckedChanged);
             // 
             // FontFamilyTray
             // 
-            this.FontFamilyTray.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(14)))), ((int)(((byte)(15)))), ((int)(((byte)(20)))));
+            this.FontFamilyTray.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
             this.FontFamilyTray.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.FontFamilyTray.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.FontFamilyTray.ForeColor = System.Drawing.Color.White;
@@ -620,7 +625,7 @@ namespace TrayTemps
             "Tahoma",
             "Trebuchet MS",
             "Verdana"});
-            this.FontFamilyTray.Location = new System.Drawing.Point(280, 255);
+            this.FontFamilyTray.Location = new System.Drawing.Point(330, 315);
             this.FontFamilyTray.MaxDropDownItems = 20;
             this.FontFamilyTray.Name = "FontFamilyTray";
             this.FontFamilyTray.Size = new System.Drawing.Size(155, 22);
@@ -632,7 +637,7 @@ namespace TrayTemps
             this.fontSizeLbl.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(14)))), ((int)(((byte)(15)))), ((int)(((byte)(20)))));
             this.fontSizeLbl.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.fontSizeLbl.ForeColor = System.Drawing.Color.White;
-            this.fontSizeLbl.Location = new System.Drawing.Point(220, 285);
+            this.fontSizeLbl.Location = new System.Drawing.Point(270, 345);
             this.fontSizeLbl.Name = "fontSizeLbl";
             this.fontSizeLbl.Size = new System.Drawing.Size(58, 18);
             this.fontSizeLbl.TabIndex = 37;
@@ -645,9 +650,9 @@ namespace TrayTemps
             this.MboName.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.MboName.ForeColor = System.Drawing.Color.White;
             this.MboName.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.MboName.Location = new System.Drawing.Point(67, 167);
+            this.MboName.Location = new System.Drawing.Point(68, 215);
             this.MboName.Name = "MboName";
-            this.MboName.Size = new System.Drawing.Size(363, 18);
+            this.MboName.Size = new System.Drawing.Size(412, 18);
             this.MboName.TabIndex = 39;
             this.MboName.Text = "N/A";
             this.MboName.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -658,7 +663,7 @@ namespace TrayTemps
             this.mboLbl.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.mboLbl.ForeColor = System.Drawing.Color.White;
             this.mboLbl.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.mboLbl.Location = new System.Drawing.Point(20, 167);
+            this.mboLbl.Location = new System.Drawing.Point(21, 215);
             this.mboLbl.Name = "mboLbl";
             this.mboLbl.Size = new System.Drawing.Size(40, 18);
             this.mboLbl.TabIndex = 38;
@@ -671,9 +676,9 @@ namespace TrayTemps
             this.RamAmount.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.RamAmount.ForeColor = System.Drawing.Color.White;
             this.RamAmount.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.RamAmount.Location = new System.Drawing.Point(67, 186);
+            this.RamAmount.Location = new System.Drawing.Point(68, 242);
             this.RamAmount.Name = "RamAmount";
-            this.RamAmount.Size = new System.Drawing.Size(363, 18);
+            this.RamAmount.Size = new System.Drawing.Size(412, 18);
             this.RamAmount.TabIndex = 41;
             this.RamAmount.Text = "N/A";
             this.RamAmount.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -684,7 +689,7 @@ namespace TrayTemps
             this.ramLbl.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.ramLbl.ForeColor = System.Drawing.Color.White;
             this.ramLbl.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.ramLbl.Location = new System.Drawing.Point(20, 186);
+            this.ramLbl.Location = new System.Drawing.Point(21, 242);
             this.ramLbl.Name = "ramLbl";
             this.ramLbl.Size = new System.Drawing.Size(40, 18);
             this.ramLbl.TabIndex = 40;
@@ -697,7 +702,7 @@ namespace TrayTemps
             this.GpuMin.Font = new System.Drawing.Font("Arial", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.GpuMin.ForeColor = System.Drawing.Color.White;
             this.GpuMin.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.GpuMin.Location = new System.Drawing.Point(354, 134);
+            this.GpuMin.Location = new System.Drawing.Point(404, 146);
             this.GpuMin.Name = "GpuMin";
             this.GpuMin.Size = new System.Drawing.Size(33, 18);
             this.GpuMin.TabIndex = 44;
@@ -710,7 +715,7 @@ namespace TrayTemps
             this.CpuMin.Font = new System.Drawing.Font("Arial", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.CpuMin.ForeColor = System.Drawing.Color.White;
             this.CpuMin.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.CpuMin.Location = new System.Drawing.Point(354, 114);
+            this.CpuMin.Location = new System.Drawing.Point(404, 119);
             this.CpuMin.Name = "CpuMin";
             this.CpuMin.Size = new System.Drawing.Size(33, 18);
             this.CpuMin.TabIndex = 43;
@@ -723,7 +728,7 @@ namespace TrayTemps
             this.minLbl.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.minLbl.ForeColor = System.Drawing.Color.White;
             this.minLbl.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.minLbl.Location = new System.Drawing.Point(354, 91);
+            this.minLbl.Location = new System.Drawing.Point(404, 93);
             this.minLbl.Name = "minLbl";
             this.minLbl.Size = new System.Drawing.Size(33, 18);
             this.minLbl.TabIndex = 42;
@@ -735,18 +740,91 @@ namespace TrayTemps
             this.cpugpuBack.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
             this.cpugpuBack.Location = new System.Drawing.Point(15, 87);
             this.cpugpuBack.Name = "cpugpuBack";
-            this.cpugpuBack.Size = new System.Drawing.Size(420, 69);
+            this.cpugpuBack.Size = new System.Drawing.Size(335, 84);
             this.cpugpuBack.TabIndex = 45;
             this.cpugpuBack.TabStop = false;
             // 
             // mboramBack
             // 
             this.mboramBack.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
-            this.mboramBack.Location = new System.Drawing.Point(15, 164);
+            this.mboramBack.Location = new System.Drawing.Point(15, 183);
             this.mboramBack.Name = "mboramBack";
-            this.mboramBack.Size = new System.Drawing.Size(420, 42);
+            this.mboramBack.Size = new System.Drawing.Size(470, 84);
             this.mboramBack.TabIndex = 46;
             this.mboramBack.TabStop = false;
+            // 
+            // comNoLbl
+            // 
+            this.comNoLbl.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
+            this.comNoLbl.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.comNoLbl.ForeColor = System.Drawing.Color.White;
+            this.comNoLbl.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.comNoLbl.Location = new System.Drawing.Point(63, 93);
+            this.comNoLbl.Name = "comNoLbl";
+            this.comNoLbl.Size = new System.Drawing.Size(35, 18);
+            this.comNoLbl.TabIndex = 47;
+            this.comNoLbl.Text = "No.";
+            this.comNoLbl.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            // 
+            // GpuSelector
+            // 
+            this.GpuSelector.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
+            this.GpuSelector.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.GpuSelector.ForeColor = System.Drawing.Color.White;
+            this.GpuSelector.FormattingEnabled = true;
+            this.GpuSelector.Location = new System.Drawing.Point(63, 145);
+            this.GpuSelector.Name = "GpuSelector";
+            this.GpuSelector.Size = new System.Drawing.Size(35, 21);
+            this.GpuSelector.TabIndex = 50;
+            this.GpuSelector.SelectedIndexChanged += new System.EventHandler(this.GpuSelector_SelectedIndexChanged);
+            // 
+            // CpuSelector
+            // 
+            this.CpuSelector.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
+            this.CpuSelector.Cursor = System.Windows.Forms.Cursors.Default;
+            this.CpuSelector.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.CpuSelector.ForeColor = System.Drawing.Color.White;
+            this.CpuSelector.FormattingEnabled = true;
+            this.CpuSelector.Location = new System.Drawing.Point(63, 118);
+            this.CpuSelector.Name = "CpuSelector";
+            this.CpuSelector.Size = new System.Drawing.Size(35, 21);
+            this.CpuSelector.TabIndex = 51;
+            this.CpuSelector.SelectedIndexChanged += new System.EventHandler(this.CpuSelector_SelectedIndexChanged);
+            // 
+            // nameamount2Lbl
+            // 
+            this.nameamount2Lbl.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
+            this.nameamount2Lbl.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.nameamount2Lbl.ForeColor = System.Drawing.Color.White;
+            this.nameamount2Lbl.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.nameamount2Lbl.Location = new System.Drawing.Point(68, 190);
+            this.nameamount2Lbl.Name = "nameamount2Lbl";
+            this.nameamount2Lbl.Size = new System.Drawing.Size(45, 18);
+            this.nameamount2Lbl.TabIndex = 53;
+            this.nameamount2Lbl.Text = "Name";
+            this.nameamount2Lbl.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            // 
+            // type2Lbl
+            // 
+            this.type2Lbl.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
+            this.type2Lbl.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.type2Lbl.ForeColor = System.Drawing.Color.White;
+            this.type2Lbl.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.type2Lbl.Location = new System.Drawing.Point(21, 190);
+            this.type2Lbl.Name = "type2Lbl";
+            this.type2Lbl.Size = new System.Drawing.Size(40, 18);
+            this.type2Lbl.TabIndex = 52;
+            this.type2Lbl.Text = "Type";
+            this.type2Lbl.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            // 
+            // tempsBack
+            // 
+            this.tempsBack.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
+            this.tempsBack.Location = new System.Drawing.Point(360, 87);
+            this.tempsBack.Name = "tempsBack";
+            this.tempsBack.Size = new System.Drawing.Size(125, 84);
+            this.tempsBack.TabIndex = 54;
+            this.tempsBack.TabStop = false;
             // 
             // TrayTemps
             // 
@@ -754,7 +832,12 @@ namespace TrayTemps
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
             this.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(14)))), ((int)(((byte)(15)))), ((int)(((byte)(20)))));
-            this.ClientSize = new System.Drawing.Size(450, 320);
+            this.ClientSize = new System.Drawing.Size(500, 380);
+            this.Controls.Add(this.nameamount2Lbl);
+            this.Controls.Add(this.type2Lbl);
+            this.Controls.Add(this.CpuSelector);
+            this.Controls.Add(this.GpuSelector);
+            this.Controls.Add(this.comNoLbl);
             this.Controls.Add(this.GpuMin);
             this.Controls.Add(this.CpuMin);
             this.Controls.Add(this.minLbl);
@@ -796,11 +879,12 @@ namespace TrayTemps
             this.Controls.Add(this.maxLbl);
             this.Controls.Add(this.cpugpuBack);
             this.Controls.Add(this.mboramBack);
+            this.Controls.Add(this.tempsBack);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MaximizeBox = false;
-            this.MaximumSize = new System.Drawing.Size(450, 320);
-            this.MinimumSize = new System.Drawing.Size(450, 320);
+            this.MaximumSize = new System.Drawing.Size(500, 380);
+            this.MinimumSize = new System.Drawing.Size(500, 380);
             this.Name = "TrayTemps";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Tray Temps";
@@ -812,6 +896,7 @@ namespace TrayTemps
             ((System.ComponentModel.ISupportInitialize)(this.Logo)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.cpugpuBack)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.mboramBack)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.tempsBack)).EndInit();
             this.ResumeLayout(false);
 
         }
@@ -864,5 +949,11 @@ namespace TrayTemps
         private System.Windows.Forms.Label minLbl;
         private System.Windows.Forms.PictureBox cpugpuBack;
         private System.Windows.Forms.PictureBox mboramBack;
+        private System.Windows.Forms.Label comNoLbl;
+        private System.Windows.Forms.ComboBox GpuSelector;
+        private System.Windows.Forms.ComboBox CpuSelector;
+        private System.Windows.Forms.Label nameamount2Lbl;
+        private System.Windows.Forms.Label type2Lbl;
+        private System.Windows.Forms.PictureBox tempsBack;
     }
 }

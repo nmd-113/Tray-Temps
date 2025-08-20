@@ -2,14 +2,11 @@
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
-using System.Drawing.Text;
 using System.IO;
 using System.Linq;
 using System.Management;
 using System.Runtime.InteropServices;
-using System.ServiceProcess;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using SystemInformation = System.Windows.Forms.SystemInformation;
@@ -27,11 +24,18 @@ namespace TrayTemps
         private const int IconSize = 16;
 
         private Computer _computer;
-        private IHardware _cpuHardware;
-        private IHardware _gpuHardware;
+        private readonly Timer _tempTimer = new Timer();
+
+        private List<IHardware> _cpuHardwares;
+        private IHardware _selectedCpuHardware;
+        private string _selectedCpuIdentifier;
+
+        private List<IHardware> _gpuHardwares;
+        private IHardware _selectedGpuHardware;
+        private string _selectedGpuIdentifier;
+
         private ISensor _cpuTempSensor;
         private ISensor _gpuTempSensor;
-        private readonly Timer _tempTimer = new Timer();
         private float _cpuMaxTemp = float.MinValue;
         private float _cpuMinTemp = float.MaxValue;
         private float _gpuMaxTemp = float.MinValue;
@@ -40,7 +44,6 @@ namespace TrayTemps
         private string _lastCpuTempText;
         private string _lastGpuTempText;
         private bool _settingsLoaded = false;
-        private bool _isUpdating = false;
         private bool _isInternalCheckChange = false;
         private bool isShutdownInitiated = false;
 
@@ -116,7 +119,7 @@ namespace TrayTemps
         #region UI Event Handlers
 
 
-        private void exit_Click(object sender, EventArgs e)
+        private void Exit_Click(object sender, EventArgs e)
         {
             if (MessageBox.Show(this, "Are you sure you want to exit TrayTemps?\nClick \"No\" to hide the app to tray.", "Exit Confirmation", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.No)
             {
@@ -138,7 +141,7 @@ namespace TrayTemps
 
         private void ShowForm_Click(object sender, EventArgs e) => ShowWindow();
 
-        private void minimize_Click(object sender, EventArgs e)
+        private void Minimize_Click(object sender, EventArgs e)
         {
             this.Hide();
             UpdateTrayIcons();
@@ -155,15 +158,51 @@ namespace TrayTemps
 
         private void TrayIcon_MouseDoubleClick(object sender, MouseEventArgs e) => ShowWindow();
 
-        // Compatibility wrappers for Designer
         private void NotifyIcon_MouseDoubleClick(object sender, MouseEventArgs e) => TrayIcon_MouseDoubleClick(sender, e);
-        private void cpuTrayIcon_MouseDoubleClick(object sender, MouseEventArgs e) => TrayIcon_MouseDoubleClick(sender, e);
-        private void gpuTrayIcon_MouseDoubleClick(object sender, MouseEventArgs e) => TrayIcon_MouseDoubleClick(sender, e);
+        private void CpuTrayIcon_MouseDoubleClick(object sender, MouseEventArgs e) => TrayIcon_MouseDoubleClick(sender, e);
+        private void GpuTrayIcon_MouseDoubleClick(object sender, MouseEventArgs e) => TrayIcon_MouseDoubleClick(sender, e);
         private void CpuTrayEnable_CheckedChanged(object sender, EventArgs e) => Setting_CheckedChanged(sender, e);
         private void GpuTrayEnable_CheckedChanged(object sender, EventArgs e) => Setting_CheckedChanged(sender, e);
         private void CpuTrayColor_SelectedIndexChanged(object sender, EventArgs e) => Setting_SelectedIndexChanged(sender, e);
         private void GpuTrayColor_SelectedIndexChanged(object sender, EventArgs e) => Setting_SelectedIndexChanged(sender, e);
         private void FontFamilyTray_SelectedIndexChanged(object sender, EventArgs e) => Setting_SelectedIndexChanged(sender, e);
+
+        private void CpuSelector_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (CpuSelector.SelectedIndex < 0 || _cpuHardwares == null || CpuSelector.SelectedIndex >= _cpuHardwares.Count) return;
+
+            _selectedCpuHardware = _cpuHardwares[CpuSelector.SelectedIndex];
+            CpuName.Text = _selectedCpuHardware.Name;
+
+            _cpuTempSensor = _selectedCpuHardware.Sensors.FirstOrDefault(s => s.SensorType == SensorType.Temperature && s.Name.Contains("Package"))
+                             ?? _selectedCpuHardware.Sensors.FirstOrDefault(s => s.SensorType == SensorType.Temperature);
+
+            _selectedCpuIdentifier = _selectedCpuHardware.Identifier.ToString();
+            SaveSetting("SelectedCpuIdentifier", _selectedCpuIdentifier);
+
+            _cpuMinTemp = float.MaxValue;
+            _cpuMaxTemp = float.MinValue;
+            _lastCpuTempText = null;
+            TempTimer_Tick(this, EventArgs.Empty);
+        }
+        private void GpuSelector_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (GpuSelector.SelectedIndex < 0 || _gpuHardwares == null || GpuSelector.SelectedIndex >= _gpuHardwares.Count) return;
+
+            _selectedGpuHardware = _gpuHardwares[GpuSelector.SelectedIndex];
+            GpuName.Text = _selectedGpuHardware.Name;
+
+            _gpuTempSensor = _selectedGpuHardware.Sensors.FirstOrDefault(s => s.SensorType == SensorType.Temperature && s.Name.Contains("Core"))
+                             ?? _selectedGpuHardware.Sensors.FirstOrDefault(s => s.SensorType == SensorType.Temperature);
+
+            _selectedGpuIdentifier = _selectedGpuHardware.Identifier.ToString();
+            SaveSetting("SelectedGpuIdentifier", _selectedGpuIdentifier);
+
+            _gpuMinTemp = float.MaxValue;
+            _gpuMaxTemp = float.MinValue;
+            _lastGpuTempText = null;
+            TempTimer_Tick(this, EventArgs.Empty);
+        }
 
         #endregion
 
@@ -180,13 +219,9 @@ namespace TrayTemps
 
         private async Task InitializeHardwareAsync()
         {
-            var cpuNameTask = GetHardwareNameAsync("Win32_Processor", "Unknown CPU");
-            var gpuNameTask = GetHardwareNameAsync("Win32_VideoController", "Unknown GPU");
             var mboNameTask = GetMotherboardNameAsync();
             var ramInfoTask = GetRamInfoAsync();
 
-            CpuName.Text = await cpuNameTask;
-            GpuName.Text = await gpuNameTask;
             MboName.Text = await mboNameTask;
             RamAmount.Text = await ramInfoTask;
 
@@ -200,14 +235,14 @@ namespace TrayTemps
                 _computer = new Computer { IsCpuEnabled = true, IsGpuEnabled = true };
                 _computer.Open();
 
-                _cpuHardware = _computer.Hardware.FirstOrDefault(h => h.HardwareType == HardwareType.Cpu);
-                _gpuHardware = _computer.Hardware.FirstOrDefault(h => h.HardwareType == HardwareType.GpuAmd || h.HardwareType == HardwareType.GpuNvidia);
+                _cpuHardwares = _computer.Hardware.Where(h => h.HardwareType == HardwareType.Cpu).ToList();
+                _gpuHardwares = _computer.Hardware.Where(h => h.HardwareType == HardwareType.GpuAmd || h.HardwareType == HardwareType.GpuNvidia || h.HardwareType == HardwareType.GpuIntel).ToList();
 
-                _cpuTempSensor = _cpuHardware?.Sensors.FirstOrDefault(s => s.SensorType == SensorType.Temperature && s.Name.Contains("Package"))
-                                 ?? _cpuHardware?.Sensors.FirstOrDefault(s => s.SensorType == SensorType.Temperature);
-
-                _gpuTempSensor = _gpuHardware?.Sensors.FirstOrDefault(s => s.SensorType == SensorType.Temperature && s.Name.Contains("Core"))
-                                 ?? _gpuHardware?.Sensors.FirstOrDefault(s => s.SensorType == SensorType.Temperature);
+                this.Invoke((MethodInvoker)delegate
+                {
+                    PopulateHardwareSelector(CpuSelector, _cpuHardwares, _selectedCpuIdentifier, CpuName, "CPU");
+                    PopulateHardwareSelector(GpuSelector, _gpuHardwares, _selectedGpuIdentifier, GpuName, "GPU");
+                });
             });
         }
 
@@ -220,15 +255,14 @@ namespace TrayTemps
 
         private async void TempTimer_Tick(object sender, EventArgs e)
         {
-            if (_isUpdating) return;
-            _isUpdating = true;
+            _tempTimer.Stop();
 
             try
             {
                 (float? cpuTemp, float? gpuTemp) = await Task.Run(() =>
                 {
-                    _cpuHardware?.Update();
-                    _gpuHardware?.Update();
+                    _selectedCpuHardware?.Update();
+                    _selectedGpuHardware?.Update();
                     return (_cpuTempSensor?.Value, _gpuTempSensor?.Value);
                 });
 
@@ -237,7 +271,10 @@ namespace TrayTemps
             }
             finally
             {
-                _isUpdating = false;
+                if (this.IsHandleCreated && !isShutdownInitiated)
+                {
+                    _tempTimer.Start();
+                }
             }
         }
 
@@ -277,6 +314,8 @@ namespace TrayTemps
             else
             {
                 CpuTemp.Text = "N/A";
+                CpuMin.Text = "N/A";
+                CpuMax.Text = "N/A";
             }
 
             if (gpuTemp.HasValue)
@@ -292,6 +331,8 @@ namespace TrayTemps
             else
             {
                 GpuTemp.Text = "N/A";
+                GpuMin.Text = "N/A";
+                GpuMax.Text = "N/A";
             }
         }
 
@@ -395,6 +436,9 @@ namespace TrayTemps
                         if (intervalValue >= UpdateInterval.Minimum && intervalValue <= UpdateInterval.Maximum)
                             UpdateInterval.Value = intervalValue;
                     }
+
+                    _selectedCpuIdentifier = GetValue("SelectedCpuIdentifier", "").ToString();
+                    _selectedGpuIdentifier = GetValue("SelectedGpuIdentifier", "").ToString();
                 }
             }
             catch (Exception ex)
@@ -486,7 +530,7 @@ namespace TrayTemps
 
         #region Autostart & Cleanup
 
-        private async void autostartApp_CheckedChanged(object sender, EventArgs e)
+        private async void AutostartApp_CheckedChanged(object sender, EventArgs e)
         {
             if (!_settingsLoaded || _isInternalCheckChange) return;
 
@@ -503,7 +547,7 @@ namespace TrayTemps
 
         private async Task HandleAutostartEnable()
         {
-            var result = MessageBox.Show(this,"Add app to run silently at Windows startup?", "Startup", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            var result = MessageBox.Show(this, "Add app to run silently at Windows startup?", "Startup", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (result == DialogResult.Yes)
             {
                 SaveSetting(nameof(autostartApp), true);
@@ -766,7 +810,35 @@ namespace TrayTemps
             }
         }
 
-        #endregion
+        private void PopulateHardwareSelector(ComboBox selector, List<IHardware> hardwareList, string savedIdentifier, Label nameLabel, string hardwareType)
+        {
+            selector.Items.Clear();
+            if (hardwareList != null && hardwareList.Any())
+            {
+                for (int i = 0; i < hardwareList.Count; i++)
+                {
+                    selector.Items.Add(i);
+                }
 
+                int initialIndex = -1;
+                if (!string.IsNullOrEmpty(savedIdentifier))
+                {
+                    var hardwareToSelect = hardwareList.FirstOrDefault(h => h.Identifier.ToString() == savedIdentifier);
+                    if (hardwareToSelect != null)
+                    {
+                        initialIndex = hardwareList.IndexOf(hardwareToSelect);
+                    }
+                }
+                selector.SelectedIndex = (initialIndex != -1) ? initialIndex : 0;
+                selector.Enabled = hardwareList.Count > 1;
+            }
+            else
+            {
+                nameLabel.Text = $"No {hardwareType} found";
+                selector.Enabled = false;
+            }
+        }
+
+        #endregion
     }
 }

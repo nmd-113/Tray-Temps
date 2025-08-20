@@ -1,6 +1,6 @@
-﻿using System.Threading.Tasks;
-using System;
+﻿using System;
 using System.ServiceProcess;
+using System.Threading.Tasks;
 
 public static class ServiceManager
 {
