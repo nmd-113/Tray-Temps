@@ -2,6 +2,7 @@
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -537,26 +538,52 @@ namespace TrayTemps
             var control = (CheckBox)sender;
             control.Enabled = false;
 
-            if (control.Checked)
-                await HandleAutostartEnable();
-            else
-                await HandleAutostartDisable();
-
-            if (control.IsHandleCreated) control.Enabled = true;
+            try
+            {
+                if (control.Checked)
+                    await HandleAutostartEnable();
+                else
+                    await HandleAutostartDisable();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                RevertCheckbox(control, !control.Checked);
+            }
+            finally
+            {
+                if (control.IsHandleCreated)
+                    control.Enabled = true;
+            }
         }
 
         private async Task HandleAutostartEnable()
         {
-            var result = MessageBox.Show(this, "Add app to run silently at Windows startup?", "Startup", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-            if (result == DialogResult.Yes)
-            {
-                SaveSetting(nameof(autostartApp), true);
-                await InstallAndRestartAsync();
-            }
-            else
+            var result = MessageBox.Show(
+                this,
+                "Add app to run silently at Windows startup?",
+                "Startup",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (result != DialogResult.Yes)
             {
                 RevertCheckbox(autostartApp, false);
+                return;
             }
+
+            SaveSetting(nameof(autostartApp), true);
+
+            await InstallAndRestartAsync();
+
+            // If user canceled install (no install folder saved), revert checkbox
+            string installFolder = Registry.GetValue(
+                @"HKEY_CURRENT_USER\" + RegistryPath,
+                "InstallFolder",
+                null) as string;
+
+            if (string.IsNullOrEmpty(installFolder))
+                RevertCheckbox(autostartApp, false);
         }
 
         private async Task HandleAutostartDisable()
@@ -589,87 +616,144 @@ namespace TrayTemps
 
         private Task InstallAndRestartAsync()
         {
-            string destFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), AppName);
+            string destFolder;
+
+            using (var fbd = new FolderBrowserDialog())
+            {
+                fbd.Description = "Select installation folder for TrayTemps";
+                fbd.ShowNewFolderButton = true;
+
+                if (fbd.ShowDialog(this) != DialogResult.OK ||
+                    string.IsNullOrWhiteSpace(fbd.SelectedPath))
+                {
+                    return Task.FromResult(0);
+                }
+
+                destFolder = Path.Combine(fbd.SelectedPath, AppName);
+            }
+
             string destExe = Path.Combine(destFolder, "TrayTemps.exe");
 
             return Task.Run(() =>
             {
                 Directory.CreateDirectory(destFolder);
+
                 string sourceFolder = AppDomain.CurrentDomain.BaseDirectory;
-                string[] filesToCopy = { "TrayTemps.exe", "HidSharp.dll", "LibreHardwareMonitorLib.dll" };
-                foreach (var file in filesToCopy.Where(f => File.Exists(Path.Combine(sourceFolder, f))))
+                string[] filesToCopy =
                 {
-                    File.Copy(Path.Combine(sourceFolder, file), Path.Combine(destFolder, file), true);
+            "TrayTemps.exe",
+            "HidSharp.dll",
+            "LibreHardwareMonitorLib.dll"
+        };
+
+                foreach (string file in filesToCopy)
+                {
+                    string src = Path.Combine(sourceFolder, file);
+                    string dst = Path.Combine(destFolder, file);
+
+                    if (File.Exists(src))
+                        File.Copy(src, dst, true);
                 }
 
-                string arguments = $"/Create /F /RL HIGHEST /SC ONLOGON /TN {AppName} /TR \"\\\"{destExe}\\\" -silent\"";
+                Registry.SetValue(
+                    @"HKEY_CURRENT_USER\" + RegistryPath,
+                    "InstallFolder",
+                    destFolder,
+                    RegistryValueKind.String);
+
+                string arguments =
+                    "/Create /F /RL HIGHEST /SC ONLOGON /TN \"" + AppName +
+                    "\" /TR \"\\\"" + destExe + "\\\" -silent\"";
+
                 RunProcessAndWait("schtasks", arguments);
                 CreateShortcutOnDesktop(destExe);
-                MessageBox.Show(this, "TrayTemps has been installed successfully. App will now close. Restart it from the desktop shortcut.", "Installation Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                ExecuteShutdownSequence();
-                this.Close();
+
+                Invoke(new Action(() =>
+                {
+                    MessageBox.Show(
+                        this,
+                        "TrayTemps has been installed successfully.\nRestart it from the desktop shortcut.",
+                        "Installation Complete",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+
+                    ExecuteShutdownSequence();
+                    Close();
+                }));
             });
         }
 
         private void UninstallAndExit()
         {
-            string installFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), AppName);
-            string shortcutPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), $"{AppName}.lnk");
-            string registryKeyPath = $@"HKEY_CURRENT_USER\{RegistryPath}";
+            string installFolder = Registry.GetValue(
+                @"HKEY_CURRENT_USER\" + RegistryPath,
+                "InstallFolder",
+                null) as string;
+
+            if (string.IsNullOrEmpty(installFolder) || !Directory.Exists(installFolder))
+            {
+                MessageBox.Show(
+                    this,
+                    "Installation folder not found.",
+                    "Uninstall Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                return;
+            }
+
+            string shortcutPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+                AppName + ".lnk");
+
+            string registryKeyPath = @"HKEY_CURRENT_USER\" + RegistryPath;
             string batPath = Path.Combine(Path.GetTempPath(), "DeleteTrayTemps.bat");
 
-            string script = $@"@echo off
-                            setlocal
-                            rem Change working directory to a neutral location to unlock the install folder.
-                            cd /d ""%~dp0""
+            string script =
+        @"@echo off
+setlocal
+cd /d ""%~dp0""
 
-                            rem Delete system entries first.
-                            schtasks /Delete /TN ""{AppName}"" /F > nul 2>&1
-                            reg delete ""{registryKeyPath}"" /f > nul 2>&1
+schtasks /Delete /TN """ + AppName + @""" /F > nul 2>&1
+reg delete """ + registryKeyPath + @""" /f > nul 2>&1
 
-                            rem Begin loop to wait for the main app to close.
-                            set ""install_folder={installFolder}""
-                            set ""attempts=0""
+set ""install_folder=" + installFolder + @"""
+set attempts=0
 
-                            :delete_loop
-                            if %attempts% geq 15 goto cleanup
-                            if not exist ""%install_folder%"" goto folder_deleted
+:loop
+if %attempts% GEQ 15 goto cleanup
+if not exist ""%install_folder%"" goto cleanup
 
-                            rmdir /s /q ""%install_folder%""
-                            if not exist ""%install_folder%"" goto folder_deleted
+rmdir /s /q ""%install_folder%""
+if not exist ""%install_folder%"" goto cleanup
 
-                            set /a attempts=attempts+1
-                            ping 127.0.0.1 -n 2 > nul
-                            goto delete_loop
+set /a attempts+=1
+ping 127.0.0.1 -n 2 > nul
+goto loop
 
-                            :folder_deleted
-                            rem Folder was deleted, now clean up the rest.
+:cleanup
+if exist """ + shortcutPath + @""" del /f /q """ + shortcutPath + @"""
 
-                            :cleanup
-                            if exist ""{shortcutPath}"" (
-                                del /f /q ""{shortcutPath}""
-                            )
-
-                            rem Self-delete the batch file.
-                            (goto) 2>nul & del ""%~f0""
-                            ";
+(goto) 2>nul & del ""%~f0""";
 
             File.WriteAllText(batPath, script);
 
-            var psi = new System.Diagnostics.ProcessStartInfo(batPath)
+            var psi = new ProcessStartInfo(batPath)
             {
                 UseShellExecute = true,
                 CreateNoWindow = true,
-                WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden
+                WindowStyle = ProcessWindowStyle.Hidden
             };
-            System.Diagnostics.Process.Start(psi);
+
+            Process.Start(psi);
+
             ExecuteShutdownSequence();
-            this.Close();
+            Close();
         }
 
         private Task RemoveStartupTaskAsync()
         {
-            return Task.Run(() => RunProcessAndWait("schtasks", $"/Delete /TN {AppName} /F"));
+            return Task.Run(() =>
+                RunProcessAndWait("schtasks", "/Delete /TN \"" + AppName + "\" /F"));
         }
 
         #endregion
