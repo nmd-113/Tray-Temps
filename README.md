@@ -52,7 +52,7 @@ The easiest way to get TrayTemps running is to download the latest release:
 4.  Run `TrayTemps.exe`.
 
 **For Autostart (Recommended):**
-Once the application is running, go to the **Settings** tab within the TrayTemps window and check the "**Autostart with Windows**" option. This will install TrayTemps to a standard program location (`C:\Program Files\TrayTemps`), set it to launch silently on logon, and create a desktop shortcut for convenience. The app will restart automatically after this process.
+Once the application is running, go to the **Settings** tab within the TrayTemps window and check the "**Autostart with Windows**" option. This will let you choose a folder where to install TrayTemps (example: if you choose "Program Files", the app will install to "Program Files\TrayTemps"), set it to launch silently on logon, and create a desktop shortcut for convenience. The app will automatically close and can be restarted from desktop after this process.
 
 ### Uninstallation
 
