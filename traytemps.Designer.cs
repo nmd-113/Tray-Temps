@@ -87,6 +87,7 @@ namespace TrayTemps
             this.Logo = new System.Windows.Forms.PictureBox();
             this.cpugpuBack = new System.Windows.Forms.PictureBox();
             this.mboramBack = new System.Windows.Forms.PictureBox();
+            this.appVersionLbl = new System.Windows.Forms.Label();
             this.contextMenuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.FontSizeTray)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.UpdateInterval)).BeginInit();
@@ -556,7 +557,7 @@ namespace TrayTemps
             this.AppTitle.ForeColor = System.Drawing.Color.White;
             this.AppTitle.Location = new System.Drawing.Point(50, 21);
             this.AppTitle.Name = "AppTitle";
-            this.AppTitle.Size = new System.Drawing.Size(150, 20);
+            this.AppTitle.Size = new System.Drawing.Size(86, 20);
             this.AppTitle.TabIndex = 33;
             this.AppTitle.Text = "TrayTemps";
             this.AppTitle.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -809,6 +810,16 @@ namespace TrayTemps
             this.mboramBack.TabIndex = 46;
             this.mboramBack.TabStop = false;
             // 
+            // appVersionLbl
+            // 
+            this.appVersionLbl.AutoSize = true;
+            this.appVersionLbl.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(80)))), ((int)(((byte)(80)))), ((int)(((byte)(80)))));
+            this.appVersionLbl.Location = new System.Drawing.Point(142, 25);
+            this.appVersionLbl.Name = "appVersionLbl";
+            this.appVersionLbl.Size = new System.Drawing.Size(0, 13);
+            this.appVersionLbl.TabIndex = 55;
+            this.appVersionLbl.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            // 
             // TrayTemps
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
@@ -817,6 +828,7 @@ namespace TrayTemps
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
             this.BackgroundImage = global::TrayTemps.Properties.Resources.border;
             this.ClientSize = new System.Drawing.Size(520, 400);
+            this.Controls.Add(this.appVersionLbl);
             this.Controls.Add(this.tempsBack);
             this.Controls.Add(this.nameamount2Lbl);
             this.Controls.Add(this.type2Lbl);
@@ -884,6 +896,7 @@ namespace TrayTemps
             ((System.ComponentModel.ISupportInitialize)(this.cpugpuBack)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.mboramBack)).EndInit();
             this.ResumeLayout(false);
+            this.PerformLayout();
 
         }
 
@@ -941,5 +954,6 @@ namespace TrayTemps
         private System.Windows.Forms.Label nameamount2Lbl;
         private System.Windows.Forms.Label type2Lbl;
         private System.Windows.Forms.PictureBox tempsBack;
+        private System.Windows.Forms.Label appVersionLbl;
     }
 }

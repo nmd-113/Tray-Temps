@@ -85,6 +85,7 @@ namespace TrayTemps
 
             SetDefaultControlValues();
             LoadSettings();
+            appVersionLbl.Text = $"v{Application.ProductVersion}";
 
             this.UpdateInterval.ValueChanged += this.UpdateInterval_ValueChanged;
             this.FontSizeTray.ValueChanged += this.FontSizeTray_ValueChanged;
