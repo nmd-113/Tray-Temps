@@ -48,10 +48,13 @@ namespace TrayTemps
         private bool _isInternalCheckChange = false;
         private bool isShutdownInitiated = false;
 
-        private Color _cpuTrayColor;
-        private Color _gpuTrayColor;
         private float _trayFontSize;
         private string _trayFontFamily;
+
+        // Cached GDI+ resources to reduce GC pressure
+        private Font _trayFont;
+        private SolidBrush _cpuBrush;
+        private SolidBrush _gpuBrush;
 
         #endregion
 
@@ -94,10 +97,7 @@ namespace TrayTemps
 
         private void ExecuteShutdownSequence()
         {
-            if (isShutdownInitiated)
-            {
-                return;
-            }
+            if (isShutdownInitiated) return;
             isShutdownInitiated = true;
 
             _tempTimer.Stop();
@@ -105,6 +105,10 @@ namespace TrayTemps
             cpuTrayIcon?.Dispose();
             gpuTrayIcon?.Dispose();
             NotifyIcon?.Dispose();
+
+            _trayFont?.Dispose();
+            _cpuBrush?.Dispose();
+            _gpuBrush?.Dispose();
 
             Task.Run(() => ServiceManager.StopServiceAsync("R0TrayTemps"));
             _computer?.Close();
@@ -118,7 +122,6 @@ namespace TrayTemps
         #endregion
 
         #region UI Event Handlers
-
 
         private void Exit_Click(object sender, EventArgs e)
         {
@@ -186,6 +189,7 @@ namespace TrayTemps
             _lastCpuTempText = null;
             TempTimer_Tick(this, EventArgs.Empty);
         }
+
         private void GpuSelector_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (GpuSelector.SelectedIndex < 0 || _gpuHardwares == null || GpuSelector.SelectedIndex >= _gpuHardwares.Count) return;
@@ -305,8 +309,8 @@ namespace TrayTemps
             if (cpuTemp.HasValue)
             {
                 float currentCpuTemp = cpuTemp.Value;
-                _cpuMinTemp = Math.Min(_cpuMinTemp, currentCpuTemp);
-                _cpuMaxTemp = Math.Max(_cpuMaxTemp, currentCpuTemp);
+                if (currentCpuTemp < _cpuMinTemp) _cpuMinTemp = currentCpuTemp;
+                if (currentCpuTemp > _cpuMaxTemp) _cpuMaxTemp = currentCpuTemp;
 
                 CpuTemp.Text = $"{currentCpuTemp:F0}°C";
                 CpuMin.Text = $"{_cpuMinTemp:F0}°C";
@@ -322,8 +326,8 @@ namespace TrayTemps
             if (gpuTemp.HasValue)
             {
                 float currentGpuTemp = gpuTemp.Value;
-                _gpuMinTemp = Math.Min(_gpuMinTemp, currentGpuTemp);
-                _gpuMaxTemp = Math.Max(_gpuMaxTemp, currentGpuTemp);
+                if (currentGpuTemp < _gpuMinTemp) _gpuMinTemp = currentGpuTemp;
+                if (currentGpuTemp > _gpuMaxTemp) _gpuMaxTemp = currentGpuTemp;
 
                 GpuTemp.Text = $"{currentGpuTemp:F0}°C";
                 GpuMin.Text = $"{_gpuMinTemp:F0}°C";
@@ -341,11 +345,11 @@ namespace TrayTemps
         {
             if (CpuTrayEnable.Checked && cpuTemp.HasValue)
             {
-                UpdateSingleTrayIcon(cpuTrayIcon, cpuTemp.Value, ref _lastCpuTempText, _cpuTrayColor);
+                UpdateSingleTrayIcon(cpuTrayIcon, cpuTemp.Value, ref _lastCpuTempText, _cpuBrush);
             }
             if (GpuTrayEnable.Checked && gpuTemp.HasValue)
             {
-                UpdateSingleTrayIcon(gpuTrayIcon, gpuTemp.Value, ref _lastGpuTempText, _gpuTrayColor);
+                UpdateSingleTrayIcon(gpuTrayIcon, gpuTemp.Value, ref _lastGpuTempText, _gpuBrush);
             }
 
             if (!CpuTrayEnable.Checked && !GpuTrayEnable.Checked)
@@ -360,19 +364,19 @@ namespace TrayTemps
             }
         }
 
-        private void UpdateSingleTrayIcon(NotifyIcon icon, float temp, ref string lastText, Color color)
+        private void UpdateSingleTrayIcon(NotifyIcon icon, float temp, ref string lastText, SolidBrush brush)
         {
             string newText = $"{temp:F0}";
             if (newText != lastText)
             {
                 Icon oldIcon = icon.Icon;
-                icon.Icon = CreateTempIcon(newText, color, _trayFontSize, _trayFontFamily);
+                icon.Icon = CreateTempIcon(newText, brush);
                 oldIcon?.Dispose();
                 lastText = newText;
             }
         }
 
-        private Icon CreateTempIcon(string text, Color color, float baseFontSize, string fontFamily)
+        private Icon CreateTempIcon(string text, SolidBrush brush)
         {
             Size iconSize = SystemInformation.SmallIconSize;
 
@@ -380,27 +384,19 @@ namespace TrayTemps
             using (var g = Graphics.FromImage(bmp))
             {
                 float dpiScale = g.DpiX / 96f;
-                float scaledFontSize = baseFontSize * dpiScale;
-
                 g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
                 g.Clear(Color.Transparent);
 
-                using (var font = new Font(fontFamily, scaledFontSize, FontStyle.Bold, GraphicsUnit.Pixel))
-                {
-                    SizeF textSize = g.MeasureString(text, font);
-                    float x = (iconSize.Width - textSize.Width) / 2;
-                    float y = (iconSize.Height - textSize.Height) / 2 + (dpiScale * 0.5f);
+                SizeF textSize = g.MeasureString(text, _trayFont);
+                float x = (iconSize.Width - textSize.Width) / 2;
+                float y = (iconSize.Height - textSize.Height) / 2 + (dpiScale * 0.5f);
 
-                    using (var brush = new SolidBrush(color))
-                    {
-                        g.DrawString(text, font, brush, new PointF(x, y));
-                    }
+                g.DrawString(text, _trayFont, brush, new PointF(x, y));
 
-                    IntPtr hIcon = bmp.GetHicon();
-                    Icon newIcon = (Icon)Icon.FromHandle(hIcon).Clone();
-                    DestroyIcon(hIcon);
-                    return newIcon;
-                }
+                IntPtr hIcon = bmp.GetHicon();
+                Icon newIcon = (Icon)Icon.FromHandle(hIcon).Clone();
+                DestroyIcon(hIcon);
+                return newIcon;
             }
         }
 
@@ -474,10 +470,22 @@ namespace TrayTemps
 
         private void CacheDisplaySettings()
         {
-            _cpuTrayColor = ColorTranslator.FromHtml(CpuTrayColor.Text);
-            _gpuTrayColor = ColorTranslator.FromHtml(GpuTrayColor.Text);
             _trayFontFamily = FontFamilyTray.Text.Trim();
             _trayFontSize = (float)this.FontSizeTray.Value;
+
+            _cpuBrush?.Dispose();
+            _cpuBrush = new SolidBrush(ColorTranslator.FromHtml(CpuTrayColor.Text));
+
+            _gpuBrush?.Dispose();
+            _gpuBrush = new SolidBrush(ColorTranslator.FromHtml(GpuTrayColor.Text));
+
+            _trayFont?.Dispose();
+            using (var g = this.CreateGraphics())
+            {
+                float dpiScale = g.DpiX / 96f;
+                float scaledFontSize = _trayFontSize * dpiScale;
+                _trayFont = new Font(_trayFontFamily, scaledFontSize, FontStyle.Bold, GraphicsUnit.Pixel);
+            }
         }
 
         private void Setting_CheckedChanged(object sender, EventArgs e)
@@ -506,8 +514,7 @@ namespace TrayTemps
 
         private void FontSizeTray_ValueChanged(object sender, EventArgs e)
         {
-            decimal fontSize = this.FontSizeTray.Value;
-            SaveSetting(nameof(FontSizeTray), fontSize.ToString());
+            SaveSetting(nameof(FontSizeTray), this.FontSizeTray.Value.ToString());
             CacheDisplaySettings();
             _lastCpuTempText = null;
             _lastGpuTempText = null;
@@ -516,15 +523,13 @@ namespace TrayTemps
 
         private void UpdateInterval_ValueChanged(object sender, EventArgs e)
         {
-            decimal interval = this.UpdateInterval.Value;
-            SaveSetting(nameof(UpdateInterval), interval.ToString("F2", System.Globalization.CultureInfo.InvariantCulture));
+            SaveSetting(nameof(UpdateInterval), this.UpdateInterval.Value.ToString("F2", System.Globalization.CultureInfo.InvariantCulture));
             UpdateTimerInterval();
         }
 
         private void UpdateTimerInterval()
         {
-            decimal intervalSeconds = this.UpdateInterval.Value;
-            _tempTimer.Interval = Math.Max(100, (int)(intervalSeconds * 1000));
+            _tempTimer.Interval = Math.Max(100, (int)(this.UpdateInterval.Value * 1000));
         }
 
         #endregion
@@ -576,7 +581,6 @@ namespace TrayTemps
 
             await InstallAndRestartAsync();
 
-            // If user canceled install (no install folder saved), revert checkbox
             string installFolder = Registry.GetValue(
                 @"HKEY_CURRENT_USER\" + RegistryPath,
                 "InstallFolder",
@@ -594,7 +598,7 @@ namespace TrayTemps
             {
                 case DialogResult.Yes:
                     SaveSetting(nameof(autostartApp), false);
-                    UninstallAndExit(); // Această metodă va închide aplicația
+                    UninstallAndExit();
                     break;
                 case DialogResult.No:
                     SaveSetting(nameof(autostartApp), false);
@@ -620,8 +624,12 @@ namespace TrayTemps
 
             using (var fbd = new FolderBrowserDialog())
             {
-                fbd.Description = "Select installation folder for TrayTemps";
+                fbd.Description = "Select installation folder for TrayTemps\n(Example: Program Files)";
                 fbd.ShowNewFolderButton = true;
+
+                string programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+                if (Directory.Exists(programFiles))
+                    fbd.SelectedPath = programFiles;
 
                 if (fbd.ShowDialog(this) != DialogResult.OK ||
                     string.IsNullOrWhiteSpace(fbd.SelectedPath))
@@ -630,6 +638,24 @@ namespace TrayTemps
                 }
 
                 destFolder = Path.Combine(fbd.SelectedPath, AppName);
+
+                try
+                {
+                    Directory.CreateDirectory(destFolder);
+                    string testFile = Path.Combine(destFolder, "test.tmp");
+                    File.WriteAllText(testFile, "test");
+                    File.Delete(testFile);
+                }
+                catch
+                {
+                    MessageBox.Show(
+                        "Cannot write to selected folder. Choose another or run as administrator.",
+                        "Access Denied",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+
+                    return Task.FromResult(0);
+                }
             }
 
             string destExe = Path.Combine(destFolder, "TrayTemps.exe");
@@ -641,10 +667,10 @@ namespace TrayTemps
                 string sourceFolder = AppDomain.CurrentDomain.BaseDirectory;
                 string[] filesToCopy =
                 {
-            "TrayTemps.exe",
-            "HidSharp.dll",
-            "LibreHardwareMonitorLib.dll"
-        };
+                    "TrayTemps.exe",
+                    "HidSharp.dll",
+                    "LibreHardwareMonitorLib.dll"
+                };
 
                 foreach (string file in filesToCopy)
                 {
@@ -768,13 +794,15 @@ if exist """ + shortcutPath + @""" del /f /q """ + shortcutPath + @"""
                 {
                     string query = "select Manufacturer, Product from Win32_BaseBoard";
                     using (var searcher = new ManagementObjectSearcher(query))
+                    using (var collection = searcher.Get())
                     {
-                        var firstObj = searcher.Get().OfType<ManagementObject>().FirstOrDefault();
+                        var firstObj = collection.OfType<ManagementObject>().FirstOrDefault();
                         if (firstObj != null)
                         {
                             string manufacturer = firstObj["Manufacturer"]?.ToString().Trim() ?? "";
                             string product = firstObj["Product"]?.ToString().Trim() ?? "";
                             string fullName = $"{manufacturer} {product}".Trim();
+                            firstObj.Dispose();
                             return string.IsNullOrEmpty(fullName) ? "Unknown Motherboard" : fullName;
                         }
                     }
@@ -792,8 +820,9 @@ if exist """ + shortcutPath + @""" del /f /q """ + shortcutPath + @"""
                 {
                     string query = "select Capacity, SMBIOSMemoryType, ConfiguredClockSpeed from Win32_PhysicalMemory";
                     using (var searcher = new ManagementObjectSearcher(query))
+                    using (var collection = searcher.Get())
                     {
-                        var sticks = searcher.Get().OfType<ManagementObject>().ToList();
+                        var sticks = collection.OfType<ManagementObject>().ToList();
                         if (sticks.Count == 0) return "Unknown RAM";
 
                         long totalCapacityBytes = sticks.Sum(mo => Convert.ToInt64(mo["Capacity"]));
@@ -801,6 +830,11 @@ if exist """ + shortcutPath + @""" del /f /q """ + shortcutPath + @"""
 
                         uint memoryType = Convert.ToUInt32(sticks[0]["SMBIOSMemoryType"]);
                         uint speed = Convert.ToUInt32(sticks[0]["ConfiguredClockSpeed"]);
+
+                        foreach (var stick in sticks)
+                        {
+                            stick.Dispose();
+                        }
 
                         long totalCapacityGB = totalCapacityBytes / (1024 * 1024 * 1024);
                         string configString = FormatRamConfiguration(individualCapacities);
@@ -836,22 +870,6 @@ if exist """ + shortcutPath + @""" del /f /q """ + shortcutPath + @"""
                 case 34: return "DDR5";
                 default: return "RAM";
             }
-        }
-
-        private Task<string> GetHardwareNameAsync(string wmiClass, string defaultName)
-        {
-            return Task.Run(() =>
-            {
-                try
-                {
-                    using (var searcher = new ManagementObjectSearcher($"select Name from {wmiClass}"))
-                    {
-                        var firstObj = searcher.Get().OfType<ManagementObject>().FirstOrDefault();
-                        return firstObj?["Name"]?.ToString()?.Trim() ?? defaultName;
-                    }
-                }
-                catch { return defaultName; }
-            });
         }
 
         private void CreateShortcutOnDesktop(string targetPath)

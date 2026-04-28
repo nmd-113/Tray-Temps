@@ -185,6 +185,7 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <None Include="border.png" />
     <Content Include="FodyWeavers.xml" />
     <Content Include="TrayTemps.ico" />
   </ItemGroup>
