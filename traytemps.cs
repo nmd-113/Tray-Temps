@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Text;
 using System.IO;
 using System.Linq;
 using System.Management;
@@ -235,7 +237,7 @@ namespace TrayTemps
         private void SetDefaultControlValues()
         {
             UpdateInterval.Value = 0.50M;
-            FontSizeTray.Value = 12M;
+            FontSizeTray.Value = 75;
             CpuTrayColor.SelectedIndex = 0;
             GpuTrayColor.SelectedIndex = 4;
             FontFamilyTray.SelectedIndex = 0;
@@ -391,21 +393,42 @@ namespace TrayTemps
         private Icon CreateTempIcon(string text, SolidBrush brush)
         {
             int size = Math.Max(IconSize, (int)(IconSize * _dpiScale));
+            float maxAllowedSize = size;
 
             using (var bmp = new Bitmap(size, size))
             using (var g = Graphics.FromImage(bmp))
             {
                 g.Clear(Color.Transparent);
-                g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
-                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
-                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.TextRenderingHint = TextRenderingHint.AntiAlias;
 
-                SizeF textSize = g.MeasureString(text, _trayFont);
-                float x = (size - textSize.Width) / 2f;
-                float y = (size - textSize.Height) / 2f;
+                using (var path = new GraphicsPath())
+                {
+                    path.AddString(
+                        text,
+                        _trayFont.FontFamily,
+                        (int)_trayFont.Style,
+                        g.DpiY * _trayFont.SizeInPoints / 72,
+                        new Point(0, 0),
+                        StringFormat.GenericTypographic);
 
-                g.DrawString(text, _trayFont, brush, new PointF(x, y));
+                    RectangleF bounds = path.GetBounds();
+
+                    float scale = 1.0f;
+                    if (bounds.Width > maxAllowedSize || bounds.Height > maxAllowedSize)
+                    {
+                        scale = Math.Min(maxAllowedSize / bounds.Width, maxAllowedSize / bounds.Height);
+                    }
+
+                    float x = (size / 2f) - (bounds.Width * scale / 2f) - (bounds.X * scale);
+                    float y = (size / 2f) - (bounds.Height * scale / 2f) - (bounds.Y * scale);
+
+                    // 3. Apply transformations
+                    g.TranslateTransform(x, y);
+                    g.ScaleTransform(scale, scale);
+
+                    g.FillPath(brush, path);
+                }
 
                 IntPtr hIcon = bmp.GetHicon();
                 Icon icon = (Icon)Icon.FromHandle(hIcon).Clone();
@@ -437,9 +460,12 @@ namespace TrayTemps
                     GpuTrayColor.SelectedItem = GetValue(nameof(GpuTrayColor), GpuTrayColor.Text);
                     FontFamilyTray.SelectedItem = GetValue(nameof(FontFamilyTray), FontFamilyTray.Text);
 
-                    if (decimal.TryParse(GetValue(nameof(FontSizeTray), "12").ToString(), out decimal fontSizeValue))
-                        if (fontSizeValue >= FontSizeTray.Minimum && fontSizeValue <= FontSizeTray.Maximum)
-                            FontSizeTray.Value = fontSizeValue;
+                    if (decimal.TryParse(GetValue(nameof(FontSizeTray), "75").ToString(), out decimal fontSizeValue))
+                    {
+                        if (fontSizeValue < FontSizeTray.Minimum) fontSizeValue = FontSizeTray.Minimum;
+                        if (fontSizeValue > FontSizeTray.Maximum) fontSizeValue = FontSizeTray.Maximum;
+                        FontSizeTray.Value = fontSizeValue;
+                    }
 
                     if (decimal.TryParse(GetValue(nameof(UpdateInterval), "0.50").ToString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal intervalValue))
                         if (intervalValue >= UpdateInterval.Minimum && intervalValue <= UpdateInterval.Maximum)
@@ -482,10 +508,14 @@ namespace TrayTemps
         private void CacheDisplaySettings()
         {
             _trayFontFamily = FontFamilyTray.Text.Trim();
-            _trayFontSize = (float)FontSizeTray.Value;
+
+            int iconPixelSize = Math.Max(IconSize, (int)(IconSize * _dpiScale));
+
+            float percentage = (float)FontSizeTray.Value / 100f;
+            float calculatedFontSize = iconPixelSize * percentage;
 
             _trayFont?.Dispose();
-            _trayFont = new Font(_trayFontFamily, _trayFontSize, FontStyle.Bold, GraphicsUnit.Pixel);
+            _trayFont = new Font(_trayFontFamily, calculatedFontSize, FontStyle.Bold, GraphicsUnit.Pixel);
 
             _cpuBrush?.Dispose();
             _cpuBrush = new SolidBrush(ColorTranslator.FromHtml(CpuTrayColor.Text));

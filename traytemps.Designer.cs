@@ -417,6 +417,7 @@ namespace TrayTemps
             // 
             // contextMenuStrip1
             // 
+            this.contextMenuStrip1.ImageScalingSize = new System.Drawing.Size(32, 32);
             this.contextMenuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.ShowForm,
             this.ExitForm});
@@ -449,14 +450,14 @@ namespace TrayTemps
             this.FontSizeTray.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.FontSizeTray.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.FontSizeTray.ForeColor = System.Drawing.Color.White;
-            this.FontSizeTray.Location = new System.Drawing.Point(295, 359);
-            this.FontSizeTray.Maximum = new decimal(new int[] {
-            20,
+            this.FontSizeTray.Increment = new decimal(new int[] {
+            5,
             0,
             0,
             0});
+            this.FontSizeTray.Location = new System.Drawing.Point(305, 359);
             this.FontSizeTray.Minimum = new decimal(new int[] {
-            5,
+            30,
             0,
             0,
             0});
@@ -464,7 +465,7 @@ namespace TrayTemps
             this.FontSizeTray.Size = new System.Drawing.Size(50, 25);
             this.FontSizeTray.TabIndex = 25;
             this.FontSizeTray.Value = new decimal(new int[] {
-            12,
+            75,
             0,
             0,
             0});
@@ -477,9 +478,9 @@ namespace TrayTemps
             this.fontStyleLbl.ForeColor = System.Drawing.Color.White;
             this.fontStyleLbl.Location = new System.Drawing.Point(230, 334);
             this.fontStyleLbl.Name = "fontStyleLbl";
-            this.fontStyleLbl.Size = new System.Drawing.Size(65, 18);
+            this.fontStyleLbl.Size = new System.Drawing.Size(74, 18);
             this.fontStyleLbl.TabIndex = 26;
-            this.fontStyleLbl.Text = "Font Style:";
+            this.fontStyleLbl.Text = "Font Family:";
             this.fontStyleLbl.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // UpdateInterval
@@ -520,9 +521,9 @@ namespace TrayTemps
             this.frequencyLbl.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.frequencyLbl.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.frequencyLbl.ForeColor = System.Drawing.Color.White;
-            this.frequencyLbl.Location = new System.Drawing.Point(359, 362);
+            this.frequencyLbl.Location = new System.Drawing.Point(361, 362);
             this.frequencyLbl.Name = "frequencyLbl";
-            this.frequencyLbl.Size = new System.Drawing.Size(90, 18);
+            this.frequencyLbl.Size = new System.Drawing.Size(93, 18);
             this.frequencyLbl.TabIndex = 30;
             this.frequencyLbl.Text = "Update Interval:";
             this.frequencyLbl.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -623,10 +624,10 @@ namespace TrayTemps
             "Times New Roman",
             "Georgia",
             "Sitka Text"});
-            this.FontFamilyTray.Location = new System.Drawing.Point(295, 333);
+            this.FontFamilyTray.Location = new System.Drawing.Point(305, 333);
             this.FontFamilyTray.MaxDropDownItems = 10;
             this.FontFamilyTray.Name = "FontFamilyTray";
-            this.FontFamilyTray.Size = new System.Drawing.Size(210, 21);
+            this.FontFamilyTray.Size = new System.Drawing.Size(200, 21);
             this.FontFamilyTray.TabIndex = 36;
             this.FontFamilyTray.SelectedIndexChanged += new System.EventHandler(this.FontFamilyTray_SelectedIndexChanged);
             // 
@@ -637,9 +638,9 @@ namespace TrayTemps
             this.fontSizeLbl.ForeColor = System.Drawing.Color.White;
             this.fontSizeLbl.Location = new System.Drawing.Point(230, 362);
             this.fontSizeLbl.Name = "fontSizeLbl";
-            this.fontSizeLbl.Size = new System.Drawing.Size(65, 18);
+            this.fontSizeLbl.Size = new System.Drawing.Size(74, 18);
             this.fontSizeLbl.TabIndex = 37;
-            this.fontSizeLbl.Text = "Font Size:";
+            this.fontSizeLbl.Text = "Icon Size (%):";
             this.fontSizeLbl.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // MboName
@@ -854,6 +855,7 @@ namespace TrayTemps
             this.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
             this.BackgroundImage = global::TrayTemps.Properties.Resources.border;
+            this.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
             this.ClientSize = new System.Drawing.Size(520, 400);
             this.Controls.Add(this.appVersionLbl);
             this.Controls.Add(this.tempsBack);
