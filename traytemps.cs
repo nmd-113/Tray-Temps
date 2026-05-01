@@ -218,8 +218,10 @@ namespace TrayTemps
             _selectedGpuHardware = _gpuHardwares[GpuSelector.SelectedIndex];
             GpuName.Text = _selectedGpuHardware.Name;
 
-            _gpuTempSensor = _selectedGpuHardware.Sensors.FirstOrDefault(s => s.SensorType == SensorType.Temperature && s.Name.Contains("Core"))
-                             ?? _selectedGpuHardware.Sensors.FirstOrDefault(s => s.SensorType == SensorType.Temperature);
+            _gpuTempSensor = _selectedGpuHardware.Sensors
+                .Where(s => s.SensorType == SensorType.Temperature)
+                .FirstOrDefault(s => s.Name.Contains("Core") || s.Name.Contains("Package") || s.Name.Equals("GPU", StringComparison.OrdinalIgnoreCase))
+                ?? _selectedGpuHardware.Sensors.FirstOrDefault(s => s.SensorType == SensorType.Temperature);
 
             _selectedGpuIdentifier = _selectedGpuHardware.Identifier.ToString();
             SaveSetting("SelectedGpuIdentifier", _selectedGpuIdentifier);
