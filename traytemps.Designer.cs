@@ -17,11 +17,13 @@ namespace TrayTemps
         {
             if (disposing)
             {
+                _tempTimer?.Stop();
+
                 components?.Dispose();
 
-                cpuTrayIcon?.Dispose();
-                gpuTrayIcon?.Dispose();
-                NotifyIcon?.Dispose();
+                if (cpuTrayIcon != null) { cpuTrayIcon.Icon?.Dispose(); cpuTrayIcon.Dispose(); }
+                if (gpuTrayIcon != null) { gpuTrayIcon.Icon?.Dispose(); gpuTrayIcon.Dispose(); }
+                if (NotifyIcon != null) { NotifyIcon.Icon?.Dispose(); NotifyIcon.Dispose(); }
 
                 _trayFont?.Dispose();
                 _cpuBrush?.Dispose();
@@ -30,7 +32,6 @@ namespace TrayTemps
                 _tempTimer?.Dispose();
                 _computer?.Close();
             }
-
             base.Dispose(disposing);
         }
 
