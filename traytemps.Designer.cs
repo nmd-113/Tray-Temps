@@ -658,9 +658,9 @@ namespace TrayTemps
             this.MboName.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.MboName.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.MboName.ForeColor = System.Drawing.Color.White;
-            this.MboName.Location = new System.Drawing.Point(125, 231);
+            this.MboName.Location = new System.Drawing.Point(75, 231);
             this.MboName.Name = "MboName";
-            this.MboName.Size = new System.Drawing.Size(350, 18);
+            this.MboName.Size = new System.Drawing.Size(419, 18);
             this.MboName.TabIndex = 39;
             this.MboName.Text = "N/A";
             this.MboName.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -682,9 +682,9 @@ namespace TrayTemps
             this.RamAmount.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.RamAmount.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.RamAmount.ForeColor = System.Drawing.Color.White;
-            this.RamAmount.Location = new System.Drawing.Point(125, 254);
+            this.RamAmount.Location = new System.Drawing.Point(75, 254);
             this.RamAmount.Name = "RamAmount";
-            this.RamAmount.Size = new System.Drawing.Size(350, 18);
+            this.RamAmount.Size = new System.Drawing.Size(419, 18);
             this.RamAmount.TabIndex = 41;
             this.RamAmount.Text = "N/A";
             this.RamAmount.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -783,7 +783,7 @@ namespace TrayTemps
             this.nameamount2Lbl.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.nameamount2Lbl.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.nameamount2Lbl.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(180)))), ((int)(((byte)(180)))), ((int)(((byte)(180)))));
-            this.nameamount2Lbl.Location = new System.Drawing.Point(125, 209);
+            this.nameamount2Lbl.Location = new System.Drawing.Point(75, 209);
             this.nameamount2Lbl.Name = "nameamount2Lbl";
             this.nameamount2Lbl.Size = new System.Drawing.Size(100, 15);
             this.nameamount2Lbl.TabIndex = 53;
