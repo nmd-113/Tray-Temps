@@ -108,11 +108,10 @@ namespace TrayTemps
             _isShutdownInitiated = true;
 
             _tempTimer.Stop();
-            _tempTimer.Dispose();
 
-            cpuTrayIcon?.Dispose();
-            gpuTrayIcon?.Dispose();
-            NotifyIcon?.Dispose();
+            if (cpuTrayIcon != null) { cpuTrayIcon.Icon?.Dispose(); cpuTrayIcon.Dispose(); }
+            if (gpuTrayIcon != null) { gpuTrayIcon.Icon?.Dispose(); gpuTrayIcon.Dispose(); }
+            if (NotifyIcon != null) { NotifyIcon.Icon?.Dispose(); NotifyIcon.Dispose(); }
 
             _trayFont?.Dispose();
             _cpuBrush?.Dispose();
@@ -120,6 +119,7 @@ namespace TrayTemps
 
             Task.Run(() => ServiceManager.StopServiceAsync("R0TrayTemps"));
             _computer?.Close();
+            _tempTimer.Dispose();
         }
 
         private void TrayTemps_FormClosing(object sender, FormClosingEventArgs e)
@@ -385,8 +385,14 @@ namespace TrayTemps
             if (newText != lastText)
             {
                 Icon oldIcon = icon.Icon;
+
                 icon.Icon = CreateTempIcon(newText, brush);
-                oldIcon?.Dispose();
+
+                if (oldIcon != null)
+                {
+                    oldIcon.Dispose();
+                }
+
                 lastText = newText;
             }
         }
@@ -424,7 +430,6 @@ namespace TrayTemps
                     float x = (size / 2f) - (bounds.Width * scale / 2f) - (bounds.X * scale);
                     float y = (size / 2f) - (bounds.Height * scale / 2f) - (bounds.Y * scale);
 
-                    // 3. Apply transformations
                     g.TranslateTransform(x, y);
                     g.ScaleTransform(scale, scale);
 
@@ -434,7 +439,6 @@ namespace TrayTemps
                 IntPtr hIcon = bmp.GetHicon();
                 Icon icon = (Icon)Icon.FromHandle(hIcon).Clone();
                 DestroyIcon(hIcon);
-
                 return icon;
             }
         }
