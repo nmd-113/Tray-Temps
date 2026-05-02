@@ -49,7 +49,6 @@ namespace TrayTemps
         private bool _isInternalCheckChange = false;
         private bool _isShutdownInitiated = false;
 
-        private float _trayFontSize;
         private string _trayFontFamily;
         private float _dpiScale = 1f;
 
@@ -702,6 +701,20 @@ namespace TrayTemps
 
                 string arguments = $"/Create /F /RL HIGHEST /SC ONLOGON /TN \"{AppName}\" /TR \"\\\"{destExe}\\\" -silent\"";
                 RunProcessAndWait("schtasks", arguments);
+
+                System.Threading.Thread.Sleep(500);
+
+                string arguments2 = $"-NoProfile -ExecutionPolicy Bypass -Command \"Set-ScheduledTask -TaskName '{AppName}' -Settings (New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries)\"";
+
+                try
+                {
+                    RunProcessAndWait("powershell", arguments2);
+                }
+                catch
+                {
+                    //
+                }
+
                 CreateShortcutOnDesktop(destExe);
 
                 Invoke(new Action(() =>

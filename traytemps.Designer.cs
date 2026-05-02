@@ -18,9 +18,19 @@ namespace TrayTemps
             if (disposing)
             {
                 components?.Dispose();
+
                 cpuTrayIcon?.Dispose();
                 gpuTrayIcon?.Dispose();
+                NotifyIcon?.Dispose();
+
+                _trayFont?.Dispose();
+                _cpuBrush?.Dispose();
+                _gpuBrush?.Dispose();
+
+                _tempTimer?.Dispose();
+                _computer?.Close();
             }
+
             base.Dispose(disposing);
         }
 
@@ -104,7 +114,7 @@ namespace TrayTemps
             this.maxLbl.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.maxLbl.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.maxLbl.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(180)))), ((int)(((byte)(180)))), ((int)(((byte)(180)))));
-            this.maxLbl.Location = new System.Drawing.Point(460, 98);
+            this.maxLbl.Location = new System.Drawing.Point(459, 98);
             this.maxLbl.Name = "maxLbl";
             this.maxLbl.Size = new System.Drawing.Size(35, 15);
             this.maxLbl.TabIndex = 1;
@@ -116,7 +126,7 @@ namespace TrayTemps
             this.currentLbl.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.currentLbl.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.currentLbl.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(180)))), ((int)(((byte)(180)))), ((int)(((byte)(180)))));
-            this.currentLbl.Location = new System.Drawing.Point(360, 98);
+            this.currentLbl.Location = new System.Drawing.Point(380, 98);
             this.currentLbl.Name = "currentLbl";
             this.currentLbl.Size = new System.Drawing.Size(40, 15);
             this.currentLbl.TabIndex = 2;
@@ -152,7 +162,7 @@ namespace TrayTemps
             this.CpuTemp.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.CpuTemp.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.CpuTemp.ForeColor = System.Drawing.Color.White;
-            this.CpuTemp.Location = new System.Drawing.Point(360, 128);
+            this.CpuTemp.Location = new System.Drawing.Point(380, 128);
             this.CpuTemp.Name = "CpuTemp";
             this.CpuTemp.Size = new System.Drawing.Size(40, 18);
             this.CpuTemp.TabIndex = 6;
@@ -164,7 +174,7 @@ namespace TrayTemps
             this.CpuMax.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.CpuMax.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.CpuMax.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(100)))), ((int)(((byte)(100)))));
-            this.CpuMax.Location = new System.Drawing.Point(460, 128);
+            this.CpuMax.Location = new System.Drawing.Point(459, 128);
             this.CpuMax.Name = "CpuMax";
             this.CpuMax.Size = new System.Drawing.Size(35, 18);
             this.CpuMax.TabIndex = 5;
@@ -190,7 +200,7 @@ namespace TrayTemps
             this.CpuName.ForeColor = System.Drawing.Color.White;
             this.CpuName.Location = new System.Drawing.Point(125, 128);
             this.CpuName.Name = "CpuName";
-            this.CpuName.Size = new System.Drawing.Size(210, 18);
+            this.CpuName.Size = new System.Drawing.Size(227, 18);
             this.CpuName.TabIndex = 9;
             this.CpuName.Text = "N/A";
             this.CpuName.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -202,7 +212,7 @@ namespace TrayTemps
             this.GpuName.ForeColor = System.Drawing.Color.White;
             this.GpuName.Location = new System.Drawing.Point(125, 156);
             this.GpuName.Name = "GpuName";
-            this.GpuName.Size = new System.Drawing.Size(210, 18);
+            this.GpuName.Size = new System.Drawing.Size(227, 18);
             this.GpuName.TabIndex = 13;
             this.GpuName.Text = "N/A";
             this.GpuName.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -224,7 +234,7 @@ namespace TrayTemps
             this.GpuTemp.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.GpuTemp.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.GpuTemp.ForeColor = System.Drawing.Color.White;
-            this.GpuTemp.Location = new System.Drawing.Point(360, 156);
+            this.GpuTemp.Location = new System.Drawing.Point(380, 156);
             this.GpuTemp.Name = "GpuTemp";
             this.GpuTemp.Size = new System.Drawing.Size(40, 18);
             this.GpuTemp.TabIndex = 11;
@@ -236,7 +246,7 @@ namespace TrayTemps
             this.GpuMax.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.GpuMax.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.GpuMax.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(100)))), ((int)(((byte)(100)))));
-            this.GpuMax.Location = new System.Drawing.Point(460, 156);
+            this.GpuMax.Location = new System.Drawing.Point(459, 156);
             this.GpuMax.Name = "GpuMax";
             this.GpuMax.Size = new System.Drawing.Size(35, 18);
             this.GpuMax.TabIndex = 10;
@@ -276,7 +286,7 @@ namespace TrayTemps
             this.traysettingsLbl.Name = "traysettingsLbl";
             this.traysettingsLbl.Size = new System.Drawing.Size(200, 20);
             this.traysettingsLbl.TabIndex = 16;
-            this.traysettingsLbl.Text = "TRAY SETTINGS";
+            this.traysettingsLbl.Text = "TRAY ICONS SETTINGS";
             this.traysettingsLbl.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // CpuTrayEnable
@@ -286,9 +296,9 @@ namespace TrayTemps
             this.CpuTrayEnable.ForeColor = System.Drawing.Color.White;
             this.CpuTrayEnable.Location = new System.Drawing.Point(15, 336);
             this.CpuTrayEnable.Name = "CpuTrayEnable";
-            this.CpuTrayEnable.Size = new System.Drawing.Size(50, 18);
+            this.CpuTrayEnable.Size = new System.Drawing.Size(73, 18);
             this.CpuTrayEnable.TabIndex = 17;
-            this.CpuTrayEnable.Text = "CPU";
+            this.CpuTrayEnable.Text = "CPU Tray";
             this.CpuTrayEnable.UseVisualStyleBackColor = false;
             this.CpuTrayEnable.CheckedChanged += new System.EventHandler(this.CpuTrayEnable_CheckedChanged);
             // 
@@ -325,7 +335,7 @@ namespace TrayTemps
             "Violet",
             "Plum",
             "Orchid"});
-            this.CpuTrayColor.Location = new System.Drawing.Point(115, 333);
+            this.CpuTrayColor.Location = new System.Drawing.Point(141, 333);
             this.CpuTrayColor.MaxDropDownItems = 10;
             this.CpuTrayColor.Name = "CpuTrayColor";
             this.CpuTrayColor.Size = new System.Drawing.Size(100, 21);
@@ -337,7 +347,7 @@ namespace TrayTemps
             this.cpucolorLbl.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.cpucolorLbl.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.cpucolorLbl.ForeColor = System.Drawing.Color.White;
-            this.cpucolorLbl.Location = new System.Drawing.Point(75, 334);
+            this.cpucolorLbl.Location = new System.Drawing.Point(99, 334);
             this.cpucolorLbl.Name = "cpucolorLbl";
             this.cpucolorLbl.Size = new System.Drawing.Size(40, 18);
             this.cpucolorLbl.TabIndex = 19;
@@ -349,7 +359,7 @@ namespace TrayTemps
             this.gpucolorLbl.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.gpucolorLbl.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.gpucolorLbl.ForeColor = System.Drawing.Color.White;
-            this.gpucolorLbl.Location = new System.Drawing.Point(75, 362);
+            this.gpucolorLbl.Location = new System.Drawing.Point(99, 362);
             this.gpucolorLbl.Name = "gpucolorLbl";
             this.gpucolorLbl.Size = new System.Drawing.Size(40, 18);
             this.gpucolorLbl.TabIndex = 24;
@@ -389,7 +399,7 @@ namespace TrayTemps
             "Violet",
             "Plum",
             "Orchid"});
-            this.GpuTrayColor.Location = new System.Drawing.Point(115, 361);
+            this.GpuTrayColor.Location = new System.Drawing.Point(141, 361);
             this.GpuTrayColor.MaxDropDownItems = 10;
             this.GpuTrayColor.Name = "GpuTrayColor";
             this.GpuTrayColor.Size = new System.Drawing.Size(100, 21);
@@ -403,9 +413,9 @@ namespace TrayTemps
             this.GpuTrayEnable.ForeColor = System.Drawing.Color.White;
             this.GpuTrayEnable.Location = new System.Drawing.Point(15, 364);
             this.GpuTrayEnable.Name = "GpuTrayEnable";
-            this.GpuTrayEnable.Size = new System.Drawing.Size(50, 18);
+            this.GpuTrayEnable.Size = new System.Drawing.Size(73, 18);
             this.GpuTrayEnable.TabIndex = 22;
-            this.GpuTrayEnable.Text = "GPU";
+            this.GpuTrayEnable.Text = "GPU Tray";
             this.GpuTrayEnable.UseVisualStyleBackColor = false;
             this.GpuTrayEnable.CheckedChanged += new System.EventHandler(this.GpuTrayEnable_CheckedChanged);
             // 
@@ -455,7 +465,7 @@ namespace TrayTemps
             0,
             0,
             0});
-            this.FontSizeTray.Location = new System.Drawing.Point(305, 359);
+            this.FontSizeTray.Location = new System.Drawing.Point(331, 359);
             this.FontSizeTray.Minimum = new decimal(new int[] {
             30,
             0,
@@ -476,7 +486,7 @@ namespace TrayTemps
             this.fontStyleLbl.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.fontStyleLbl.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.fontStyleLbl.ForeColor = System.Drawing.Color.White;
-            this.fontStyleLbl.Location = new System.Drawing.Point(230, 334);
+            this.fontStyleLbl.Location = new System.Drawing.Point(255, 334);
             this.fontStyleLbl.Name = "fontStyleLbl";
             this.fontStyleLbl.Size = new System.Drawing.Size(74, 18);
             this.fontStyleLbl.TabIndex = 26;
@@ -521,11 +531,11 @@ namespace TrayTemps
             this.frequencyLbl.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.frequencyLbl.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.frequencyLbl.ForeColor = System.Drawing.Color.White;
-            this.frequencyLbl.Location = new System.Drawing.Point(361, 362);
+            this.frequencyLbl.Location = new System.Drawing.Point(390, 362);
             this.frequencyLbl.Name = "frequencyLbl";
-            this.frequencyLbl.Size = new System.Drawing.Size(93, 18);
+            this.frequencyLbl.Size = new System.Drawing.Size(63, 18);
             this.frequencyLbl.TabIndex = 30;
-            this.frequencyLbl.Text = "Update Interval:";
+            this.frequencyLbl.Text = "Update (s):";
             this.frequencyLbl.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // exitBtn
@@ -624,10 +634,10 @@ namespace TrayTemps
             "Times New Roman",
             "Georgia",
             "Sitka Text"});
-            this.FontFamilyTray.Location = new System.Drawing.Point(305, 333);
+            this.FontFamilyTray.Location = new System.Drawing.Point(331, 333);
             this.FontFamilyTray.MaxDropDownItems = 10;
             this.FontFamilyTray.Name = "FontFamilyTray";
-            this.FontFamilyTray.Size = new System.Drawing.Size(200, 21);
+            this.FontFamilyTray.Size = new System.Drawing.Size(174, 21);
             this.FontFamilyTray.TabIndex = 36;
             this.FontFamilyTray.SelectedIndexChanged += new System.EventHandler(this.FontFamilyTray_SelectedIndexChanged);
             // 
@@ -636,7 +646,7 @@ namespace TrayTemps
             this.fontSizeLbl.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.fontSizeLbl.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.fontSizeLbl.ForeColor = System.Drawing.Color.White;
-            this.fontSizeLbl.Location = new System.Drawing.Point(230, 362);
+            this.fontSizeLbl.Location = new System.Drawing.Point(255, 362);
             this.fontSizeLbl.Name = "fontSizeLbl";
             this.fontSizeLbl.Size = new System.Drawing.Size(74, 18);
             this.fontSizeLbl.TabIndex = 37;
@@ -696,7 +706,7 @@ namespace TrayTemps
             this.GpuMin.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.GpuMin.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.GpuMin.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(100)))), ((int)(((byte)(200)))), ((int)(((byte)(255)))));
-            this.GpuMin.Location = new System.Drawing.Point(410, 156);
+            this.GpuMin.Location = new System.Drawing.Point(422, 156);
             this.GpuMin.Name = "GpuMin";
             this.GpuMin.Size = new System.Drawing.Size(35, 18);
             this.GpuMin.TabIndex = 44;
@@ -708,7 +718,7 @@ namespace TrayTemps
             this.CpuMin.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.CpuMin.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.CpuMin.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(100)))), ((int)(((byte)(200)))), ((int)(((byte)(255)))));
-            this.CpuMin.Location = new System.Drawing.Point(410, 128);
+            this.CpuMin.Location = new System.Drawing.Point(422, 128);
             this.CpuMin.Name = "CpuMin";
             this.CpuMin.Size = new System.Drawing.Size(35, 18);
             this.CpuMin.TabIndex = 43;
@@ -720,7 +730,7 @@ namespace TrayTemps
             this.minLbl.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.minLbl.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.minLbl.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(180)))), ((int)(((byte)(180)))), ((int)(((byte)(180)))));
-            this.minLbl.Location = new System.Drawing.Point(410, 98);
+            this.minLbl.Location = new System.Drawing.Point(422, 98);
             this.minLbl.Name = "minLbl";
             this.minLbl.Size = new System.Drawing.Size(35, 15);
             this.minLbl.TabIndex = 42;
@@ -795,7 +805,7 @@ namespace TrayTemps
             // tempsBack
             // 
             this.tempsBack.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(60)))), ((int)(((byte)(60)))), ((int)(((byte)(60)))));
-            this.tempsBack.Location = new System.Drawing.Point(340, 101);
+            this.tempsBack.Location = new System.Drawing.Point(368, 101);
             this.tempsBack.Name = "tempsBack";
             this.tempsBack.Size = new System.Drawing.Size(1, 75);
             this.tempsBack.TabIndex = 54;
