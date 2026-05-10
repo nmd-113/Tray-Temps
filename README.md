@@ -45,9 +45,8 @@ A lightweight and customizable Windows utility that displays your **CPU and GPU 
 ### Installation
 
 1.  Go to the [Releases page](https://github.com/nmd-113/Tray-Temps/releases).
-2.  Download the `TrayTemps.zip` file from the latest release.
-3.  Extract the contents to a folder of your choice.
-4.  Run `TrayTemps.exe`.
+2.  Download the `TrayTemps.exe` file from the latest release.
+3.  Run `TrayTemps.exe`.
 
 **For Autostart:**
 Enable "**Autostart with Windows**" in the Settings tab. This creates a scheduled task for silent startup and an optional desktop shortcut.
