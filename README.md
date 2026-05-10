@@ -13,15 +13,16 @@ A lightweight and customizable Windows utility that displays your **CPU and GPU 
 
 * **Real-time Temperature Monitoring:** Accurate readings for CPU and GPU powered by [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor).
 * **Dynamic Temperature Coloring:** Automatically change icon colors based on temperature thresholds (Normal, Warm, and Critical).
-* **High-Quality Icon Rendering:** Uses Anti-Aliasing and specialized font rendering (Consolas) for maximum legibility in the system tray.
+* **Combined Tray Mode:** Display both CPU and GPU temperatures in a single, space-saving tray icon optimized with the `Consolas` font for perfect alignment.
+* **High-Quality Icon Rendering:** Uses Anti-Aliasing and high-quality rendering modes to ensure numbers are crisp and readable.
 * **Fully Customizable Visuals:**
-    * Support for custom ARGB colors via a standard color picker.
-    * Adjustable temperature thresholds for color transitions.
-    * Options for separate or combined tray icons.
+    * **Static Mode:** Choose any custom ARGB color for each sensor.
+    * **Dynamic Mode:** Configure specific temperature ranges and colors for color-coded alerts.
+    * **Font Control:** Support for any system font in standard mode.
 * **Configurable Update Interval:** Set how frequently the temperatures refresh.
-* **Minimalist Design:** Low resource usage and a clean UI that stays out of your way.
-* **Optional Autostart & Silent Mode:** Seamlessly integrate TrayTemps into your Windows startup.
-* **Persistent Settings:** Your preferences, colors, and thresholds are saved and loaded automatically.
+* **High-DPI Support:** Properly scales icons for 1080p, 1440p, and 4K displays.
+* **Minimalist Design:** Low resource usage (<30MB RAM) and a clean UI.
+* **Optional Autostart:** Integrated Windows Task Scheduler setup for silent launch on startup.
 
 ---
 
@@ -49,7 +50,7 @@ A lightweight and customizable Windows utility that displays your **CPU and GPU 
 3.  Run `TrayTemps.exe`.
 
 **For Autostart:**
-Enable "**Autostart with Windows**" in the Settings tab. This creates a scheduled task for silent startup and an optional desktop shortcut.
+Enable "**Autostart with Windows**" in the Settings tab. This creates a scheduled task for silent startup (bypassing UAC prompts) and an optional desktop shortcut.
 
 ---
 
@@ -58,9 +59,9 @@ Enable "**Autostart with Windows**" in the Settings tab. This creates a schedule
 Once launched, TrayTemps resides in your system tray. 
 
 ### Customizing Colors
-You can now choose between two coloring modes:
-1. **Static Mode:** Click the color box next to CPU/GPU settings to choose a fixed color.
-2. **Dynamic Mode:** Enable "Temperature-Based Coloring" to allow icons to transition between three colors (Normal, Warm, Critical) based on the temperature ranges you define in the configuration menu.
+* **Individual Icons:** In standard mode, click the color boxes to open a full ARGB color dialog.
+* **Dynamic Mode:** Check the "Temperature-Based Coloring" box to enable automatic color transitions based on your custom thresholds.
+* **Combined Mode:** Enable the combined icon to view both temperatures in one icon slot. This mode uses a fixed `Consolas` layout for better legibility.
 
 ### Controls
 * **Double-click** any TrayTemps icon to open the main dashboard.
