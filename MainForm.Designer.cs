@@ -102,23 +102,24 @@
             this.generalSettingsLabel = new System.Windows.Forms.TableLayoutPanel();
             this.autostartInstall = new System.Windows.Forms.CheckBox();
             this.tempsFahrenheit = new System.Windows.Forms.CheckBox();
-            this.singleIconTray = new System.Windows.Forms.CheckBox();
             this.refreshPanel = new System.Windows.Forms.TableLayoutPanel();
             this.refreshLabel = new System.Windows.Forms.Label();
             this.refreshValue = new System.Windows.Forms.NumericUpDown();
             this.traySettingsLabel = new System.Windows.Forms.Label();
             this.traySettingsPanel = new System.Windows.Forms.TableLayoutPanel();
-            this.enableCpuTray = new System.Windows.Forms.CheckBox();
-            this.enableGpuTray = new System.Windows.Forms.CheckBox();
+            this.colortempsPanel = new System.Windows.Forms.TableLayoutPanel();
+            this.colortempsEnable = new System.Windows.Forms.CheckBox();
+            this.colortempsConfig = new System.Windows.Forms.Button();
             this.fontFamilyPanel = new System.Windows.Forms.TableLayoutPanel();
             this.fontFamilyLabel = new System.Windows.Forms.Label();
             this.fontFamilyValue = new System.Windows.Forms.ComboBox();
+            this.singleIconTray = new System.Windows.Forms.CheckBox();
+            this.enableCpuTray = new System.Windows.Forms.CheckBox();
+            this.enableGpuTray = new System.Windows.Forms.CheckBox();
             this.cpuColorPanel = new System.Windows.Forms.TableLayoutPanel();
             this.cpuColorLabel = new System.Windows.Forms.Label();
-            this.cpuColorValue = new System.Windows.Forms.ComboBox();
             this.gpuColorPanel = new System.Windows.Forms.TableLayoutPanel();
             this.gpuColorLabel = new System.Windows.Forms.Label();
-            this.gpuColorValue = new System.Windows.Forms.ComboBox();
             this.iconsizePanel = new System.Windows.Forms.TableLayoutPanel();
             this.iconsizeLabel = new System.Windows.Forms.Label();
             this.iconsizeValue = new System.Windows.Forms.NumericUpDown();
@@ -133,11 +134,14 @@
             this.donatePic = new System.Windows.Forms.PictureBox();
             this.panelWrapper = new System.Windows.Forms.Panel();
             this.cpuTrayIcon = new System.Windows.Forms.NotifyIcon(this.components);
-            this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
-            this.ShowForm = new System.Windows.Forms.ToolStripMenuItem();
-            this.ExitForm = new System.Windows.Forms.ToolStripMenuItem();
             this.gpuTrayIcon = new System.Windows.Forms.NotifyIcon(this.components);
             this.NotifyIcon = new System.Windows.Forms.NotifyIcon(this.components);
+            this.colorDialog = new System.Windows.Forms.ColorDialog();
+            this.ShowForm = new System.Windows.Forms.ToolStripMenuItem();
+            this.ExitForm = new System.Windows.Forms.ToolStripMenuItem();
+            this.contextMenuStrip = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.cpuColorValue = new System.Windows.Forms.Button();
+            this.gpuColorValue = new System.Windows.Forms.Button();
             this.mainMenu.SuspendLayout();
             this.AppDataPnl.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.appLogo)).BeginInit();
@@ -153,6 +157,7 @@
             this.refreshPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.refreshValue)).BeginInit();
             this.traySettingsPanel.SuspendLayout();
+            this.colortempsPanel.SuspendLayout();
             this.fontFamilyPanel.SuspendLayout();
             this.cpuColorPanel.SuspendLayout();
             this.gpuColorPanel.SuspendLayout();
@@ -163,7 +168,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.divider1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.donatePic)).BeginInit();
             this.panelWrapper.SuspendLayout();
-            this.contextMenuStrip1.SuspendLayout();
+            this.contextMenuStrip.SuspendLayout();
             this.SuspendLayout();
             // 
             // mainMenu
@@ -178,18 +183,18 @@
             this.mainMenu.Controls.Add(this.settingsBtn, 0, 4);
             this.mainMenu.Controls.Add(this.homeBtn, 0, 3);
             this.mainMenu.Location = new System.Drawing.Point(1, 1);
-            this.mainMenu.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.mainMenu.Margin = new System.Windows.Forms.Padding(4);
             this.mainMenu.Name = "mainMenu";
             this.mainMenu.RowCount = 8;
-            this.mainMenu.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 56F));
-            this.mainMenu.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 94F));
+            this.mainMenu.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 45F));
+            this.mainMenu.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 75F));
             this.mainMenu.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 50F));
-            this.mainMenu.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 94F));
-            this.mainMenu.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 94F));
+            this.mainMenu.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 75F));
+            this.mainMenu.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 75F));
             this.mainMenu.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 50F));
-            this.mainMenu.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 94F));
-            this.mainMenu.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 56F));
-            this.mainMenu.Size = new System.Drawing.Size(138, 748);
+            this.mainMenu.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 75F));
+            this.mainMenu.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 45F));
+            this.mainMenu.Size = new System.Drawing.Size(110, 598);
             this.mainMenu.TabIndex = 0;
             this.mainMenu.MouseDown += new System.Windows.Forms.MouseEventHandler(this.MainForm_MouseDown);
             this.mainMenu.MouseMove += new System.Windows.Forms.MouseEventHandler(this.MainForm_MouseMove);
@@ -202,23 +207,21 @@
             this.AppDataPnl.Controls.Add(this.appLogo, 0, 0);
             this.AppDataPnl.Controls.Add(this.appTitle, 0, 1);
             this.AppDataPnl.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.AppDataPnl.Location = new System.Drawing.Point(4, 60);
-            this.AppDataPnl.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.AppDataPnl.Location = new System.Drawing.Point(3, 48);
             this.AppDataPnl.Name = "AppDataPnl";
             this.AppDataPnl.RowCount = 2;
             this.AppDataPnl.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 70F));
             this.AppDataPnl.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 30F));
-            this.AppDataPnl.Size = new System.Drawing.Size(130, 86);
+            this.AppDataPnl.Size = new System.Drawing.Size(104, 69);
             this.AppDataPnl.TabIndex = 1;
             // 
             // appLogo
             // 
             this.appLogo.Dock = System.Windows.Forms.DockStyle.Fill;
             this.appLogo.Image = global::TrayTemps.Properties.Resources.traytemps;
-            this.appLogo.Location = new System.Drawing.Point(4, 4);
-            this.appLogo.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.appLogo.Location = new System.Drawing.Point(3, 3);
             this.appLogo.Name = "appLogo";
-            this.appLogo.Size = new System.Drawing.Size(122, 52);
+            this.appLogo.Size = new System.Drawing.Size(98, 42);
             this.appLogo.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.appLogo.TabIndex = 0;
             this.appLogo.TabStop = false;
@@ -229,10 +232,9 @@
             this.appTitle.Dock = System.Windows.Forms.DockStyle.Top;
             this.appTitle.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.appTitle.ForeColor = System.Drawing.Color.White;
-            this.appTitle.Location = new System.Drawing.Point(4, 60);
-            this.appTitle.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.appTitle.Location = new System.Drawing.Point(3, 48);
             this.appTitle.Name = "appTitle";
-            this.appTitle.Size = new System.Drawing.Size(122, 26);
+            this.appTitle.Size = new System.Drawing.Size(98, 21);
             this.appTitle.TabIndex = 4;
             this.appTitle.Text = "TrayTemps";
             this.appTitle.TextAlign = System.Drawing.ContentAlignment.TopCenter;
@@ -248,10 +250,10 @@
             this.aboutBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.aboutBtn.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.aboutBtn.ForeColor = System.Drawing.Color.White;
-            this.aboutBtn.Location = new System.Drawing.Point(5, 603);
-            this.aboutBtn.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.aboutBtn.Location = new System.Drawing.Point(4, 482);
+            this.aboutBtn.Margin = new System.Windows.Forms.Padding(4);
             this.aboutBtn.Name = "aboutBtn";
-            this.aboutBtn.Size = new System.Drawing.Size(128, 84);
+            this.aboutBtn.Size = new System.Drawing.Size(102, 67);
             this.aboutBtn.TabIndex = 2;
             this.aboutBtn.Text = "❓\r\nAbout";
             this.aboutBtn.UseVisualStyleBackColor = false;
@@ -268,10 +270,10 @@
             this.settingsBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.settingsBtn.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.settingsBtn.ForeColor = System.Drawing.Color.White;
-            this.settingsBtn.Location = new System.Drawing.Point(5, 379);
-            this.settingsBtn.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.settingsBtn.Location = new System.Drawing.Point(4, 303);
+            this.settingsBtn.Margin = new System.Windows.Forms.Padding(4);
             this.settingsBtn.Name = "settingsBtn";
-            this.settingsBtn.Size = new System.Drawing.Size(128, 84);
+            this.settingsBtn.Size = new System.Drawing.Size(102, 67);
             this.settingsBtn.TabIndex = 1;
             this.settingsBtn.Text = "⚙\r\nSettings";
             this.settingsBtn.UseVisualStyleBackColor = false;
@@ -288,10 +290,10 @@
             this.homeBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.homeBtn.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.homeBtn.ForeColor = System.Drawing.Color.White;
-            this.homeBtn.Location = new System.Drawing.Point(5, 285);
-            this.homeBtn.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.homeBtn.Location = new System.Drawing.Point(4, 228);
+            this.homeBtn.Margin = new System.Windows.Forms.Padding(4);
             this.homeBtn.Name = "homeBtn";
-            this.homeBtn.Size = new System.Drawing.Size(128, 84);
+            this.homeBtn.Size = new System.Drawing.Size(102, 67);
             this.homeBtn.TabIndex = 0;
             this.homeBtn.Text = "🖥️\r\nMain";
             this.homeBtn.UseVisualStyleBackColor = false;
@@ -307,10 +309,10 @@
             this.exitBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.exitBtn.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.exitBtn.ForeColor = System.Drawing.Color.White;
-            this.exitBtn.Location = new System.Drawing.Point(930, 1);
-            this.exitBtn.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.exitBtn.Location = new System.Drawing.Point(744, 1);
+            this.exitBtn.Margin = new System.Windows.Forms.Padding(4);
             this.exitBtn.Name = "exitBtn";
-            this.exitBtn.Size = new System.Drawing.Size(69, 56);
+            this.exitBtn.Size = new System.Drawing.Size(55, 45);
             this.exitBtn.TabIndex = 1;
             this.exitBtn.Text = "✖";
             this.exitBtn.UseVisualStyleBackColor = true;
@@ -326,10 +328,10 @@
             this.minimizeBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.minimizeBtn.Font = new System.Drawing.Font("Segoe UI", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.minimizeBtn.ForeColor = System.Drawing.Color.White;
-            this.minimizeBtn.Location = new System.Drawing.Point(861, 1);
-            this.minimizeBtn.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.minimizeBtn.Location = new System.Drawing.Point(689, 1);
+            this.minimizeBtn.Margin = new System.Windows.Forms.Padding(4);
             this.minimizeBtn.Name = "minimizeBtn";
-            this.minimizeBtn.Size = new System.Drawing.Size(69, 56);
+            this.minimizeBtn.Size = new System.Drawing.Size(55, 45);
             this.minimizeBtn.TabIndex = 2;
             this.minimizeBtn.Text = "─";
             this.minimizeBtn.UseVisualStyleBackColor = true;
@@ -345,11 +347,10 @@
             this.mainTabControl.Controls.Add(this.settingsPage);
             this.mainTabControl.Controls.Add(this.aboutPage);
             this.mainTabControl.ItemSize = new System.Drawing.Size(0, 1);
-            this.mainTabControl.Location = new System.Drawing.Point(-6, -6);
-            this.mainTabControl.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.mainTabControl.Location = new System.Drawing.Point(-5, -5);
             this.mainTabControl.Name = "mainTabControl";
             this.mainTabControl.SelectedIndex = 0;
-            this.mainTabControl.Size = new System.Drawing.Size(872, 704);
+            this.mainTabControl.Size = new System.Drawing.Size(698, 563);
             this.mainTabControl.SizeMode = System.Windows.Forms.TabSizeMode.Fixed;
             this.mainTabControl.TabIndex = 0;
             // 
@@ -364,19 +365,17 @@
             this.homePage.Controls.Add(this.tempTitle);
             this.homePage.ForeColor = System.Drawing.Color.White;
             this.homePage.Location = new System.Drawing.Point(4, 5);
-            this.homePage.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.homePage.Name = "homePage";
-            this.homePage.Size = new System.Drawing.Size(864, 695);
+            this.homePage.Size = new System.Drawing.Size(690, 554);
             this.homePage.TabIndex = 0;
             this.homePage.Text = "Home";
             // 
             // mainComponentsTitle
             // 
             this.mainComponentsTitle.Font = new System.Drawing.Font("Segoe UI", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.mainComponentsTitle.Location = new System.Drawing.Point(41, 358);
-            this.mainComponentsTitle.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.mainComponentsTitle.Location = new System.Drawing.Point(33, 286);
             this.mainComponentsTitle.Name = "mainComponentsTitle";
-            this.mainComponentsTitle.Size = new System.Drawing.Size(389, 38);
+            this.mainComponentsTitle.Size = new System.Drawing.Size(311, 30);
             this.mainComponentsTitle.TabIndex = 14;
             this.mainComponentsTitle.Text = "🧩 Components";
             // 
@@ -387,8 +386,8 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.mainComponentsPanel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.mainComponentsPanel.ColumnCount = 3;
-            this.mainComponentsPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 88F));
-            this.mainComponentsPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 62F));
+            this.mainComponentsPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 70F));
+            this.mainComponentsPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 50F));
             this.mainComponentsPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.mainComponentsPanel.Controls.Add(this.componentType, 0, 0);
             this.mainComponentsPanel.Controls.Add(this.indexLabel, 1, 0);
@@ -408,10 +407,9 @@
             this.mainComponentsPanel.Controls.Add(this.motherboardDetails, 2, 5);
             this.mainComponentsPanel.Controls.Add(this.placeholderLabel1, 1, 5);
             this.mainComponentsPanel.Controls.Add(this.placeholderLabel2, 1, 3);
-            this.mainComponentsPanel.Location = new System.Drawing.Point(41, 404);
-            this.mainComponentsPanel.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.mainComponentsPanel.Location = new System.Drawing.Point(33, 323);
             this.mainComponentsPanel.Name = "mainComponentsPanel";
-            this.mainComponentsPanel.Padding = new System.Windows.Forms.Padding(6, 6, 6, 6);
+            this.mainComponentsPanel.Padding = new System.Windows.Forms.Padding(5);
             this.mainComponentsPanel.RowCount = 6;
             this.mainComponentsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 20F));
             this.mainComponentsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 16F));
@@ -419,7 +417,7 @@
             this.mainComponentsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 16F));
             this.mainComponentsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 16F));
             this.mainComponentsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 16F));
-            this.mainComponentsPanel.Size = new System.Drawing.Size(781, 249);
+            this.mainComponentsPanel.Size = new System.Drawing.Size(625, 199);
             this.mainComponentsPanel.TabIndex = 13;
             // 
             // componentType
@@ -429,11 +427,11 @@
             this.componentType.Dock = System.Windows.Forms.DockStyle.Fill;
             this.componentType.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.componentType.ForeColor = System.Drawing.Color.DarkGray;
-            this.componentType.Location = new System.Drawing.Point(6, 6);
+            this.componentType.Location = new System.Drawing.Point(5, 5);
             this.componentType.Margin = new System.Windows.Forms.Padding(0);
             this.componentType.Name = "componentType";
-            this.componentType.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.componentType.Size = new System.Drawing.Size(88, 47);
+            this.componentType.Padding = new System.Windows.Forms.Padding(3);
+            this.componentType.Size = new System.Drawing.Size(70, 37);
             this.componentType.TabIndex = 2;
             this.componentType.Text = "Type";
             this.componentType.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -445,11 +443,11 @@
             this.indexLabel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.indexLabel.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.indexLabel.ForeColor = System.Drawing.Color.DarkGray;
-            this.indexLabel.Location = new System.Drawing.Point(94, 6);
+            this.indexLabel.Location = new System.Drawing.Point(75, 5);
             this.indexLabel.Margin = new System.Windows.Forms.Padding(0);
             this.indexLabel.Name = "indexLabel";
-            this.indexLabel.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.indexLabel.Size = new System.Drawing.Size(62, 47);
+            this.indexLabel.Padding = new System.Windows.Forms.Padding(3);
+            this.indexLabel.Size = new System.Drawing.Size(50, 37);
             this.indexLabel.TabIndex = 22;
             this.indexLabel.Text = "Index";
             this.indexLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -461,11 +459,11 @@
             this.componentModel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.componentModel.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.componentModel.ForeColor = System.Drawing.Color.DarkGray;
-            this.componentModel.Location = new System.Drawing.Point(156, 6);
+            this.componentModel.Location = new System.Drawing.Point(125, 5);
             this.componentModel.Margin = new System.Windows.Forms.Padding(0);
             this.componentModel.Name = "componentModel";
-            this.componentModel.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.componentModel.Size = new System.Drawing.Size(619, 47);
+            this.componentModel.Padding = new System.Windows.Forms.Padding(3);
+            this.componentModel.Size = new System.Drawing.Size(495, 37);
             this.componentModel.TabIndex = 3;
             this.componentModel.Text = "Model / Info";
             this.componentModel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -477,11 +475,11 @@
             this.compCpuLabel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.compCpuLabel.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.compCpuLabel.ForeColor = System.Drawing.Color.DarkGray;
-            this.compCpuLabel.Location = new System.Drawing.Point(6, 53);
+            this.compCpuLabel.Location = new System.Drawing.Point(5, 42);
             this.compCpuLabel.Margin = new System.Windows.Forms.Padding(0);
             this.compCpuLabel.Name = "compCpuLabel";
-            this.compCpuLabel.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.compCpuLabel.Size = new System.Drawing.Size(88, 37);
+            this.compCpuLabel.Padding = new System.Windows.Forms.Padding(3);
+            this.compCpuLabel.Size = new System.Drawing.Size(70, 30);
             this.compCpuLabel.TabIndex = 10;
             this.compCpuLabel.Text = "CPU:";
             this.compCpuLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -496,13 +494,13 @@
             this.cpuIndexSelect.ForeColor = System.Drawing.Color.White;
             this.cpuIndexSelect.FormattingEnabled = true;
             this.cpuIndexSelect.IntegralHeight = false;
-            this.cpuIndexSelect.ItemHeight = 19;
+            this.cpuIndexSelect.ItemHeight = 13;
             this.cpuIndexSelect.Items.AddRange(new object[] {
             "0"});
-            this.cpuIndexSelect.Location = new System.Drawing.Point(95, 58);
+            this.cpuIndexSelect.Location = new System.Drawing.Point(76, 46);
             this.cpuIndexSelect.Margin = new System.Windows.Forms.Padding(1);
             this.cpuIndexSelect.Name = "cpuIndexSelect";
-            this.cpuIndexSelect.Size = new System.Drawing.Size(60, 27);
+            this.cpuIndexSelect.Size = new System.Drawing.Size(48, 21);
             this.cpuIndexSelect.TabIndex = 23;
             this.cpuIndexSelect.SelectedIndexChanged += new System.EventHandler(this.CpuIndexSelect_SelectedIndexChanged);
             // 
@@ -513,11 +511,11 @@
             this.cpuModel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.cpuModel.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.cpuModel.ForeColor = System.Drawing.Color.White;
-            this.cpuModel.Location = new System.Drawing.Point(156, 53);
+            this.cpuModel.Location = new System.Drawing.Point(125, 42);
             this.cpuModel.Margin = new System.Windows.Forms.Padding(0);
             this.cpuModel.Name = "cpuModel";
-            this.cpuModel.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.cpuModel.Size = new System.Drawing.Size(619, 37);
+            this.cpuModel.Padding = new System.Windows.Forms.Padding(3);
+            this.cpuModel.Size = new System.Drawing.Size(495, 30);
             this.cpuModel.TabIndex = 20;
             this.cpuModel.Text = "N/A";
             this.cpuModel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -529,11 +527,11 @@
             this.compGpuLabel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.compGpuLabel.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.compGpuLabel.ForeColor = System.Drawing.Color.DarkGray;
-            this.compGpuLabel.Location = new System.Drawing.Point(6, 90);
+            this.compGpuLabel.Location = new System.Drawing.Point(5, 72);
             this.compGpuLabel.Margin = new System.Windows.Forms.Padding(0);
             this.compGpuLabel.Name = "compGpuLabel";
-            this.compGpuLabel.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.compGpuLabel.Size = new System.Drawing.Size(88, 37);
+            this.compGpuLabel.Padding = new System.Windows.Forms.Padding(3);
+            this.compGpuLabel.Size = new System.Drawing.Size(70, 30);
             this.compGpuLabel.TabIndex = 11;
             this.compGpuLabel.Text = "GPU:";
             this.compGpuLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -548,13 +546,13 @@
             this.gpuIndexSelect.ForeColor = System.Drawing.Color.White;
             this.gpuIndexSelect.FormattingEnabled = true;
             this.gpuIndexSelect.IntegralHeight = false;
-            this.gpuIndexSelect.ItemHeight = 19;
+            this.gpuIndexSelect.ItemHeight = 13;
             this.gpuIndexSelect.Items.AddRange(new object[] {
             "0"});
-            this.gpuIndexSelect.Location = new System.Drawing.Point(95, 95);
+            this.gpuIndexSelect.Location = new System.Drawing.Point(76, 76);
             this.gpuIndexSelect.Margin = new System.Windows.Forms.Padding(1);
             this.gpuIndexSelect.Name = "gpuIndexSelect";
-            this.gpuIndexSelect.Size = new System.Drawing.Size(60, 27);
+            this.gpuIndexSelect.Size = new System.Drawing.Size(48, 21);
             this.gpuIndexSelect.TabIndex = 24;
             this.gpuIndexSelect.SelectedIndexChanged += new System.EventHandler(this.GpuIndexSelect_SelectedIndexChanged);
             // 
@@ -565,11 +563,11 @@
             this.gpuModel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.gpuModel.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.gpuModel.ForeColor = System.Drawing.Color.White;
-            this.gpuModel.Location = new System.Drawing.Point(156, 90);
+            this.gpuModel.Location = new System.Drawing.Point(125, 72);
             this.gpuModel.Margin = new System.Windows.Forms.Padding(0);
             this.gpuModel.Name = "gpuModel";
-            this.gpuModel.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.gpuModel.Size = new System.Drawing.Size(619, 37);
+            this.gpuModel.Padding = new System.Windows.Forms.Padding(3);
+            this.gpuModel.Size = new System.Drawing.Size(495, 30);
             this.gpuModel.TabIndex = 21;
             this.gpuModel.Text = "N/A";
             this.gpuModel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -581,11 +579,11 @@
             this.compRamLabel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.compRamLabel.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.compRamLabel.ForeColor = System.Drawing.Color.DarkGray;
-            this.compRamLabel.Location = new System.Drawing.Point(6, 127);
+            this.compRamLabel.Location = new System.Drawing.Point(5, 102);
             this.compRamLabel.Margin = new System.Windows.Forms.Padding(0);
             this.compRamLabel.Name = "compRamLabel";
-            this.compRamLabel.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.compRamLabel.Size = new System.Drawing.Size(88, 37);
+            this.compRamLabel.Padding = new System.Windows.Forms.Padding(3);
+            this.compRamLabel.Size = new System.Drawing.Size(70, 30);
             this.compRamLabel.TabIndex = 12;
             this.compRamLabel.Text = "RAM:";
             this.compRamLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -597,11 +595,11 @@
             this.ramDetails.Dock = System.Windows.Forms.DockStyle.Fill;
             this.ramDetails.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.ramDetails.ForeColor = System.Drawing.Color.White;
-            this.ramDetails.Location = new System.Drawing.Point(156, 127);
+            this.ramDetails.Location = new System.Drawing.Point(125, 102);
             this.ramDetails.Margin = new System.Windows.Forms.Padding(0);
             this.ramDetails.Name = "ramDetails";
-            this.ramDetails.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.ramDetails.Size = new System.Drawing.Size(619, 37);
+            this.ramDetails.Padding = new System.Windows.Forms.Padding(3);
+            this.ramDetails.Size = new System.Drawing.Size(495, 30);
             this.ramDetails.TabIndex = 17;
             this.ramDetails.Text = "N/A";
             this.ramDetails.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -614,11 +612,11 @@
             this.CompStorageLabel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.CompStorageLabel.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.CompStorageLabel.ForeColor = System.Drawing.Color.DarkGray;
-            this.CompStorageLabel.Location = new System.Drawing.Point(6, 164);
+            this.CompStorageLabel.Location = new System.Drawing.Point(5, 132);
             this.CompStorageLabel.Margin = new System.Windows.Forms.Padding(0);
             this.CompStorageLabel.Name = "CompStorageLabel";
-            this.CompStorageLabel.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.CompStorageLabel.Size = new System.Drawing.Size(88, 37);
+            this.CompStorageLabel.Padding = new System.Windows.Forms.Padding(3);
+            this.CompStorageLabel.Size = new System.Drawing.Size(70, 30);
             this.CompStorageLabel.TabIndex = 13;
             this.CompStorageLabel.Text = "Storage:";
             this.CompStorageLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -633,13 +631,13 @@
             this.storageIndexSelect.ForeColor = System.Drawing.Color.White;
             this.storageIndexSelect.FormattingEnabled = true;
             this.storageIndexSelect.IntegralHeight = false;
-            this.storageIndexSelect.ItemHeight = 19;
+            this.storageIndexSelect.ItemHeight = 13;
             this.storageIndexSelect.Items.AddRange(new object[] {
             "0"});
-            this.storageIndexSelect.Location = new System.Drawing.Point(95, 169);
+            this.storageIndexSelect.Location = new System.Drawing.Point(76, 136);
             this.storageIndexSelect.Margin = new System.Windows.Forms.Padding(1);
             this.storageIndexSelect.Name = "storageIndexSelect";
-            this.storageIndexSelect.Size = new System.Drawing.Size(60, 27);
+            this.storageIndexSelect.Size = new System.Drawing.Size(48, 21);
             this.storageIndexSelect.TabIndex = 25;
             this.storageIndexSelect.SelectedIndexChanged += new System.EventHandler(this.storageIndexSelect_SelectedIndexChanged);
             // 
@@ -650,11 +648,11 @@
             this.storageDetails.Dock = System.Windows.Forms.DockStyle.Fill;
             this.storageDetails.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.storageDetails.ForeColor = System.Drawing.Color.White;
-            this.storageDetails.Location = new System.Drawing.Point(156, 164);
+            this.storageDetails.Location = new System.Drawing.Point(125, 132);
             this.storageDetails.Margin = new System.Windows.Forms.Padding(0);
             this.storageDetails.Name = "storageDetails";
-            this.storageDetails.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.storageDetails.Size = new System.Drawing.Size(619, 37);
+            this.storageDetails.Padding = new System.Windows.Forms.Padding(3);
+            this.storageDetails.Size = new System.Drawing.Size(495, 30);
             this.storageDetails.TabIndex = 18;
             this.storageDetails.Text = "N/A";
             this.storageDetails.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -666,11 +664,11 @@
             this.CompMotherboardLabel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.CompMotherboardLabel.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.CompMotherboardLabel.ForeColor = System.Drawing.Color.DarkGray;
-            this.CompMotherboardLabel.Location = new System.Drawing.Point(6, 201);
+            this.CompMotherboardLabel.Location = new System.Drawing.Point(5, 162);
             this.CompMotherboardLabel.Margin = new System.Windows.Forms.Padding(0);
             this.CompMotherboardLabel.Name = "CompMotherboardLabel";
-            this.CompMotherboardLabel.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.CompMotherboardLabel.Size = new System.Drawing.Size(88, 42);
+            this.CompMotherboardLabel.Padding = new System.Windows.Forms.Padding(3);
+            this.CompMotherboardLabel.Size = new System.Drawing.Size(70, 32);
             this.CompMotherboardLabel.TabIndex = 14;
             this.CompMotherboardLabel.Text = "MBO:";
             this.CompMotherboardLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -682,11 +680,11 @@
             this.motherboardDetails.Dock = System.Windows.Forms.DockStyle.Fill;
             this.motherboardDetails.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.motherboardDetails.ForeColor = System.Drawing.Color.White;
-            this.motherboardDetails.Location = new System.Drawing.Point(156, 201);
+            this.motherboardDetails.Location = new System.Drawing.Point(125, 162);
             this.motherboardDetails.Margin = new System.Windows.Forms.Padding(0);
             this.motherboardDetails.Name = "motherboardDetails";
-            this.motherboardDetails.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.motherboardDetails.Size = new System.Drawing.Size(619, 42);
+            this.motherboardDetails.Padding = new System.Windows.Forms.Padding(3);
+            this.motherboardDetails.Size = new System.Drawing.Size(495, 32);
             this.motherboardDetails.TabIndex = 19;
             this.motherboardDetails.Text = "N/A";
             this.motherboardDetails.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -698,11 +696,11 @@
             this.placeholderLabel1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.placeholderLabel1.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.placeholderLabel1.ForeColor = System.Drawing.Color.White;
-            this.placeholderLabel1.Location = new System.Drawing.Point(94, 201);
+            this.placeholderLabel1.Location = new System.Drawing.Point(75, 162);
             this.placeholderLabel1.Margin = new System.Windows.Forms.Padding(0);
             this.placeholderLabel1.Name = "placeholderLabel1";
-            this.placeholderLabel1.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.placeholderLabel1.Size = new System.Drawing.Size(62, 42);
+            this.placeholderLabel1.Padding = new System.Windows.Forms.Padding(3);
+            this.placeholderLabel1.Size = new System.Drawing.Size(50, 32);
             this.placeholderLabel1.TabIndex = 27;
             this.placeholderLabel1.Text = "-";
             this.placeholderLabel1.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -714,11 +712,11 @@
             this.placeholderLabel2.Dock = System.Windows.Forms.DockStyle.Fill;
             this.placeholderLabel2.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.placeholderLabel2.ForeColor = System.Drawing.Color.White;
-            this.placeholderLabel2.Location = new System.Drawing.Point(94, 127);
+            this.placeholderLabel2.Location = new System.Drawing.Point(75, 102);
             this.placeholderLabel2.Margin = new System.Windows.Forms.Padding(0);
             this.placeholderLabel2.Name = "placeholderLabel2";
-            this.placeholderLabel2.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.placeholderLabel2.Size = new System.Drawing.Size(62, 37);
+            this.placeholderLabel2.Padding = new System.Windows.Forms.Padding(3);
+            this.placeholderLabel2.Size = new System.Drawing.Size(50, 30);
             this.placeholderLabel2.TabIndex = 26;
             this.placeholderLabel2.Text = "-";
             this.placeholderLabel2.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -734,12 +732,11 @@
             this.tempsWrapper.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 48.5F));
             this.tempsWrapper.Controls.Add(this.gpuPanel, 0, 0);
             this.tempsWrapper.Controls.Add(this.cpuPanel, 2, 0);
-            this.tempsWrapper.Location = new System.Drawing.Point(38, 156);
-            this.tempsWrapper.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.tempsWrapper.Location = new System.Drawing.Point(30, 125);
             this.tempsWrapper.Name = "tempsWrapper";
             this.tempsWrapper.RowCount = 1;
             this.tempsWrapper.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.tempsWrapper.Size = new System.Drawing.Size(789, 188);
+            this.tempsWrapper.Size = new System.Drawing.Size(631, 150);
             this.tempsWrapper.TabIndex = 12;
             // 
             // gpuPanel
@@ -758,16 +755,15 @@
             this.gpuPanel.Controls.Add(this.gpuTempMin, 1, 3);
             this.gpuPanel.Controls.Add(this.gpuTempMax, 2, 3);
             this.gpuPanel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.gpuPanel.Location = new System.Drawing.Point(4, 4);
-            this.gpuPanel.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.gpuPanel.Location = new System.Drawing.Point(3, 3);
             this.gpuPanel.Name = "gpuPanel";
-            this.gpuPanel.Padding = new System.Windows.Forms.Padding(6, 6, 6, 6);
+            this.gpuPanel.Padding = new System.Windows.Forms.Padding(5);
             this.gpuPanel.RowCount = 4;
             this.gpuPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 20F));
             this.gpuPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 35F));
             this.gpuPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 17.5F));
             this.gpuPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 27.5F));
-            this.gpuPanel.Size = new System.Drawing.Size(374, 180);
+            this.gpuPanel.Size = new System.Drawing.Size(300, 144);
             this.gpuPanel.TabIndex = 10;
             // 
             // gpuTempLabel
@@ -778,11 +774,11 @@
             this.gpuTempLabel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.gpuTempLabel.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.gpuTempLabel.ForeColor = System.Drawing.Color.DarkGray;
-            this.gpuTempLabel.Location = new System.Drawing.Point(6, 6);
+            this.gpuTempLabel.Location = new System.Drawing.Point(5, 5);
             this.gpuTempLabel.Margin = new System.Windows.Forms.Padding(0);
             this.gpuTempLabel.Name = "gpuTempLabel";
-            this.gpuTempLabel.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.gpuTempLabel.Size = new System.Drawing.Size(362, 33);
+            this.gpuTempLabel.Padding = new System.Windows.Forms.Padding(3);
+            this.gpuTempLabel.Size = new System.Drawing.Size(290, 26);
             this.gpuTempLabel.TabIndex = 0;
             this.gpuTempLabel.Text = "Graphics card (GPU)";
             this.gpuTempLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -795,11 +791,11 @@
             this.gpuName.Dock = System.Windows.Forms.DockStyle.Fill;
             this.gpuName.Font = new System.Drawing.Font("Segoe UI Semibold", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.gpuName.ForeColor = System.Drawing.Color.White;
-            this.gpuName.Location = new System.Drawing.Point(6, 39);
+            this.gpuName.Location = new System.Drawing.Point(5, 31);
             this.gpuName.Margin = new System.Windows.Forms.Padding(0);
             this.gpuName.Name = "gpuName";
-            this.gpuName.Padding = new System.Windows.Forms.Padding(6, 6, 6, 6);
-            this.gpuName.Size = new System.Drawing.Size(362, 58);
+            this.gpuName.Padding = new System.Windows.Forms.Padding(5);
+            this.gpuName.Size = new System.Drawing.Size(290, 46);
             this.gpuName.TabIndex = 9;
             this.gpuName.Text = "N/A";
             this.gpuName.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -811,11 +807,11 @@
             this.gpuTempCurLabel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.gpuTempCurLabel.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.gpuTempCurLabel.ForeColor = System.Drawing.Color.DarkGray;
-            this.gpuTempCurLabel.Location = new System.Drawing.Point(6, 97);
+            this.gpuTempCurLabel.Location = new System.Drawing.Point(5, 77);
             this.gpuTempCurLabel.Margin = new System.Windows.Forms.Padding(0);
             this.gpuTempCurLabel.Name = "gpuTempCurLabel";
-            this.gpuTempCurLabel.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.gpuTempCurLabel.Size = new System.Drawing.Size(120, 29);
+            this.gpuTempCurLabel.Padding = new System.Windows.Forms.Padding(3);
+            this.gpuTempCurLabel.Size = new System.Drawing.Size(96, 23);
             this.gpuTempCurLabel.TabIndex = 1;
             this.gpuTempCurLabel.Text = "Current:";
             this.gpuTempCurLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -827,11 +823,11 @@
             this.gpuTempMinLabel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.gpuTempMinLabel.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.gpuTempMinLabel.ForeColor = System.Drawing.Color.DarkGray;
-            this.gpuTempMinLabel.Location = new System.Drawing.Point(126, 97);
+            this.gpuTempMinLabel.Location = new System.Drawing.Point(101, 77);
             this.gpuTempMinLabel.Margin = new System.Windows.Forms.Padding(0);
             this.gpuTempMinLabel.Name = "gpuTempMinLabel";
-            this.gpuTempMinLabel.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.gpuTempMinLabel.Size = new System.Drawing.Size(120, 29);
+            this.gpuTempMinLabel.Padding = new System.Windows.Forms.Padding(3);
+            this.gpuTempMinLabel.Size = new System.Drawing.Size(96, 23);
             this.gpuTempMinLabel.TabIndex = 2;
             this.gpuTempMinLabel.Text = "Minimum:";
             this.gpuTempMinLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -843,11 +839,11 @@
             this.gpuTempMaxLabel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.gpuTempMaxLabel.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.gpuTempMaxLabel.ForeColor = System.Drawing.Color.DarkGray;
-            this.gpuTempMaxLabel.Location = new System.Drawing.Point(246, 97);
+            this.gpuTempMaxLabel.Location = new System.Drawing.Point(197, 77);
             this.gpuTempMaxLabel.Margin = new System.Windows.Forms.Padding(0);
             this.gpuTempMaxLabel.Name = "gpuTempMaxLabel";
-            this.gpuTempMaxLabel.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.gpuTempMaxLabel.Size = new System.Drawing.Size(122, 29);
+            this.gpuTempMaxLabel.Padding = new System.Windows.Forms.Padding(3);
+            this.gpuTempMaxLabel.Size = new System.Drawing.Size(98, 23);
             this.gpuTempMaxLabel.TabIndex = 3;
             this.gpuTempMaxLabel.Text = "Maximum:";
             this.gpuTempMaxLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -859,11 +855,11 @@
             this.gpuTempCur.Dock = System.Windows.Forms.DockStyle.Fill;
             this.gpuTempCur.Font = new System.Drawing.Font("Segoe UI", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.gpuTempCur.ForeColor = System.Drawing.Color.White;
-            this.gpuTempCur.Location = new System.Drawing.Point(6, 126);
+            this.gpuTempCur.Location = new System.Drawing.Point(5, 100);
             this.gpuTempCur.Margin = new System.Windows.Forms.Padding(0);
             this.gpuTempCur.Name = "gpuTempCur";
-            this.gpuTempCur.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.gpuTempCur.Size = new System.Drawing.Size(120, 48);
+            this.gpuTempCur.Padding = new System.Windows.Forms.Padding(3);
+            this.gpuTempCur.Size = new System.Drawing.Size(96, 39);
             this.gpuTempCur.TabIndex = 4;
             this.gpuTempCur.Text = "N/A";
             this.gpuTempCur.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -875,11 +871,11 @@
             this.gpuTempMin.Dock = System.Windows.Forms.DockStyle.Fill;
             this.gpuTempMin.Font = new System.Drawing.Font("Segoe UI", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.gpuTempMin.ForeColor = System.Drawing.Color.LimeGreen;
-            this.gpuTempMin.Location = new System.Drawing.Point(126, 126);
+            this.gpuTempMin.Location = new System.Drawing.Point(101, 100);
             this.gpuTempMin.Margin = new System.Windows.Forms.Padding(0);
             this.gpuTempMin.Name = "gpuTempMin";
-            this.gpuTempMin.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.gpuTempMin.Size = new System.Drawing.Size(120, 48);
+            this.gpuTempMin.Padding = new System.Windows.Forms.Padding(3);
+            this.gpuTempMin.Size = new System.Drawing.Size(96, 39);
             this.gpuTempMin.TabIndex = 5;
             this.gpuTempMin.Text = "N/A";
             this.gpuTempMin.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -891,11 +887,11 @@
             this.gpuTempMax.Dock = System.Windows.Forms.DockStyle.Fill;
             this.gpuTempMax.Font = new System.Drawing.Font("Segoe UI", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.gpuTempMax.ForeColor = System.Drawing.Color.Red;
-            this.gpuTempMax.Location = new System.Drawing.Point(246, 126);
+            this.gpuTempMax.Location = new System.Drawing.Point(197, 100);
             this.gpuTempMax.Margin = new System.Windows.Forms.Padding(0);
             this.gpuTempMax.Name = "gpuTempMax";
-            this.gpuTempMax.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.gpuTempMax.Size = new System.Drawing.Size(122, 48);
+            this.gpuTempMax.Padding = new System.Windows.Forms.Padding(3);
+            this.gpuTempMax.Size = new System.Drawing.Size(98, 39);
             this.gpuTempMax.TabIndex = 6;
             this.gpuTempMax.Text = "N/A";
             this.gpuTempMax.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -916,16 +912,15 @@
             this.cpuPanel.Controls.Add(this.cpuTempMin, 1, 3);
             this.cpuPanel.Controls.Add(this.cpuTempMax, 2, 3);
             this.cpuPanel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.cpuPanel.Location = new System.Drawing.Point(409, 4);
-            this.cpuPanel.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.cpuPanel.Location = new System.Drawing.Point(327, 3);
             this.cpuPanel.Name = "cpuPanel";
-            this.cpuPanel.Padding = new System.Windows.Forms.Padding(6, 6, 6, 6);
+            this.cpuPanel.Padding = new System.Windows.Forms.Padding(5);
             this.cpuPanel.RowCount = 4;
             this.cpuPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 20F));
             this.cpuPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 35F));
             this.cpuPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 17.5F));
             this.cpuPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 27.5F));
-            this.cpuPanel.Size = new System.Drawing.Size(376, 180);
+            this.cpuPanel.Size = new System.Drawing.Size(301, 144);
             this.cpuPanel.TabIndex = 11;
             // 
             // cpuTempLabel
@@ -936,11 +931,11 @@
             this.cpuTempLabel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.cpuTempLabel.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.cpuTempLabel.ForeColor = System.Drawing.Color.DarkGray;
-            this.cpuTempLabel.Location = new System.Drawing.Point(6, 6);
+            this.cpuTempLabel.Location = new System.Drawing.Point(5, 5);
             this.cpuTempLabel.Margin = new System.Windows.Forms.Padding(0);
             this.cpuTempLabel.Name = "cpuTempLabel";
-            this.cpuTempLabel.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.cpuTempLabel.Size = new System.Drawing.Size(364, 33);
+            this.cpuTempLabel.Padding = new System.Windows.Forms.Padding(3);
+            this.cpuTempLabel.Size = new System.Drawing.Size(291, 26);
             this.cpuTempLabel.TabIndex = 1;
             this.cpuTempLabel.Text = "Processor (CPU)";
             this.cpuTempLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -953,11 +948,11 @@
             this.cpuName.Dock = System.Windows.Forms.DockStyle.Fill;
             this.cpuName.Font = new System.Drawing.Font("Segoe UI Semibold", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.cpuName.ForeColor = System.Drawing.Color.White;
-            this.cpuName.Location = new System.Drawing.Point(6, 39);
+            this.cpuName.Location = new System.Drawing.Point(5, 31);
             this.cpuName.Margin = new System.Windows.Forms.Padding(0);
             this.cpuName.Name = "cpuName";
-            this.cpuName.Padding = new System.Windows.Forms.Padding(6, 6, 6, 6);
-            this.cpuName.Size = new System.Drawing.Size(364, 58);
+            this.cpuName.Padding = new System.Windows.Forms.Padding(5);
+            this.cpuName.Size = new System.Drawing.Size(291, 46);
             this.cpuName.TabIndex = 8;
             this.cpuName.Text = "N/A";
             this.cpuName.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -969,11 +964,11 @@
             this.cpuTempCurLabel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.cpuTempCurLabel.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.cpuTempCurLabel.ForeColor = System.Drawing.Color.DarkGray;
-            this.cpuTempCurLabel.Location = new System.Drawing.Point(6, 97);
+            this.cpuTempCurLabel.Location = new System.Drawing.Point(5, 77);
             this.cpuTempCurLabel.Margin = new System.Windows.Forms.Padding(0);
             this.cpuTempCurLabel.Name = "cpuTempCurLabel";
-            this.cpuTempCurLabel.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.cpuTempCurLabel.Size = new System.Drawing.Size(121, 29);
+            this.cpuTempCurLabel.Padding = new System.Windows.Forms.Padding(3);
+            this.cpuTempCurLabel.Size = new System.Drawing.Size(96, 23);
             this.cpuTempCurLabel.TabIndex = 2;
             this.cpuTempCurLabel.Text = "Current:";
             this.cpuTempCurLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -985,11 +980,11 @@
             this.cpuTempMinLabel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.cpuTempMinLabel.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.cpuTempMinLabel.ForeColor = System.Drawing.Color.DarkGray;
-            this.cpuTempMinLabel.Location = new System.Drawing.Point(127, 97);
+            this.cpuTempMinLabel.Location = new System.Drawing.Point(101, 77);
             this.cpuTempMinLabel.Margin = new System.Windows.Forms.Padding(0);
             this.cpuTempMinLabel.Name = "cpuTempMinLabel";
-            this.cpuTempMinLabel.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.cpuTempMinLabel.Size = new System.Drawing.Size(121, 29);
+            this.cpuTempMinLabel.Padding = new System.Windows.Forms.Padding(3);
+            this.cpuTempMinLabel.Size = new System.Drawing.Size(97, 23);
             this.cpuTempMinLabel.TabIndex = 3;
             this.cpuTempMinLabel.Text = "Minimum:";
             this.cpuTempMinLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -1001,11 +996,11 @@
             this.cpuTempMaxLabel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.cpuTempMaxLabel.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.cpuTempMaxLabel.ForeColor = System.Drawing.Color.DarkGray;
-            this.cpuTempMaxLabel.Location = new System.Drawing.Point(248, 97);
+            this.cpuTempMaxLabel.Location = new System.Drawing.Point(198, 77);
             this.cpuTempMaxLabel.Margin = new System.Windows.Forms.Padding(0);
             this.cpuTempMaxLabel.Name = "cpuTempMaxLabel";
-            this.cpuTempMaxLabel.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.cpuTempMaxLabel.Size = new System.Drawing.Size(122, 29);
+            this.cpuTempMaxLabel.Padding = new System.Windows.Forms.Padding(3);
+            this.cpuTempMaxLabel.Size = new System.Drawing.Size(98, 23);
             this.cpuTempMaxLabel.TabIndex = 4;
             this.cpuTempMaxLabel.Text = "Maximum:";
             this.cpuTempMaxLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -1017,11 +1012,11 @@
             this.cpuTempCur.Dock = System.Windows.Forms.DockStyle.Fill;
             this.cpuTempCur.Font = new System.Drawing.Font("Segoe UI", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.cpuTempCur.ForeColor = System.Drawing.Color.White;
-            this.cpuTempCur.Location = new System.Drawing.Point(6, 126);
+            this.cpuTempCur.Location = new System.Drawing.Point(5, 100);
             this.cpuTempCur.Margin = new System.Windows.Forms.Padding(0);
             this.cpuTempCur.Name = "cpuTempCur";
-            this.cpuTempCur.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.cpuTempCur.Size = new System.Drawing.Size(121, 48);
+            this.cpuTempCur.Padding = new System.Windows.Forms.Padding(3);
+            this.cpuTempCur.Size = new System.Drawing.Size(96, 39);
             this.cpuTempCur.TabIndex = 5;
             this.cpuTempCur.Text = "N/A";
             this.cpuTempCur.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -1033,11 +1028,11 @@
             this.cpuTempMin.Dock = System.Windows.Forms.DockStyle.Fill;
             this.cpuTempMin.Font = new System.Drawing.Font("Segoe UI", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.cpuTempMin.ForeColor = System.Drawing.Color.LimeGreen;
-            this.cpuTempMin.Location = new System.Drawing.Point(127, 126);
+            this.cpuTempMin.Location = new System.Drawing.Point(101, 100);
             this.cpuTempMin.Margin = new System.Windows.Forms.Padding(0);
             this.cpuTempMin.Name = "cpuTempMin";
-            this.cpuTempMin.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.cpuTempMin.Size = new System.Drawing.Size(121, 48);
+            this.cpuTempMin.Padding = new System.Windows.Forms.Padding(3);
+            this.cpuTempMin.Size = new System.Drawing.Size(97, 39);
             this.cpuTempMin.TabIndex = 6;
             this.cpuTempMin.Text = "N/A";
             this.cpuTempMin.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -1049,11 +1044,11 @@
             this.cpuTempMax.Dock = System.Windows.Forms.DockStyle.Fill;
             this.cpuTempMax.Font = new System.Drawing.Font("Segoe UI", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.cpuTempMax.ForeColor = System.Drawing.Color.Red;
-            this.cpuTempMax.Location = new System.Drawing.Point(248, 126);
+            this.cpuTempMax.Location = new System.Drawing.Point(198, 100);
             this.cpuTempMax.Margin = new System.Windows.Forms.Padding(0);
             this.cpuTempMax.Name = "cpuTempMax";
-            this.cpuTempMax.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.cpuTempMax.Size = new System.Drawing.Size(122, 48);
+            this.cpuTempMax.Padding = new System.Windows.Forms.Padding(3);
+            this.cpuTempMax.Size = new System.Drawing.Size(98, 39);
             this.cpuTempMax.TabIndex = 7;
             this.cpuTempMax.Text = "N/A";
             this.cpuTempMax.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -1062,10 +1057,9 @@
             // 
             this.sysmonTitle.Font = new System.Drawing.Font("Segoe UI", 15.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.sysmonTitle.ForeColor = System.Drawing.Color.White;
-            this.sysmonTitle.Location = new System.Drawing.Point(41, 35);
-            this.sysmonTitle.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.sysmonTitle.Location = new System.Drawing.Point(33, 28);
             this.sysmonTitle.Name = "sysmonTitle";
-            this.sysmonTitle.Size = new System.Drawing.Size(389, 38);
+            this.sysmonTitle.Size = new System.Drawing.Size(311, 30);
             this.sysmonTitle.TabIndex = 4;
             this.sysmonTitle.Text = "🖥️ System Monitoring";
             // 
@@ -1074,20 +1068,18 @@
             this.divider2.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.divider2.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(120)))), ((int)(((byte)(212)))));
-            this.divider2.Location = new System.Drawing.Point(41, 95);
-            this.divider2.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.divider2.Location = new System.Drawing.Point(33, 76);
             this.divider2.Name = "divider2";
-            this.divider2.Size = new System.Drawing.Size(781, 1);
+            this.divider2.Size = new System.Drawing.Size(625, 1);
             this.divider2.TabIndex = 5;
             this.divider2.TabStop = false;
             // 
             // tempTitle
             // 
             this.tempTitle.Font = new System.Drawing.Font("Segoe UI", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.tempTitle.Location = new System.Drawing.Point(41, 110);
-            this.tempTitle.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.tempTitle.Location = new System.Drawing.Point(33, 88);
             this.tempTitle.Name = "tempTitle";
-            this.tempTitle.Size = new System.Drawing.Size(389, 38);
+            this.tempTitle.Size = new System.Drawing.Size(311, 30);
             this.tempTitle.TabIndex = 9;
             this.tempTitle.Text = "🌡 Temperatures";
             // 
@@ -1102,9 +1094,8 @@
             this.settingsPage.Controls.Add(this.divider3);
             this.settingsPage.ForeColor = System.Drawing.Color.White;
             this.settingsPage.Location = new System.Drawing.Point(4, 5);
-            this.settingsPage.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.settingsPage.Name = "settingsPage";
-            this.settingsPage.Size = new System.Drawing.Size(864, 695);
+            this.settingsPage.Size = new System.Drawing.Size(690, 554);
             this.settingsPage.TabIndex = 1;
             this.settingsPage.Text = "Settings";
             // 
@@ -1112,20 +1103,18 @@
             // 
             this.settingsTitle.Font = new System.Drawing.Font("Segoe UI", 15.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.settingsTitle.ForeColor = System.Drawing.Color.White;
-            this.settingsTitle.Location = new System.Drawing.Point(41, 35);
-            this.settingsTitle.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.settingsTitle.Location = new System.Drawing.Point(33, 28);
             this.settingsTitle.Name = "settingsTitle";
-            this.settingsTitle.Size = new System.Drawing.Size(389, 38);
+            this.settingsTitle.Size = new System.Drawing.Size(311, 30);
             this.settingsTitle.TabIndex = 4;
             this.settingsTitle.Text = "⚙ Application Settings";
             // 
             // genSettings
             // 
             this.genSettings.Font = new System.Drawing.Font("Segoe UI", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.genSettings.Location = new System.Drawing.Point(41, 110);
-            this.genSettings.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.genSettings.Location = new System.Drawing.Point(33, 88);
             this.genSettings.Name = "genSettings";
-            this.genSettings.Size = new System.Drawing.Size(389, 38);
+            this.genSettings.Size = new System.Drawing.Size(311, 30);
             this.genSettings.TabIndex = 6;
             this.genSettings.Text = "🌐 General Settings";
             // 
@@ -1138,18 +1127,16 @@
             this.generalSettingsLabel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.generalSettingsLabel.Controls.Add(this.autostartInstall, 0, 0);
             this.generalSettingsLabel.Controls.Add(this.tempsFahrenheit, 0, 1);
-            this.generalSettingsLabel.Controls.Add(this.singleIconTray, 0, 2);
-            this.generalSettingsLabel.Controls.Add(this.refreshPanel, 0, 3);
-            this.generalSettingsLabel.Location = new System.Drawing.Point(41, 161);
-            this.generalSettingsLabel.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.generalSettingsLabel.Controls.Add(this.refreshPanel, 0, 2);
+            this.generalSettingsLabel.Location = new System.Drawing.Point(33, 129);
             this.generalSettingsLabel.Name = "generalSettingsLabel";
-            this.generalSettingsLabel.Padding = new System.Windows.Forms.Padding(6, 6, 6, 6);
-            this.generalSettingsLabel.RowCount = 4;
-            this.generalSettingsLabel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 25.00062F));
-            this.generalSettingsLabel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 25.00062F));
-            this.generalSettingsLabel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 25.00062F));
-            this.generalSettingsLabel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 24.99813F));
-            this.generalSettingsLabel.Size = new System.Drawing.Size(781, 209);
+            this.generalSettingsLabel.Padding = new System.Windows.Forms.Padding(5);
+            this.generalSettingsLabel.RowCount = 3;
+            this.generalSettingsLabel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
+            this.generalSettingsLabel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
+            this.generalSettingsLabel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
+            this.generalSettingsLabel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
+            this.generalSettingsLabel.Size = new System.Drawing.Size(625, 141);
             this.generalSettingsLabel.TabIndex = 7;
             // 
             // autostartInstall
@@ -1157,11 +1144,10 @@
             this.autostartInstall.AutoSize = true;
             this.autostartInstall.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.autostartInstall.Dock = System.Windows.Forms.DockStyle.Left;
-            this.autostartInstall.Location = new System.Drawing.Point(10, 10);
-            this.autostartInstall.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.autostartInstall.Location = new System.Drawing.Point(8, 8);
             this.autostartInstall.Name = "autostartInstall";
-            this.autostartInstall.Padding = new System.Windows.Forms.Padding(6, 6, 6, 6);
-            this.autostartInstall.Size = new System.Drawing.Size(306, 41);
+            this.autostartInstall.Padding = new System.Windows.Forms.Padding(5);
+            this.autostartInstall.Size = new System.Drawing.Size(236, 37);
             this.autostartInstall.TabIndex = 0;
             this.autostartInstall.Text = "Autostart at windows boot (Install)";
             this.autostartInstall.UseVisualStyleBackColor = true;
@@ -1172,56 +1158,38 @@
             this.tempsFahrenheit.AutoSize = true;
             this.tempsFahrenheit.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.tempsFahrenheit.Dock = System.Windows.Forms.DockStyle.Left;
-            this.tempsFahrenheit.Location = new System.Drawing.Point(10, 59);
-            this.tempsFahrenheit.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.tempsFahrenheit.Location = new System.Drawing.Point(8, 51);
             this.tempsFahrenheit.Name = "tempsFahrenheit";
-            this.tempsFahrenheit.Padding = new System.Windows.Forms.Padding(6, 6, 6, 6);
-            this.tempsFahrenheit.Size = new System.Drawing.Size(325, 41);
+            this.tempsFahrenheit.Padding = new System.Windows.Forms.Padding(5);
+            this.tempsFahrenheit.Size = new System.Drawing.Size(251, 37);
             this.tempsFahrenheit.TabIndex = 1;
             this.tempsFahrenheit.Text = "Show temperatures in Fahrenheit (°F)";
             this.tempsFahrenheit.UseVisualStyleBackColor = true;
-            // 
-            // singleIconTray
-            // 
-            this.singleIconTray.AutoSize = true;
-            this.singleIconTray.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
-            this.singleIconTray.Dock = System.Windows.Forms.DockStyle.Left;
-            this.singleIconTray.Location = new System.Drawing.Point(10, 108);
-            this.singleIconTray.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.singleIconTray.Name = "singleIconTray";
-            this.singleIconTray.Padding = new System.Windows.Forms.Padding(6, 6, 6, 6);
-            this.singleIconTray.Size = new System.Drawing.Size(256, 41);
-            this.singleIconTray.TabIndex = 2;
-            this.singleIconTray.Text = "Enable tray single-icon style";
-            this.singleIconTray.UseVisualStyleBackColor = true;
-            this.singleIconTray.CheckedChanged += new System.EventHandler(this.singleIconTray_CheckedChanged);
             // 
             // refreshPanel
             // 
             this.refreshPanel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left)));
             this.refreshPanel.ColumnCount = 2;
-            this.refreshPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 188F));
+            this.refreshPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 130F));
             this.refreshPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.refreshPanel.Controls.Add(this.refreshLabel, 0, 0);
             this.refreshPanel.Controls.Add(this.refreshValue, 1, 0);
-            this.refreshPanel.Location = new System.Drawing.Point(10, 157);
-            this.refreshPanel.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.refreshPanel.Location = new System.Drawing.Point(8, 94);
             this.refreshPanel.Name = "refreshPanel";
-            this.refreshPanel.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.refreshPanel.Padding = new System.Windows.Forms.Padding(3);
             this.refreshPanel.RowCount = 1;
             this.refreshPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.refreshPanel.Size = new System.Drawing.Size(314, 42);
+            this.refreshPanel.Size = new System.Drawing.Size(225, 39);
             this.refreshPanel.TabIndex = 22;
             // 
             // refreshLabel
             // 
             this.refreshLabel.AutoSize = true;
             this.refreshLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.refreshLabel.Location = new System.Drawing.Point(8, 4);
-            this.refreshLabel.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.refreshLabel.Location = new System.Drawing.Point(6, 3);
             this.refreshLabel.Name = "refreshLabel";
-            this.refreshLabel.Size = new System.Drawing.Size(180, 34);
+            this.refreshLabel.Size = new System.Drawing.Size(124, 33);
             this.refreshLabel.TabIndex = 1;
             this.refreshLabel.Text = "Update interval (s):";
             this.refreshLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -1229,16 +1197,17 @@
             // refreshValue
             // 
             this.refreshValue.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.refreshValue.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
+            this.refreshValue.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(25)))), ((int)(((byte)(25)))), ((int)(((byte)(25)))));
+            this.refreshValue.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.refreshValue.DecimalPlaces = 2;
+            this.refreshValue.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.refreshValue.ForeColor = System.Drawing.Color.White;
             this.refreshValue.Increment = new decimal(new int[] {
             25,
             0,
             0,
             131072});
-            this.refreshValue.Location = new System.Drawing.Point(196, 8);
-            this.refreshValue.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.refreshValue.Location = new System.Drawing.Point(136, 7);
             this.refreshValue.Maximum = new decimal(new int[] {
             10,
             0,
@@ -1250,8 +1219,9 @@
             0,
             131072});
             this.refreshValue.Name = "refreshValue";
-            this.refreshValue.Size = new System.Drawing.Size(110, 29);
+            this.refreshValue.Size = new System.Drawing.Size(83, 25);
             this.refreshValue.TabIndex = 3;
+            this.refreshValue.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             this.refreshValue.Value = new decimal(new int[] {
             50,
             0,
@@ -1262,10 +1232,9 @@
             // traySettingsLabel
             // 
             this.traySettingsLabel.Font = new System.Drawing.Font("Segoe UI", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.traySettingsLabel.Location = new System.Drawing.Point(41, 389);
-            this.traySettingsLabel.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.traySettingsLabel.Location = new System.Drawing.Point(33, 283);
             this.traySettingsLabel.Name = "traySettingsLabel";
-            this.traySettingsLabel.Size = new System.Drawing.Size(389, 38);
+            this.traySettingsLabel.Size = new System.Drawing.Size(311, 30);
             this.traySettingsLabel.TabIndex = 8;
             this.traySettingsLabel.Text = "🔧 Tray Settings";
             // 
@@ -1278,80 +1247,95 @@
             this.traySettingsPanel.ColumnCount = 2;
             this.traySettingsPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
             this.traySettingsPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
+            this.traySettingsPanel.Controls.Add(this.colortempsPanel, 0, 3);
+            this.traySettingsPanel.Controls.Add(this.fontFamilyPanel, 2, 2);
+            this.traySettingsPanel.Controls.Add(this.singleIconTray, 0, 2);
             this.traySettingsPanel.Controls.Add(this.enableCpuTray, 0, 0);
             this.traySettingsPanel.Controls.Add(this.enableGpuTray, 0, 1);
-            this.traySettingsPanel.Controls.Add(this.fontFamilyPanel, 0, 2);
             this.traySettingsPanel.Controls.Add(this.cpuColorPanel, 1, 0);
             this.traySettingsPanel.Controls.Add(this.gpuColorPanel, 1, 1);
-            this.traySettingsPanel.Controls.Add(this.iconsizePanel, 1, 2);
-            this.traySettingsPanel.Location = new System.Drawing.Point(41, 435);
-            this.traySettingsPanel.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.traySettingsPanel.Controls.Add(this.iconsizePanel, 1, 3);
+            this.traySettingsPanel.Location = new System.Drawing.Point(33, 319);
             this.traySettingsPanel.Name = "traySettingsPanel";
-            this.traySettingsPanel.Padding = new System.Windows.Forms.Padding(6, 6, 6, 6);
-            this.traySettingsPanel.RowCount = 3;
-            this.traySettingsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 33.33335F));
-            this.traySettingsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
-            this.traySettingsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 33.33332F));
-            this.traySettingsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 25F));
-            this.traySettingsPanel.Size = new System.Drawing.Size(781, 219);
+            this.traySettingsPanel.Padding = new System.Windows.Forms.Padding(5);
+            this.traySettingsPanel.RowCount = 4;
+            this.traySettingsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 25.00064F));
+            this.traySettingsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 25.00062F));
+            this.traySettingsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 25.00061F));
+            this.traySettingsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 24.99813F));
+            this.traySettingsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
+            this.traySettingsPanel.Size = new System.Drawing.Size(625, 204);
             this.traySettingsPanel.TabIndex = 9;
             // 
-            // enableCpuTray
+            // colortempsPanel
             // 
-            this.enableCpuTray.AutoSize = true;
-            this.enableCpuTray.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
-            this.enableCpuTray.Dock = System.Windows.Forms.DockStyle.Left;
-            this.enableCpuTray.Location = new System.Drawing.Point(10, 10);
-            this.enableCpuTray.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.enableCpuTray.Name = "enableCpuTray";
-            this.enableCpuTray.Padding = new System.Windows.Forms.Padding(6, 6, 6, 6);
-            this.enableCpuTray.Size = new System.Drawing.Size(206, 61);
-            this.enableCpuTray.TabIndex = 0;
-            this.enableCpuTray.Text = "Enable CPU Tray icon";
-            this.enableCpuTray.UseVisualStyleBackColor = true;
-            this.enableCpuTray.CheckedChanged += new System.EventHandler(this.Setting_CheckedChanged);
+            this.colortempsPanel.ColumnCount = 2;
+            this.colortempsPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 200F));
+            this.colortempsPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.colortempsPanel.Controls.Add(this.colortempsEnable, 0, 0);
+            this.colortempsPanel.Controls.Add(this.colortempsConfig, 1, 0);
+            this.colortempsPanel.Dock = System.Windows.Forms.DockStyle.Left;
+            this.colortempsPanel.Location = new System.Drawing.Point(8, 152);
+            this.colortempsPanel.Name = "colortempsPanel";
+            this.colortempsPanel.Padding = new System.Windows.Forms.Padding(1);
+            this.colortempsPanel.RowCount = 1;
+            this.colortempsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.colortempsPanel.Size = new System.Drawing.Size(301, 44);
+            this.colortempsPanel.TabIndex = 25;
             // 
-            // enableGpuTray
+            // colortempsEnable
             // 
-            this.enableGpuTray.AutoSize = true;
-            this.enableGpuTray.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
-            this.enableGpuTray.Dock = System.Windows.Forms.DockStyle.Left;
-            this.enableGpuTray.Location = new System.Drawing.Point(10, 79);
-            this.enableGpuTray.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.enableGpuTray.Name = "enableGpuTray";
-            this.enableGpuTray.Padding = new System.Windows.Forms.Padding(6, 6, 6, 6);
-            this.enableGpuTray.Size = new System.Drawing.Size(207, 60);
-            this.enableGpuTray.TabIndex = 12;
-            this.enableGpuTray.Text = "Enable GPU Tray icon";
-            this.enableGpuTray.UseVisualStyleBackColor = true;
-            this.enableGpuTray.CheckedChanged += new System.EventHandler(this.Setting_CheckedChanged);
+            this.colortempsEnable.AutoSize = true;
+            this.colortempsEnable.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.colortempsEnable.Dock = System.Windows.Forms.DockStyle.Left;
+            this.colortempsEnable.Location = new System.Drawing.Point(4, 4);
+            this.colortempsEnable.Name = "colortempsEnable";
+            this.colortempsEnable.Size = new System.Drawing.Size(182, 36);
+            this.colortempsEnable.TabIndex = 13;
+            this.colortempsEnable.Text = "Temperature-based colors";
+            this.colortempsEnable.UseVisualStyleBackColor = true;
+            this.colortempsEnable.CheckedChanged += new System.EventHandler(this.colortempsEnable_CheckedChanged);
+            // 
+            // colortempsConfig
+            // 
+            this.colortempsConfig.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.colortempsConfig.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(120)))), ((int)(((byte)(212)))));
+            this.colortempsConfig.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(25)))), ((int)(((byte)(25)))), ((int)(((byte)(25)))));
+            this.colortempsConfig.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.colortempsConfig.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.colortempsConfig.ForeColor = System.Drawing.Color.White;
+            this.colortempsConfig.Location = new System.Drawing.Point(204, 7);
+            this.colortempsConfig.Name = "colortempsConfig";
+            this.colortempsConfig.Size = new System.Drawing.Size(35, 30);
+            this.colortempsConfig.TabIndex = 14;
+            this.colortempsConfig.Text = "⋮";
+            this.colortempsConfig.UseVisualStyleBackColor = false;
+            this.colortempsConfig.Click += new System.EventHandler(this.colortempsConfig_Click);
             // 
             // fontFamilyPanel
             // 
             this.fontFamilyPanel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left)));
             this.fontFamilyPanel.ColumnCount = 2;
-            this.fontFamilyPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 120F));
+            this.fontFamilyPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 96F));
             this.fontFamilyPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.fontFamilyPanel.Controls.Add(this.fontFamilyLabel, 0, 0);
             this.fontFamilyPanel.Controls.Add(this.fontFamilyValue, 1, 0);
-            this.fontFamilyPanel.Location = new System.Drawing.Point(10, 147);
-            this.fontFamilyPanel.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.fontFamilyPanel.Location = new System.Drawing.Point(315, 104);
             this.fontFamilyPanel.Name = "fontFamilyPanel";
-            this.fontFamilyPanel.Padding = new System.Windows.Forms.Padding(6, 6, 6, 6);
+            this.fontFamilyPanel.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
             this.fontFamilyPanel.RowCount = 1;
             this.fontFamilyPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.fontFamilyPanel.Size = new System.Drawing.Size(314, 62);
-            this.fontFamilyPanel.TabIndex = 13;
+            this.fontFamilyPanel.Size = new System.Drawing.Size(251, 42);
+            this.fontFamilyPanel.TabIndex = 23;
             // 
             // fontFamilyLabel
             // 
             this.fontFamilyLabel.AutoSize = true;
             this.fontFamilyLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.fontFamilyLabel.Location = new System.Drawing.Point(10, 6);
-            this.fontFamilyLabel.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.fontFamilyLabel.Location = new System.Drawing.Point(8, 0);
             this.fontFamilyLabel.Name = "fontFamilyLabel";
-            this.fontFamilyLabel.Size = new System.Drawing.Size(112, 50);
+            this.fontFamilyLabel.Size = new System.Drawing.Size(90, 42);
             this.fontFamilyLabel.TabIndex = 0;
             this.fontFamilyLabel.Text = "Font family:";
             this.fontFamilyLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -1359,14 +1343,14 @@
             // fontFamilyValue
             // 
             this.fontFamilyValue.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.fontFamilyValue.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
+            this.fontFamilyValue.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(25)))), ((int)(((byte)(25)))), ((int)(((byte)(25)))));
             this.fontFamilyValue.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.fontFamilyValue.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.fontFamilyValue.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.fontFamilyValue.ForeColor = System.Drawing.Color.White;
             this.fontFamilyValue.FormattingEnabled = true;
             this.fontFamilyValue.IntegralHeight = false;
-            this.fontFamilyValue.ItemHeight = 19;
+            this.fontFamilyValue.ItemHeight = 13;
             this.fontFamilyValue.Items.AddRange(new object[] {
             "Consolas",
             "Cascadia Mono",
@@ -1389,184 +1373,134 @@
             "Times New Roman",
             "Georgia",
             "Sitka Text"});
-            this.fontFamilyValue.Location = new System.Drawing.Point(127, 17);
+            this.fontFamilyValue.Location = new System.Drawing.Point(102, 10);
             this.fontFamilyValue.Margin = new System.Windows.Forms.Padding(1);
             this.fontFamilyValue.Name = "fontFamilyValue";
-            this.fontFamilyValue.Size = new System.Drawing.Size(180, 27);
+            this.fontFamilyValue.Size = new System.Drawing.Size(143, 21);
             this.fontFamilyValue.TabIndex = 24;
             this.fontFamilyValue.SelectedIndexChanged += new System.EventHandler(this.Setting_SelectedIndexChanged);
+            // 
+            // singleIconTray
+            // 
+            this.singleIconTray.AutoSize = true;
+            this.singleIconTray.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.singleIconTray.Dock = System.Windows.Forms.DockStyle.Left;
+            this.singleIconTray.Location = new System.Drawing.Point(8, 104);
+            this.singleIconTray.Name = "singleIconTray";
+            this.singleIconTray.Padding = new System.Windows.Forms.Padding(5);
+            this.singleIconTray.Size = new System.Drawing.Size(156, 42);
+            this.singleIconTray.TabIndex = 22;
+            this.singleIconTray.Text = "Single tray icon style";
+            this.singleIconTray.UseVisualStyleBackColor = true;
+            this.singleIconTray.CheckedChanged += new System.EventHandler(this.singleIconTray_CheckedChanged);
+            // 
+            // enableCpuTray
+            // 
+            this.enableCpuTray.AutoSize = true;
+            this.enableCpuTray.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.enableCpuTray.Dock = System.Windows.Forms.DockStyle.Left;
+            this.enableCpuTray.Location = new System.Drawing.Point(8, 8);
+            this.enableCpuTray.Name = "enableCpuTray";
+            this.enableCpuTray.Padding = new System.Windows.Forms.Padding(5);
+            this.enableCpuTray.Size = new System.Drawing.Size(160, 42);
+            this.enableCpuTray.TabIndex = 0;
+            this.enableCpuTray.Text = "Enable CPU Tray icon";
+            this.enableCpuTray.UseVisualStyleBackColor = true;
+            this.enableCpuTray.CheckedChanged += new System.EventHandler(this.Setting_CheckedChanged);
+            // 
+            // enableGpuTray
+            // 
+            this.enableGpuTray.AutoSize = true;
+            this.enableGpuTray.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.enableGpuTray.Dock = System.Windows.Forms.DockStyle.Left;
+            this.enableGpuTray.Location = new System.Drawing.Point(8, 56);
+            this.enableGpuTray.Name = "enableGpuTray";
+            this.enableGpuTray.Padding = new System.Windows.Forms.Padding(5);
+            this.enableGpuTray.Size = new System.Drawing.Size(161, 42);
+            this.enableGpuTray.TabIndex = 12;
+            this.enableGpuTray.Text = "Enable GPU Tray icon";
+            this.enableGpuTray.UseVisualStyleBackColor = true;
+            this.enableGpuTray.CheckedChanged += new System.EventHandler(this.Setting_CheckedChanged);
             // 
             // cpuColorPanel
             // 
             this.cpuColorPanel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left)));
             this.cpuColorPanel.ColumnCount = 2;
-            this.cpuColorPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 120F));
+            this.cpuColorPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 96F));
             this.cpuColorPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.cpuColorPanel.Controls.Add(this.cpuColorLabel, 0, 0);
             this.cpuColorPanel.Controls.Add(this.cpuColorValue, 1, 0);
-            this.cpuColorPanel.Location = new System.Drawing.Point(394, 10);
-            this.cpuColorPanel.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.cpuColorPanel.Controls.Add(this.cpuColorLabel, 0, 0);
+            this.cpuColorPanel.Location = new System.Drawing.Point(315, 8);
             this.cpuColorPanel.Name = "cpuColorPanel";
-            this.cpuColorPanel.Padding = new System.Windows.Forms.Padding(6, 6, 6, 6);
+            this.cpuColorPanel.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
             this.cpuColorPanel.RowCount = 1;
             this.cpuColorPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.cpuColorPanel.Size = new System.Drawing.Size(314, 61);
+            this.cpuColorPanel.Size = new System.Drawing.Size(251, 42);
             this.cpuColorPanel.TabIndex = 16;
             // 
             // cpuColorLabel
             // 
             this.cpuColorLabel.AutoSize = true;
             this.cpuColorLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.cpuColorLabel.Location = new System.Drawing.Point(10, 6);
-            this.cpuColorLabel.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.cpuColorLabel.Location = new System.Drawing.Point(8, 0);
             this.cpuColorLabel.Name = "cpuColorLabel";
-            this.cpuColorLabel.Size = new System.Drawing.Size(112, 49);
+            this.cpuColorLabel.Size = new System.Drawing.Size(90, 42);
             this.cpuColorLabel.TabIndex = 0;
             this.cpuColorLabel.Text = "CPU Color:";
             this.cpuColorLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            // 
-            // cpuColorValue
-            // 
-            this.cpuColorValue.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.cpuColorValue.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
-            this.cpuColorValue.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cpuColorValue.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.cpuColorValue.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.cpuColorValue.ForeColor = System.Drawing.Color.White;
-            this.cpuColorValue.FormattingEnabled = true;
-            this.cpuColorValue.IntegralHeight = false;
-            this.cpuColorValue.ItemHeight = 19;
-            this.cpuColorValue.Items.AddRange(new object[] {
-            "DodgerBlue",
-            "DeepSkyBlue",
-            "Cyan",
-            "Turquoise",
-            "Aqua",
-            "LimeGreen",
-            "SpringGreen",
-            "MediumSeaGreen",
-            "SeaGreen",
-            "Yellow",
-            "Gold",
-            "Khaki",
-            "Orange",
-            "DarkOrange",
-            "OrangeRed",
-            "Coral",
-            "Red",
-            "Tomato",
-            "Magenta",
-            "HotPink",
-            "DeepPink",
-            "Violet",
-            "Plum",
-            "Orchid"});
-            this.cpuColorValue.Location = new System.Drawing.Point(127, 17);
-            this.cpuColorValue.Margin = new System.Windows.Forms.Padding(1);
-            this.cpuColorValue.Name = "cpuColorValue";
-            this.cpuColorValue.Size = new System.Drawing.Size(180, 27);
-            this.cpuColorValue.TabIndex = 24;
-            this.cpuColorValue.SelectedIndexChanged += new System.EventHandler(this.Setting_SelectedIndexChanged);
             // 
             // gpuColorPanel
             // 
             this.gpuColorPanel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left)));
             this.gpuColorPanel.ColumnCount = 2;
-            this.gpuColorPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 120F));
+            this.gpuColorPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 96F));
             this.gpuColorPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.gpuColorPanel.Controls.Add(this.gpuColorLabel, 0, 0);
             this.gpuColorPanel.Controls.Add(this.gpuColorValue, 1, 0);
-            this.gpuColorPanel.Location = new System.Drawing.Point(394, 79);
-            this.gpuColorPanel.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.gpuColorPanel.Controls.Add(this.gpuColorLabel, 0, 0);
+            this.gpuColorPanel.Location = new System.Drawing.Point(315, 56);
             this.gpuColorPanel.Name = "gpuColorPanel";
-            this.gpuColorPanel.Padding = new System.Windows.Forms.Padding(6, 6, 6, 6);
+            this.gpuColorPanel.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
             this.gpuColorPanel.RowCount = 1;
             this.gpuColorPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.gpuColorPanel.Size = new System.Drawing.Size(314, 60);
+            this.gpuColorPanel.Size = new System.Drawing.Size(251, 42);
             this.gpuColorPanel.TabIndex = 17;
             // 
             // gpuColorLabel
             // 
             this.gpuColorLabel.AutoSize = true;
             this.gpuColorLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.gpuColorLabel.Location = new System.Drawing.Point(10, 6);
-            this.gpuColorLabel.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.gpuColorLabel.Location = new System.Drawing.Point(8, 0);
             this.gpuColorLabel.Name = "gpuColorLabel";
-            this.gpuColorLabel.Size = new System.Drawing.Size(112, 48);
+            this.gpuColorLabel.Size = new System.Drawing.Size(90, 42);
             this.gpuColorLabel.TabIndex = 0;
             this.gpuColorLabel.Text = "GPU Color:";
             this.gpuColorLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
-            // gpuColorValue
-            // 
-            this.gpuColorValue.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.gpuColorValue.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
-            this.gpuColorValue.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.gpuColorValue.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.gpuColorValue.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.gpuColorValue.ForeColor = System.Drawing.Color.White;
-            this.gpuColorValue.FormattingEnabled = true;
-            this.gpuColorValue.IntegralHeight = false;
-            this.gpuColorValue.ItemHeight = 19;
-            this.gpuColorValue.Items.AddRange(new object[] {
-            "DodgerBlue",
-            "DeepSkyBlue",
-            "Cyan",
-            "Turquoise",
-            "Aqua",
-            "LimeGreen",
-            "SpringGreen",
-            "MediumSeaGreen",
-            "SeaGreen",
-            "Yellow",
-            "Gold",
-            "Khaki",
-            "Orange",
-            "DarkOrange",
-            "OrangeRed",
-            "Coral",
-            "Red",
-            "Tomato",
-            "Magenta",
-            "HotPink",
-            "DeepPink",
-            "Violet",
-            "Plum",
-            "Orchid"});
-            this.gpuColorValue.Location = new System.Drawing.Point(127, 16);
-            this.gpuColorValue.Margin = new System.Windows.Forms.Padding(1);
-            this.gpuColorValue.Name = "gpuColorValue";
-            this.gpuColorValue.Size = new System.Drawing.Size(180, 27);
-            this.gpuColorValue.TabIndex = 24;
-            this.gpuColorValue.SelectedIndexChanged += new System.EventHandler(this.Setting_SelectedIndexChanged);
-            // 
             // iconsizePanel
             // 
             this.iconsizePanel.ColumnCount = 2;
-            this.iconsizePanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 120F));
+            this.iconsizePanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 94F));
             this.iconsizePanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.iconsizePanel.Controls.Add(this.iconsizeLabel, 0, 0);
             this.iconsizePanel.Controls.Add(this.iconsizeValue, 1, 0);
             this.iconsizePanel.Dock = System.Windows.Forms.DockStyle.Left;
-            this.iconsizePanel.Location = new System.Drawing.Point(394, 147);
-            this.iconsizePanel.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.iconsizePanel.Location = new System.Drawing.Point(315, 152);
             this.iconsizePanel.Name = "iconsizePanel";
-            this.iconsizePanel.Padding = new System.Windows.Forms.Padding(6, 6, 6, 6);
+            this.iconsizePanel.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
             this.iconsizePanel.RowCount = 1;
             this.iconsizePanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.iconsizePanel.Size = new System.Drawing.Size(244, 62);
+            this.iconsizePanel.Size = new System.Drawing.Size(195, 44);
             this.iconsizePanel.TabIndex = 21;
             // 
             // iconsizeLabel
             // 
             this.iconsizeLabel.AutoSize = true;
             this.iconsizeLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.iconsizeLabel.Location = new System.Drawing.Point(10, 6);
-            this.iconsizeLabel.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.iconsizeLabel.Location = new System.Drawing.Point(8, 0);
             this.iconsizeLabel.Name = "iconsizeLabel";
-            this.iconsizeLabel.Size = new System.Drawing.Size(112, 50);
+            this.iconsizeLabel.Size = new System.Drawing.Size(88, 44);
             this.iconsizeLabel.TabIndex = 1;
             this.iconsizeLabel.Text = "Icon size (%):";
             this.iconsizeLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -1574,23 +1508,25 @@
             // iconsizeValue
             // 
             this.iconsizeValue.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.iconsizeValue.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
+            this.iconsizeValue.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(25)))), ((int)(((byte)(25)))), ((int)(((byte)(25)))));
+            this.iconsizeValue.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.iconsizeValue.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.iconsizeValue.ForeColor = System.Drawing.Color.White;
             this.iconsizeValue.Increment = new decimal(new int[] {
             5,
             0,
             0,
             0});
-            this.iconsizeValue.Location = new System.Drawing.Point(130, 16);
-            this.iconsizeValue.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.iconsizeValue.Location = new System.Drawing.Point(102, 9);
             this.iconsizeValue.Minimum = new decimal(new int[] {
             30,
             0,
             0,
             0});
             this.iconsizeValue.Name = "iconsizeValue";
-            this.iconsizeValue.Size = new System.Drawing.Size(104, 29);
+            this.iconsizeValue.Size = new System.Drawing.Size(85, 25);
             this.iconsizeValue.TabIndex = 2;
+            this.iconsizeValue.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             this.iconsizeValue.Value = new decimal(new int[] {
             75,
             0,
@@ -1603,10 +1539,9 @@
             this.divider3.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.divider3.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(120)))), ((int)(((byte)(212)))));
-            this.divider3.Location = new System.Drawing.Point(41, 95);
-            this.divider3.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.divider3.Location = new System.Drawing.Point(33, 76);
             this.divider3.Name = "divider3";
-            this.divider3.Size = new System.Drawing.Size(781, 1);
+            this.divider3.Size = new System.Drawing.Size(625, 1);
             this.divider3.TabIndex = 5;
             this.divider3.TabStop = false;
             // 
@@ -1622,9 +1557,8 @@
             this.aboutPage.Controls.Add(this.donatePic);
             this.aboutPage.ForeColor = System.Drawing.Color.White;
             this.aboutPage.Location = new System.Drawing.Point(4, 5);
-            this.aboutPage.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.aboutPage.Name = "aboutPage";
-            this.aboutPage.Size = new System.Drawing.Size(864, 695);
+            this.aboutPage.Size = new System.Drawing.Size(690, 554);
             this.aboutPage.TabIndex = 2;
             this.aboutPage.Text = "About";
             // 
@@ -1632,10 +1566,9 @@
             // 
             this.aboutTitle.Font = new System.Drawing.Font("Segoe UI", 15.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.aboutTitle.ForeColor = System.Drawing.Color.White;
-            this.aboutTitle.Location = new System.Drawing.Point(41, 35);
-            this.aboutTitle.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.aboutTitle.Location = new System.Drawing.Point(33, 28);
             this.aboutTitle.Name = "aboutTitle";
-            this.aboutTitle.Size = new System.Drawing.Size(389, 38);
+            this.aboutTitle.Size = new System.Drawing.Size(311, 30);
             this.aboutTitle.TabIndex = 1;
             this.aboutTitle.Text = "❓ About";
             // 
@@ -1644,20 +1577,18 @@
             this.divider1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.divider1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(120)))), ((int)(((byte)(212)))));
-            this.divider1.Location = new System.Drawing.Point(41, 95);
-            this.divider1.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.divider1.Location = new System.Drawing.Point(33, 76);
             this.divider1.Name = "divider1";
-            this.divider1.Size = new System.Drawing.Size(781, 1);
+            this.divider1.Size = new System.Drawing.Size(625, 1);
             this.divider1.TabIndex = 2;
             this.divider1.TabStop = false;
             // 
             // appTitleAbout
             // 
             this.appTitleAbout.Font = new System.Drawing.Font("Segoe UI", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.appTitleAbout.Location = new System.Drawing.Point(41, 110);
-            this.appTitleAbout.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.appTitleAbout.Location = new System.Drawing.Point(33, 88);
             this.appTitleAbout.Name = "appTitleAbout";
-            this.appTitleAbout.Size = new System.Drawing.Size(389, 38);
+            this.appTitleAbout.Size = new System.Drawing.Size(311, 30);
             this.appTitleAbout.TabIndex = 3;
             this.appTitleAbout.Text = "Tray Temps";
             // 
@@ -1668,11 +1599,10 @@
             this.appAboutExtra.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.appAboutExtra.Font = new System.Drawing.Font("Segoe UI", 10.8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.appAboutExtra.ForeColor = System.Drawing.Color.DarkGray;
-            this.appAboutExtra.Location = new System.Drawing.Point(41, 158);
-            this.appAboutExtra.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.appAboutExtra.Location = new System.Drawing.Point(33, 126);
             this.appAboutExtra.Name = "appAboutExtra";
-            this.appAboutExtra.Padding = new System.Windows.Forms.Padding(12, 12, 12, 12);
-            this.appAboutExtra.Size = new System.Drawing.Size(781, 292);
+            this.appAboutExtra.Padding = new System.Windows.Forms.Padding(10);
+            this.appAboutExtra.Size = new System.Drawing.Size(625, 234);
             this.appAboutExtra.TabIndex = 4;
             this.appAboutExtra.Text = resources.GetString("appAboutExtra.Text");
             this.appAboutExtra.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -1682,10 +1612,9 @@
             this.appVersion.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.appVersion.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.appVersion.ForeColor = System.Drawing.Color.DimGray;
-            this.appVersion.Location = new System.Drawing.Point(42, 622);
-            this.appVersion.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.appVersion.Location = new System.Drawing.Point(34, 498);
             this.appVersion.Name = "appVersion";
-            this.appVersion.Size = new System.Drawing.Size(388, 30);
+            this.appVersion.Size = new System.Drawing.Size(310, 24);
             this.appVersion.TabIndex = 5;
             this.appVersion.Text = "Version: 0.0.0.0";
             // 
@@ -1694,10 +1623,9 @@
             this.githubLink.Cursor = System.Windows.Forms.Cursors.Hand;
             this.githubLink.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.githubLink.ForeColor = System.Drawing.Color.SeaGreen;
-            this.githubLink.Location = new System.Drawing.Point(41, 471);
-            this.githubLink.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.githubLink.Location = new System.Drawing.Point(33, 377);
             this.githubLink.Name = "githubLink";
-            this.githubLink.Size = new System.Drawing.Size(389, 30);
+            this.githubLink.Size = new System.Drawing.Size(311, 24);
             this.githubLink.TabIndex = 7;
             this.githubLink.Text = "GitHub: github.com/nmd-113/Tray-Temps";
             this.githubLink.Click += new System.EventHandler(this.GithubLink_Click);
@@ -1707,10 +1635,9 @@
             this.donatePic.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.donatePic.Cursor = System.Windows.Forms.Cursors.Hand;
             this.donatePic.Image = global::TrayTemps.Properties.Resources.donate;
-            this.donatePic.Location = new System.Drawing.Point(759, 589);
-            this.donatePic.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.donatePic.Location = new System.Drawing.Point(607, 471);
             this.donatePic.Name = "donatePic";
-            this.donatePic.Size = new System.Drawing.Size(64, 64);
+            this.donatePic.Size = new System.Drawing.Size(51, 51);
             this.donatePic.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.donatePic.TabIndex = 6;
             this.donatePic.TabStop = false;
@@ -1723,63 +1650,107 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.panelWrapper.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(25)))), ((int)(((byte)(25)))), ((int)(((byte)(25)))));
             this.panelWrapper.Controls.Add(this.mainTabControl);
-            this.panelWrapper.Location = new System.Drawing.Point(139, 58);
-            this.panelWrapper.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.panelWrapper.Location = new System.Drawing.Point(111, 46);
             this.panelWrapper.Name = "panelWrapper";
-            this.panelWrapper.Size = new System.Drawing.Size(860, 691);
+            this.panelWrapper.Size = new System.Drawing.Size(688, 553);
             this.panelWrapper.TabIndex = 3;
             // 
             // cpuTrayIcon
             // 
-            this.cpuTrayIcon.ContextMenuStrip = this.contextMenuStrip1;
+            this.cpuTrayIcon.ContextMenuStrip = this.contextMenuStrip;
             this.cpuTrayIcon.Text = "CPU Temp";
             this.cpuTrayIcon.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.cpuTrayIcon_MouseDoubleClick);
             // 
-            // contextMenuStrip1
-            // 
-            this.contextMenuStrip1.ImageScalingSize = new System.Drawing.Size(32, 32);
-            this.contextMenuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.ShowForm,
-            this.ExitForm});
-            this.contextMenuStrip1.Name = "contextMenuStrip1";
-            this.contextMenuStrip1.Size = new System.Drawing.Size(115, 52);
-            // 
-            // ShowForm
-            // 
-            this.ShowForm.Name = "ShowForm";
-            this.ShowForm.Size = new System.Drawing.Size(114, 24);
-            this.ShowForm.Text = "Show";
-            this.ShowForm.Click += new System.EventHandler(this.ShowForm_Click);
-            // 
-            // ExitForm
-            // 
-            this.ExitForm.Name = "ExitForm";
-            this.ExitForm.Size = new System.Drawing.Size(114, 24);
-            this.ExitForm.Text = "Exit";
-            this.ExitForm.Click += new System.EventHandler(this.ExitForm_Click);
-            // 
             // gpuTrayIcon
             // 
-            this.gpuTrayIcon.ContextMenuStrip = this.contextMenuStrip1;
+            this.gpuTrayIcon.ContextMenuStrip = this.contextMenuStrip;
             this.gpuTrayIcon.Text = "GPU Temp";
             this.gpuTrayIcon.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.gpuTrayIcon_MouseDoubleClick);
             // 
             // NotifyIcon
             // 
             this.NotifyIcon.BalloonTipText = "Double click to show.";
-            this.NotifyIcon.ContextMenuStrip = this.contextMenuStrip1;
+            this.NotifyIcon.ContextMenuStrip = this.contextMenuStrip;
             this.NotifyIcon.Icon = ((System.Drawing.Icon)(resources.GetObject("NotifyIcon.Icon")));
             this.NotifyIcon.Text = "TrayTemps";
             this.NotifyIcon.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.NotifyIcon_MouseDoubleClick);
             // 
+            // ShowForm
+            // 
+            this.ShowForm.AutoSize = false;
+            this.ShowForm.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.ShowForm.ForeColor = System.Drawing.Color.White;
+            this.ShowForm.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.ShowForm.ImageScaling = System.Windows.Forms.ToolStripItemImageScaling.None;
+            this.ShowForm.Name = "ShowForm";
+            this.ShowForm.Size = new System.Drawing.Size(155, 30);
+            this.ShowForm.Text = "Show";
+            this.ShowForm.Click += new System.EventHandler(this.ShowForm_Click);
+            // 
+            // ExitForm
+            // 
+            this.ExitForm.AutoSize = false;
+            this.ExitForm.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.ExitForm.ForeColor = System.Drawing.Color.Red;
+            this.ExitForm.Name = "ExitForm";
+            this.ExitForm.Size = new System.Drawing.Size(155, 30);
+            this.ExitForm.Text = "Exit";
+            this.ExitForm.Click += new System.EventHandler(this.ExitForm_Click);
+            // 
+            // contextMenuStrip
+            // 
+            this.contextMenuStrip.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(25)))), ((int)(((byte)(25)))), ((int)(((byte)(25)))));
+            this.contextMenuStrip.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
+            this.contextMenuStrip.Font = new System.Drawing.Font("Segoe UI", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.contextMenuStrip.ImageScalingSize = new System.Drawing.Size(32, 32);
+            this.contextMenuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.ShowForm,
+            this.ExitForm});
+            this.contextMenuStrip.LayoutStyle = System.Windows.Forms.ToolStripLayoutStyle.VerticalStackWithOverflow;
+            this.contextMenuStrip.Name = "contextMenuStrip1";
+            this.contextMenuStrip.ShowImageMargin = false;
+            this.contextMenuStrip.Size = new System.Drawing.Size(94, 64);
+            // 
+            // cpuColorValue
+            // 
+            this.cpuColorValue.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.cpuColorValue.BackColor = System.Drawing.Color.Aqua;
+            this.cpuColorValue.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(25)))), ((int)(((byte)(25)))), ((int)(((byte)(25)))));
+            this.cpuColorValue.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.cpuColorValue.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.cpuColorValue.ForeColor = System.Drawing.Color.Black;
+            this.cpuColorValue.Location = new System.Drawing.Point(104, 6);
+            this.cpuColorValue.Name = "cpuColorValue";
+            this.cpuColorValue.Size = new System.Drawing.Size(139, 30);
+            this.cpuColorValue.TabIndex = 10;
+            this.cpuColorValue.Text = "🎨";
+            this.cpuColorValue.UseVisualStyleBackColor = false;
+            this.cpuColorValue.Click += new System.EventHandler(this.cpuColorValue_Click);
+            // 
+            // gpuColorValue
+            // 
+            this.gpuColorValue.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.gpuColorValue.BackColor = System.Drawing.Color.Gold;
+            this.gpuColorValue.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(25)))), ((int)(((byte)(25)))), ((int)(((byte)(25)))));
+            this.gpuColorValue.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.gpuColorValue.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.gpuColorValue.ForeColor = System.Drawing.Color.Black;
+            this.gpuColorValue.Location = new System.Drawing.Point(104, 6);
+            this.gpuColorValue.Name = "gpuColorValue";
+            this.gpuColorValue.Size = new System.Drawing.Size(139, 30);
+            this.gpuColorValue.TabIndex = 11;
+            this.gpuColorValue.Text = "🎨";
+            this.gpuColorValue.UseVisualStyleBackColor = false;
+            this.gpuColorValue.Click += new System.EventHandler(this.gpuColorValue_Click);
+            // 
             // MainForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(120F, 120F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(18)))), ((int)(((byte)(18)))), ((int)(((byte)(18)))));
             this.BackgroundImage = global::TrayTemps.Properties.Resources.border;
             this.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
-            this.ClientSize = new System.Drawing.Size(1000, 750);
+            this.ClientSize = new System.Drawing.Size(800, 600);
             this.Controls.Add(this.panelWrapper);
             this.Controls.Add(this.minimizeBtn);
             this.Controls.Add(this.exitBtn);
@@ -1790,10 +1761,10 @@
             this.ForeColor = System.Drawing.Color.White;
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
-            this.Margin = new System.Windows.Forms.Padding(5, 5, 5, 5);
+            this.Margin = new System.Windows.Forms.Padding(4);
             this.MaximizeBox = false;
-            this.MaximumSize = new System.Drawing.Size(1280, 960);
-            this.MinimumSize = new System.Drawing.Size(875, 725);
+            this.MaximumSize = new System.Drawing.Size(1024, 768);
+            this.MinimumSize = new System.Drawing.Size(700, 580);
             this.Name = "MainForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
             this.Text = "Test Tool";
@@ -1824,6 +1795,8 @@
             ((System.ComponentModel.ISupportInitialize)(this.refreshValue)).EndInit();
             this.traySettingsPanel.ResumeLayout(false);
             this.traySettingsPanel.PerformLayout();
+            this.colortempsPanel.ResumeLayout(false);
+            this.colortempsPanel.PerformLayout();
             this.fontFamilyPanel.ResumeLayout(false);
             this.fontFamilyPanel.PerformLayout();
             this.cpuColorPanel.ResumeLayout(false);
@@ -1838,7 +1811,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.divider1)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.donatePic)).EndInit();
             this.panelWrapper.ResumeLayout(false);
-            this.contextMenuStrip1.ResumeLayout(false);
+            this.contextMenuStrip.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }
@@ -1914,19 +1887,13 @@
         private System.Windows.Forms.TableLayoutPanel generalSettingsLabel;
         private System.Windows.Forms.CheckBox autostartInstall;
         private System.Windows.Forms.CheckBox tempsFahrenheit;
-        private System.Windows.Forms.CheckBox singleIconTray;
         private System.Windows.Forms.TableLayoutPanel traySettingsPanel;
         private System.Windows.Forms.CheckBox enableCpuTray;
         private System.Windows.Forms.Label traySettingsLabel;
         private System.Windows.Forms.CheckBox enableGpuTray;
-        private System.Windows.Forms.TableLayoutPanel fontFamilyPanel;
-        private System.Windows.Forms.ComboBox fontFamilyValue;
-        private System.Windows.Forms.Label fontFamilyLabel;
         private System.Windows.Forms.TableLayoutPanel gpuColorPanel;
-        private System.Windows.Forms.ComboBox gpuColorValue;
         private System.Windows.Forms.Label gpuColorLabel;
         private System.Windows.Forms.TableLayoutPanel cpuColorPanel;
-        private System.Windows.Forms.ComboBox cpuColorValue;
         private System.Windows.Forms.Label cpuColorLabel;
         private System.Windows.Forms.TableLayoutPanel iconsizePanel;
         private System.Windows.Forms.Label iconsizeLabel;
@@ -1935,10 +1902,20 @@
         private System.Windows.Forms.NumericUpDown refreshValue;
         private System.Windows.Forms.Label refreshLabel;
         private System.Windows.Forms.NotifyIcon cpuTrayIcon;
-        private System.Windows.Forms.ContextMenuStrip contextMenuStrip1;
-        private System.Windows.Forms.ToolStripMenuItem ShowForm;
-        private System.Windows.Forms.ToolStripMenuItem ExitForm;
         private System.Windows.Forms.NotifyIcon gpuTrayIcon;
         private System.Windows.Forms.NotifyIcon NotifyIcon;
+        private System.Windows.Forms.TableLayoutPanel fontFamilyPanel;
+        private System.Windows.Forms.Label fontFamilyLabel;
+        private System.Windows.Forms.ComboBox fontFamilyValue;
+        private System.Windows.Forms.CheckBox singleIconTray;
+        private System.Windows.Forms.TableLayoutPanel colortempsPanel;
+        private System.Windows.Forms.CheckBox colortempsEnable;
+        private System.Windows.Forms.Button colortempsConfig;
+        private System.Windows.Forms.ColorDialog colorDialog;
+        private System.Windows.Forms.ContextMenuStrip contextMenuStrip;
+        private System.Windows.Forms.ToolStripMenuItem ShowForm;
+        private System.Windows.Forms.ToolStripMenuItem ExitForm;
+        private System.Windows.Forms.Button cpuColorValue;
+        private System.Windows.Forms.Button gpuColorValue;
     }
 }

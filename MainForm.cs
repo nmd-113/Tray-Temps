@@ -6,14 +6,15 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
 using System.Drawing.Text;
 using System.IO;
 using System.Linq;
 using System.Management;
 using System.Runtime.InteropServices;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Text.Json.Serialization;
 
 namespace TrayTemps
 {
@@ -46,6 +47,13 @@ namespace TrayTemps
         private int _savedCpuIndex = 0;
         private int _savedGpuIndex = 0;
         private int _savedStorageIndex = 0;
+
+        public int WarmTempMin;
+        public int WarmTempMax;
+
+        public Color NormalColor;
+        public Color WarningColor;
+        public Color CriticalColor;
 
         private ISensor _cpuTempSensor;
         private ISensor _gpuTempSensor;
@@ -322,23 +330,48 @@ namespace TrayTemps
         {
             string unit = GetUnit();
 
+            if (colortempsEnable.Checked)
+            {
+                if (cpuTemp.HasValue)
+                {
+                    float val = GetDisplayTemp(cpuTemp.Value);
+                    if (val < WarmTempMin) _cpuBrush.Color = NormalColor;
+                    else if (val <= WarmTempMax) _cpuBrush.Color = WarningColor;
+                    else _cpuBrush.Color = CriticalColor;
+                }
+                if (gpuTemp.HasValue)
+                {
+                    float val = GetDisplayTemp(gpuTemp.Value);
+                    if (val < WarmTempMin) _gpuBrush.Color = NormalColor;
+                    else if (val <= WarmTempMax) _gpuBrush.Color = WarningColor;
+                    else _gpuBrush.Color = CriticalColor;
+                }
+            }
+            else
+            {
+                _cpuBrush.Color = cpuColorValue.BackColor;
+                _gpuBrush.Color = gpuColorValue.BackColor;
+            }
+
+            // ---------------------------------
+
             if (singleIconTray.Checked && enableCpuTray.Checked && enableGpuTray.Checked)
             {
                 cpuTrayIcon.Visible = true;
                 gpuTrayIcon.Visible = false;
-
-                float cTemp = cpuTemp ?? 0;
-                float gTemp = gpuTemp ?? 0;
-
-                UpdateCombinedTrayIcon(cpuTrayIcon, GetDisplayTemp(cTemp), GetDisplayTemp(gTemp));
+                UpdateCombinedTrayIcon(cpuTrayIcon, GetDisplayTemp(cpuTemp ?? 0), GetDisplayTemp(gpuTemp ?? 0));
                 return;
             }
 
             if (enableCpuTray.Checked && cpuTemp.HasValue)
+            {
                 UpdateSingleTrayIcon(cpuTrayIcon, GetDisplayTemp(cpuTemp.Value), ref _lastCpuTempText, _cpuBrush);
+            }
 
             if (enableGpuTray.Checked && gpuTemp.HasValue)
+            {
                 UpdateSingleTrayIcon(gpuTrayIcon, GetDisplayTemp(gpuTemp.Value), ref _lastGpuTempText, _gpuBrush);
+            }
 
             if (!enableCpuTray.Checked && !enableGpuTray.Checked)
             {
@@ -354,32 +387,37 @@ namespace TrayTemps
 
         private void UpdateCombinedTrayIcon(NotifyIcon icon, float cpuTemp, float gpuTemp)
         {
-            string newText = $"{cpuTemp:F0}{gpuTemp:F0}";
-            if (newText != _lastCpuTempText)
+            string cacheKey = $"{cpuTemp:F0}_{gpuTemp:F0}_{_cpuBrush.Color.ToArgb()}_{_gpuBrush.Color.ToArgb()}";
+
+            if (cacheKey != _lastCpuTempText)
             {
                 Icon oldIcon = icon.Icon;
                 icon.Icon = CreateCombinedTempIcon($"{cpuTemp:F0}", $"{gpuTemp:F0}");
+                if (oldIcon != null)
+                {
+                    DestroyIcon(oldIcon.Handle);
+                    oldIcon.Dispose();
+                }
 
-                if (oldIcon != null) DestroyIcon(oldIcon.Handle);
-                _lastCpuTempText = newText;
+                _lastCpuTempText = cacheKey;
             }
         }
 
         private void UpdateSingleTrayIcon(NotifyIcon icon, float temp, ref string lastText, SolidBrush brush)
         {
-            string newText = $"{temp:F0}";
-            if (newText != lastText)
+            string cacheKey = $"{temp:F0}_{brush.Color.ToArgb()}";
+
+            if (cacheKey != lastText)
             {
                 Icon oldIcon = icon.Icon;
-
-                icon.Icon = CreateTempIcon(newText, brush);
-
+                icon.Icon = CreateTempIcon($"{temp:F0}", brush);
                 if (oldIcon != null)
                 {
+                    DestroyIcon(oldIcon.Handle);
                     oldIcon.Dispose();
                 }
 
-                lastText = newText;
+                lastText = cacheKey;
             }
         }
 
@@ -431,28 +469,39 @@ namespace TrayTemps
 
         private Icon CreateCombinedTempIcon(string cpuText, string gpuText)
         {
-            int size = Math.Max(IconSize, (int)(IconSize * _dpiScale));
+            const int baseSize = 16;
 
-            using (var bmp = new Bitmap(size, size))
+            float dpiScale = Graphics.FromHwnd(IntPtr.Zero).DpiX / 96f;
+
+            int size = baseSize;
+
+            using (var bmp = new Bitmap(size, size, PixelFormat.Format32bppArgb))
             using (var g = Graphics.FromImage(bmp))
             {
                 g.Clear(Color.Transparent);
+
                 g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                g.CompositingQuality = CompositingQuality.HighQuality;
 
-                float fontSize = size * 0.45f;
-                using (var stackedFont = new Font("Tahoma", fontSize, FontStyle.Bold, GraphicsUnit.Pixel))
+                float fontSize = (size * 0.55f) * dpiScale;
+
+                using (var font = new Font("Consolas", fontSize, FontStyle.Regular, GraphicsUnit.Pixel))
                 {
-                    // Draw CPU (Top)
-                    TextRenderer.DrawText(g, cpuText, stackedFont,
-                        new Rectangle(0, 0, size, size / 2),
-                        _cpuBrush.Color, Color.Transparent,
-                        TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                    var flags = TextFormatFlags.HorizontalCenter |
+                                TextFormatFlags.VerticalCenter |
+                                TextFormatFlags.NoPadding;
 
-                    // Draw GPU (Bottom)
-                    TextRenderer.DrawText(g, gpuText, stackedFont,
-                        new Rectangle(0, size / 2, size, size / 2),
-                        _gpuBrush.Color, Color.Transparent,
-                        TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                    var cpuRect = new Rectangle(0, 0, size, size / 2);
+                    var gpuRect = new Rectangle(0, size / 2, size, size / 2);
+
+                    TextRenderer.DrawText(g, cpuText, font, cpuRect,
+                        _cpuBrush.Color, Color.Transparent, flags);
+
+                    TextRenderer.DrawText(g, gpuText, font, gpuRect,
+                        _gpuBrush.Color, Color.Transparent, flags);
                 }
 
                 IntPtr hIcon = bmp.GetHicon();
@@ -475,10 +524,10 @@ namespace TrayTemps
             _trayFont = new Font(_trayFontFamily, calculatedFontSize, FontStyle.Bold, GraphicsUnit.Pixel);
 
             _cpuBrush?.Dispose();
-            _cpuBrush = new SolidBrush(ColorTranslator.FromHtml(cpuColorValue.Text));
+            _cpuBrush = new SolidBrush(cpuColorValue.BackColor);
 
             _gpuBrush?.Dispose();
-            _gpuBrush = new SolidBrush(ColorTranslator.FromHtml(gpuColorValue.Text));
+            _gpuBrush = new SolidBrush(gpuColorValue.BackColor);
         }
 
         #endregion
@@ -489,12 +538,18 @@ namespace TrayTemps
         {
             refreshValue.Value = 0.50M;
             iconsizeValue.Value = 75;
-            cpuColorValue.SelectedIndex = 0;
-            gpuColorValue.SelectedIndex = 4;
+            cpuColorValue.BackColor = Color.Aqua;
+            gpuColorValue.BackColor = Color.Gold;
             fontFamilyValue.SelectedIndex = 0;
+
+            WarmTempMin = 60;
+            WarmTempMax = 80;
+            NormalColor = Color.FromArgb(-1);
+            WarningColor = Color.FromArgb(-256);
+            CriticalColor = Color.FromArgb(-65536);
         }
 
-        private void SaveSettings()
+        public void SaveSettings()
         {
             if (this.InvokeRequired)
             {
@@ -511,10 +566,16 @@ namespace TrayTemps
                     SingleIconTray = singleIconTray.Checked,
                     CpuTrayIcon = enableCpuTray.Checked,
                     GpuTrayIcon = enableGpuTray.Checked,
+                    TempBasedIconColor = colortempsEnable.Checked,
                     UpdateInterval = refreshValue.Value,
+                    MinWarmTemp = WarmTempMin,
+                    MaxWarmTemp = WarmTempMax,
+                    NormalTempColor = NormalColor.ToArgb(),
+                    WarmTempColor = WarningColor.ToArgb(),
+                    HotTempColor = CriticalColor.ToArgb(),
                     FontFamily = fontFamilyValue.SelectedIndex,
-                    CpuColor = cpuColorValue.SelectedIndex,
-                    GpuColor = gpuColorValue.SelectedIndex,
+                    CpuColor = cpuColorValue.BackColor.ToArgb(),
+                    GpuColor = gpuColorValue.BackColor.ToArgb(),
                     IconSize = (int)iconsizeValue.Value,
                     CpuIndex = cpuIndexSelect.SelectedIndex,
                     GpuIndex = gpuIndexSelect.SelectedIndex,
@@ -580,11 +641,17 @@ namespace TrayTemps
                     singleIconTray.Checked = settings.SingleIconTray;
                     enableCpuTray.Checked = settings.CpuTrayIcon;
                     enableGpuTray.Checked = settings.GpuTrayIcon;
+                    colortempsEnable.Checked = settings.TempBasedIconColor;
                     refreshValue.Value = settings.UpdateInterval;
                     fontFamilyValue.SelectedIndex = (settings.FontFamily < fontFamilyValue.Items.Count) ? settings.FontFamily : 0;
-                    cpuColorValue.SelectedIndex = (settings.CpuColor < cpuColorValue.Items.Count) ? settings.CpuColor : 0;
-                    gpuColorValue.SelectedIndex = (settings.GpuColor < gpuColorValue.Items.Count) ? settings.GpuColor : 4;
+                    cpuColorValue.BackColor = Color.FromArgb(settings.CpuColor);
+                    gpuColorValue.BackColor = Color.FromArgb(settings.GpuColor);
                     iconsizeValue.Value = settings.IconSize;
+                    WarmTempMin = settings.MinWarmTemp;
+                    WarmTempMax = settings.MaxWarmTemp;
+                    NormalColor = Color.FromArgb(settings.NormalTempColor);
+                    WarningColor = Color.FromArgb(settings.WarmTempColor);
+                    CriticalColor = Color.FromArgb(settings.HotTempColor);
 
                     _savedCpuIndex = settings.CpuIndex;
                     _savedGpuIndex = settings.GpuIndex;
@@ -601,6 +668,7 @@ namespace TrayTemps
             finally
             {
                 singleIconTray_CheckedChanged(this, EventArgs.Empty);
+                colortempsEnable_CheckedChanged(this, EventArgs.Empty);
                 _settingsLoaded = true;
             }
         }
@@ -721,6 +789,23 @@ namespace TrayTemps
             }
         }
 
+        private void colortempsEnable_CheckedChanged(object sender, EventArgs e)
+        {
+            bool useTempColors = colortempsEnable.Checked;
+
+            cpuColorValue.Enabled = !useTempColors;
+            gpuColorValue.Enabled = !useTempColors;
+
+            colortempsConfig.Enabled = useTempColors;
+
+            if (_settingsLoaded)
+            {
+                CacheDisplaySettings();
+                ResetTrayCache();
+                TempTimer_Tick(this, EventArgs.Empty);
+            }
+        }
+
         private void singleIconTray_CheckedChanged(object sender, EventArgs e)
         {
             if (singleIconTray.Checked)
@@ -737,6 +822,12 @@ namespace TrayTemps
                     gpuTrayIcon.Visible = true;
                 }
             }
+        }
+
+        private void colortempsConfig_Click(object sender, EventArgs e)
+        {
+            ColorTempsConfig cfg = new ColorTempsConfig(this);
+            cfg.Show();
         }
 
         private void RefreshValue_ValueChanged(object sender, EventArgs e)
@@ -809,6 +900,12 @@ namespace TrayTemps
 
         private float GetDisplayTemp(float celsius) => tempsFahrenheit.Checked ? (celsius * 1.8f) + 32 : celsius;
         private string GetUnit() => tempsFahrenheit.Checked ? "°F" : "°C";
+
+        public void ResetTrayCache()
+        {
+            _lastCpuTempText = null;
+            _lastGpuTempText = null;
+        }
 
         private Task<string> GetMotherboardNameAsync()
         {
@@ -1189,5 +1286,37 @@ if exist ""{shortcutPath}"" del /f /q ""{shortcutPath}""
         }
 
         #endregion
+
+        private void cpuColorValue_Click(object sender, EventArgs e)
+        {
+            using (ColorDialog cd = new ColorDialog())
+            {
+                cd.Color = cpuColorValue.BackColor;
+                if (cd.ShowDialog() == DialogResult.OK)
+                {
+                    cpuColorValue.BackColor = cd.Color;
+
+                    CacheDisplaySettings();
+                    _lastCpuTempText = null;
+                    TempTimer_Tick(this, EventArgs.Empty);
+                }
+            }
+        }
+
+        private void gpuColorValue_Click(object sender, EventArgs e)
+        {
+            using (ColorDialog cd = new ColorDialog())
+            {
+                cd.Color = gpuColorValue.BackColor;
+                if (cd.ShowDialog() == DialogResult.OK)
+                {
+                    gpuColorValue.BackColor = cd.Color;
+
+                    CacheDisplaySettings();
+                    _lastGpuTempText = null;
+                    TempTimer_Tick(this, EventArgs.Empty);
+                }
+            }
+        }
     }
 }
