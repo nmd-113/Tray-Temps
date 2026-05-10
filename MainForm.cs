@@ -894,6 +894,38 @@ namespace TrayTemps
             }
         }
 
+        private void cpuColorValue_Click(object sender, EventArgs e)
+        {
+            using (ColorDialog cd = new ColorDialog())
+            {
+                cd.Color = cpuColorValue.BackColor;
+                if (cd.ShowDialog() == DialogResult.OK)
+                {
+                    cpuColorValue.BackColor = cd.Color;
+
+                    CacheDisplaySettings();
+                    _lastCpuTempText = null;
+                    TempTimer_Tick(this, EventArgs.Empty);
+                }
+            }
+        }
+
+        private void gpuColorValue_Click(object sender, EventArgs e)
+        {
+            using (ColorDialog cd = new ColorDialog())
+            {
+                cd.Color = gpuColorValue.BackColor;
+                if (cd.ShowDialog() == DialogResult.OK)
+                {
+                    gpuColorValue.BackColor = cd.Color;
+
+                    CacheDisplaySettings();
+                    _lastGpuTempText = null;
+                    TempTimer_Tick(this, EventArgs.Empty);
+                }
+            }
+        }
+
         #endregion
 
         #region [ Helper Methods ]
@@ -1286,37 +1318,5 @@ if exist ""{shortcutPath}"" del /f /q ""{shortcutPath}""
         }
 
         #endregion
-
-        private void cpuColorValue_Click(object sender, EventArgs e)
-        {
-            using (ColorDialog cd = new ColorDialog())
-            {
-                cd.Color = cpuColorValue.BackColor;
-                if (cd.ShowDialog() == DialogResult.OK)
-                {
-                    cpuColorValue.BackColor = cd.Color;
-
-                    CacheDisplaySettings();
-                    _lastCpuTempText = null;
-                    TempTimer_Tick(this, EventArgs.Empty);
-                }
-            }
-        }
-
-        private void gpuColorValue_Click(object sender, EventArgs e)
-        {
-            using (ColorDialog cd = new ColorDialog())
-            {
-                cd.Color = gpuColorValue.BackColor;
-                if (cd.ShowDialog() == DialogResult.OK)
-                {
-                    gpuColorValue.BackColor = cd.Color;
-
-                    CacheDisplaySettings();
-                    _lastGpuTempText = null;
-                    TempTimer_Tick(this, EventArgs.Empty);
-                }
-            }
-        }
     }
 }
