@@ -7,10 +7,10 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("TrayTemps")]
 [assembly: AssemblyDescription("Simple app to show CPU and GPU temps in tray.")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("NaeTech.ro")]
+[assembly: AssemblyCompany("NaeTech")]
 [assembly: AssemblyProduct("Tray Temps")]
 [assembly: AssemblyCopyright("Copyright ©  2026")]
-[assembly: AssemblyTrademark("NaeTech.ro™")]
+[assembly: AssemblyTrademark("NaeTech™")]
 [assembly: AssemblyCulture("")]
 
 // Setting ComVisible to false makes the types in this assembly not visible
@@ -28,5 +28,5 @@ using System.Runtime.InteropServices;
 //      Build Number
 //      Revision
 //
-[assembly: AssemblyVersion("1.0.4.4")]
-[assembly: AssemblyFileVersion("1.0.4.4")]
+[assembly: AssemblyVersion("2.0.0.0")]
+[assembly: AssemblyFileVersion("2.0.0.0")]

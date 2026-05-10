@@ -12,7 +12,7 @@ namespace TrayTemps
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            var mainForm = new TrayTemps();
+            var mainForm = new MainForm();
 
             if (args.Contains("-silent"))
             {
