@@ -118,11 +118,11 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="appAboutExtra.Text" xml:space="preserve">
-    <value>•   Tray Temps is a lightweight Windows utility that monitors CPU and GPU temperatures in real time directly from the system tray.
-•   It is designed to stay minimal, fast, and non-intrusive while providing quick hardware temperature feedback without opening heavy monitoring software.
+    <value>• TrayTemps is a lightweight Windows utility that monitors hardware temperatures in real time directly from the system tray.
+• Designed to be minimal and fast, it provides instant diagnostic data and detailed hardware specs without the overhead of heavy monitoring software.
 
 Built with:
-C# (.NET Framework 4.8) • LibreHardwareMonitor
+C# (.NET Framework 4.8) • LibreHardwareMonitor • WMI
 
 Created by NaeTech</value>
   </data>

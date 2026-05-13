@@ -68,6 +68,7 @@
             this.compRamLabel = new System.Windows.Forms.Label();
             this.ramDetails = new System.Windows.Forms.Label();
             this.CompStorageLabel = new System.Windows.Forms.Label();
+            this.storageIndexSelect = new System.Windows.Forms.ComboBox();
             this.storageDetails = new System.Windows.Forms.Label();
             this.CompMotherboardLabel = new System.Windows.Forms.Label();
             this.motherboardDetails = new System.Windows.Forms.Label();
@@ -143,7 +144,6 @@
             this.gpuTrayIcon = new System.Windows.Forms.NotifyIcon(this.components);
             this.NotifyIcon = new System.Windows.Forms.NotifyIcon(this.components);
             this.colorDialog = new System.Windows.Forms.ColorDialog();
-            this.storageIndexSelect = new System.Windows.Forms.ComboBox();
             this.mainMenu.SuspendLayout();
             this.aboutPanel.SuspendLayout();
             this.settingsPanel.SuspendLayout();
@@ -774,6 +774,26 @@
             this.CompStorageLabel.TabIndex = 13;
             this.CompStorageLabel.Text = "Storage:";
             this.CompStorageLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            // 
+            // storageIndexSelect
+            // 
+            this.storageIndexSelect.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.storageIndexSelect.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
+            this.storageIndexSelect.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.storageIndexSelect.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.storageIndexSelect.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.storageIndexSelect.ForeColor = System.Drawing.Color.DarkGray;
+            this.storageIndexSelect.FormattingEnabled = true;
+            this.storageIndexSelect.IntegralHeight = false;
+            this.storageIndexSelect.ItemHeight = 13;
+            this.storageIndexSelect.Items.AddRange(new object[] {
+            "0"});
+            this.storageIndexSelect.Location = new System.Drawing.Point(550, 128);
+            this.storageIndexSelect.Margin = new System.Windows.Forms.Padding(0);
+            this.storageIndexSelect.Name = "storageIndexSelect";
+            this.storageIndexSelect.Size = new System.Drawing.Size(52, 21);
+            this.storageIndexSelect.TabIndex = 25;
+            this.storageIndexSelect.SelectedIndexChanged += new System.EventHandler(this.StorageIndexSelect_SelectedIndexChanged);
             // 
             // storageDetails
             // 
@@ -1895,26 +1915,6 @@
             this.NotifyIcon.Icon = ((System.Drawing.Icon)(resources.GetObject("NotifyIcon.Icon")));
             this.NotifyIcon.Text = "TrayTemps";
             this.NotifyIcon.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.NotifyIcon_MouseDoubleClick);
-            // 
-            // storageIndexSelect
-            // 
-            this.storageIndexSelect.Anchor = System.Windows.Forms.AnchorStyles.Left;
-            this.storageIndexSelect.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
-            this.storageIndexSelect.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.storageIndexSelect.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.storageIndexSelect.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.storageIndexSelect.ForeColor = System.Drawing.Color.DarkGray;
-            this.storageIndexSelect.FormattingEnabled = true;
-            this.storageIndexSelect.IntegralHeight = false;
-            this.storageIndexSelect.ItemHeight = 13;
-            this.storageIndexSelect.Items.AddRange(new object[] {
-            "0"});
-            this.storageIndexSelect.Location = new System.Drawing.Point(550, 128);
-            this.storageIndexSelect.Margin = new System.Windows.Forms.Padding(0);
-            this.storageIndexSelect.Name = "storageIndexSelect";
-            this.storageIndexSelect.Size = new System.Drawing.Size(52, 21);
-            this.storageIndexSelect.TabIndex = 25;
-            this.storageIndexSelect.SelectedIndexChanged += new System.EventHandler(this.StorageIndexSelect_SelectedIndexChanged);
             // 
             // MainForm
             // 
