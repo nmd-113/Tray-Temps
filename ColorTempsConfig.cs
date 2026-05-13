@@ -1,24 +1,15 @@
 ﻿using System;
 using System.Drawing;
-using System.IO;
 using System.Windows.Forms;
-using System.Text.Json;
 
 namespace TrayTemps
 {
     public partial class ColorTempsConfig : Form
     {
-        private MainForm _mainForm;
+        private readonly MainForm _mainForm;
         private bool dragging = false;
         private Point dragCursorPoint;
         private Point dragFormPoint;
-
-        private const string AppName = "TrayTemps";
-
-        private string SettingsFilePath =>
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                         AppName,
-                         "settings.json");
 
         private bool _updating = false;
 
@@ -36,8 +27,6 @@ namespace TrayTemps
         {
             LoadSettings();
         }
-
-        // ---------------- DRAG ----------------
 
         private void ColorTempsConfig_MouseDown(object sender, MouseEventArgs e)
         {
@@ -59,24 +48,20 @@ namespace TrayTemps
             dragging = false;
         }
 
-        // ---------------- COLORS ----------------
-
         private void ApplyColor(Button target)
         {
             if (colorDialog.ShowDialog() == DialogResult.OK)
                 target.BackColor = colorDialog.Color;
         }
 
-        private void minTempColor_Click(object sender, EventArgs e)
+        private void MinTempColor_Click(object sender, EventArgs e)
             => ApplyColor(normalTempColor);
 
-        private void warmTempColor_Click(object sender, EventArgs e)
+        private void WarmTempColor_Click(object sender, EventArgs e)
             => ApplyColor(warmTempColor);
 
-        private void hotTempColor_Click(object sender, EventArgs e)
+        private void HotTempColor_Click(object sender, EventArgs e)
             => ApplyColor(hotTempColor);
-
-        // ---------------- NUMERIC RANGE ----------------
 
         private void NumericRange_ValueChanged(object sender, EventArgs e)
         {
@@ -90,9 +75,7 @@ namespace TrayTemps
             _updating = false;
         }
 
-        // ---------------- SAVE ----------------
-
-        private void saveBtn_Click(object sender, EventArgs e)
+        private void SaveBtn_Click(object sender, EventArgs e)
         {
             _mainForm.NormalColor = normalTempColor.BackColor;
             _mainForm.WarningColor = warmTempColor.BackColor;
@@ -107,7 +90,6 @@ namespace TrayTemps
             this.Close();
         }
 
-        // ---------------- LOAD ----------------
 
         private void LoadSettings()
         {
@@ -126,9 +108,8 @@ namespace TrayTemps
             return value;
         }
 
-        // ---------------- EXIT ----------------
 
-        private void exitBtn_Click(object sender, EventArgs e)
+        private void ExitBtn_Click(object sender, EventArgs e)
         {
             Close();
         }

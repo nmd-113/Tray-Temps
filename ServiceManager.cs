@@ -2,29 +2,46 @@
 using System.ServiceProcess;
 using System.Threading.Tasks;
 
-public static class ServiceManager
+namespace TrayTemps
 {
-    public static async Task<bool> StopServiceAsync(string serviceName, int timeoutSeconds = 30)
+    public static class ServiceManager
     {
-        try
+        public static bool StopService(string serviceName, int timeoutSeconds = 5)
         {
-            await Task.Run(() =>
+            try
             {
                 using (var service = new ServiceController(serviceName))
                 {
                     if (service.Status == ServiceControllerStatus.Stopped)
+                        return true;
+
+                    if (service.Status == ServiceControllerStatus.StopPending)
                     {
-                        return;
+                        service.WaitForStatus(
+                            ServiceControllerStatus.Stopped,
+                            TimeSpan.FromSeconds(timeoutSeconds));
+
+                        return service.Status == ServiceControllerStatus.Stopped;
                     }
+
                     service.Stop();
-                    service.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(timeoutSeconds));
+
+                    service.WaitForStatus(
+                        ServiceControllerStatus.Stopped,
+                        TimeSpan.FromSeconds(timeoutSeconds));
+
+                    return service.Status == ServiceControllerStatus.Stopped;
                 }
-            });
-            return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
-        catch (Exception)
+
+        public static Task<bool> StopServiceAsync(string serviceName, int timeoutSeconds = 5)
         {
-            return false;
+            return Task.Run(() => StopService(serviceName, timeoutSeconds));
         }
     }
 }

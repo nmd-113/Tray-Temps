@@ -1,6 +1,4 @@
-﻿using System.Drawing;
-
-public class AppSettings
+﻿public class AppSettings
 {
     public bool Autostart { get; set; } = false;
     public bool TempsFahrenheit { get; set; } = false;
