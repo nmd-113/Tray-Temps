@@ -11,17 +11,18 @@ A lightweight and customizable Windows utility that displays your **CPU and GPU 
 
 ## ✨ Features
 
-* **Real-time Temperature Monitoring:** Get instant temperature readings for your CPU and GPU.
-* **Customizable Tray Icons:**
-    * Display CPU and GPU temperatures in separate, dedicated tray icons.
-    * Choose from a variety of **colors** for each temperature display.
-    * Adjust **font size and family** to suit your preference.
+* **Real-time Temperature Monitoring:** Accurate readings for CPU and GPU powered by [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor).
+* **Dynamic Temperature Coloring:** Automatically change icon colors based on temperature thresholds (Normal, Warm, and Critical).
+* **Combined Tray Mode:** Display both CPU and GPU temperatures in a single, space-saving tray icon optimized with the `Consolas` font for perfect alignment.
+* **High-Quality Icon Rendering:** Uses Anti-Aliasing and high-quality rendering modes to ensure numbers are crisp and readable.
+* **Fully Customizable Visuals:**
+    * **Static Mode:** Choose any custom ARGB color for each sensor.
+    * **Dynamic Mode:** Configure specific temperature ranges and colors for color-coded alerts.
+    * **Font Control:** Support for any system font in standard mode.
 * **Configurable Update Interval:** Set how frequently the temperatures refresh.
-* **Minimalist Design:** Stays out of your way, providing crucial info without distracting pop-ups.
-* **Persistent Settings:** Your preferences are saved and loaded automatically.
-* **Optional Autostart & Silent Mode:** Seamlessly integrate TrayTemps into your Windows startup.
-* **Easy Installation & Uninstallation:** Simple setup and a straightforward removal process, including full cleanup.
-* **Lightweight:** Built with efficiency in mind, using [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) for reliable hardware data.
+* **High-DPI Support:** Properly scales icons for 1080p, 1440p, and 4K displays.
+* **Minimalist Design:** Low resource usage (<30MB RAM) and a clean UI.
+* **Optional Autostart:** Integrated Windows Task Scheduler setup for silent launch on startup.
 
 ---
 
@@ -40,49 +41,32 @@ A lightweight and customizable Windows utility that displays your **CPU and GPU 
 ### Prerequisites
 
 * Windows 10 or newer.
-* .NET Framework 4.7.2 or later (usually pre-installed or prompted if missing).
+* .NET Framework 4.8 or later.
 
 ### Installation
 
-The easiest way to get TrayTemps running is to download the latest release:
-
 1.  Go to the [Releases page](https://github.com/nmd-113/Tray-Temps/releases).
-2.  Download the `TrayTemps.zip` file from the latest release.
-3.  Extract the contents of the zip file to a folder of your choice (e.g., `C:\Program Files\TrayTemps`).
-4.  Run `TrayTemps.exe`.
+2.  Download the `TrayTemps.exe` file from the latest release.
+3.  Run `TrayTemps.exe`.
 
-**For Autostart (Recommended):**
-Once the application is running, go to the **Settings** tab within the TrayTemps window and check the "**Autostart with Windows**" option. This will let you choose a folder where to install TrayTemps (example: if you choose "Program Files", the app will install to "Program Files\TrayTemps"), set it to launch silently on logon, and create a desktop shortcut for convenience. The app will automatically close and can be restarted from desktop after this process.
-
-### Uninstallation
-
-To completely remove TrayTemps from your system:
-
-1.  Open the TrayTemps application.
-2.  Go to the **Settings** tab.
-3.  Uncheck the "**Autostart with Windows**" option.
-4.  You will be prompted with removal options:
-    * **Yes:** Removes all installed files, shortcuts, and startup entries.
-    * **No:** Only removes the startup entry, leaving the installed files.
-    * **Cancel:** Does nothing.
-    Choose **Yes** for a complete cleanup.
+**For Autostart:**
+Enable "**Autostart with Windows**" in the Settings tab. This creates a scheduled task for silent startup (bypassing UAC prompts) and an optional desktop shortcut.
 
 ---
 
 ## ⚙️ Usage & Configuration
 
-Once launched, TrayTemps will appear in your system tray. You can:
+Once launched, TrayTemps resides in your system tray. 
 
-* **Double-click** any of the TrayTemps icons (CPU, GPU, or the main TrayTemps icon) to bring up the main window.
-* **Right-click** the main TrayTemps icon for quick options like `Exit` or showing the main window.
+### Customizing Colors
+* **Individual Icons:** In standard mode, click the color boxes to open a full ARGB color dialog.
+* **Dynamic Mode:** Check the "Temperature-Based Coloring" box to enable automatic color transitions based on your custom thresholds.
+* **Combined Mode:** Enable the combined icon to view both temperatures in one icon slot. This mode uses a fixed `Consolas` layout for better legibility.
 
-In the main window, you can adjust settings:
-
-* **CPU Tray / GPU Tray Enable:** Toggle visibility of individual CPU/GPU temperature icons in the tray.
-* **CPU Tray Color / GPU Tray Color:** Select the text color for the respective tray icons.
-* **Font Size Tray / Font Family Tray:** Customize the appearance of the numbers on the tray icons.
-* **Update Interval:** Choose how often the temperatures update (in seconds).
-* **Autostart with Windows:** Enable or disable automatic launch with Windows (includes installation/uninstallation).
+### Controls
+* **Double-click** any TrayTemps icon to open the main dashboard.
+* **Right-click** the main icon for a quick exit or access to settings.
+* **Update Interval:** Adjust the slider to change the polling frequency (in seconds).
 
 ---
 
