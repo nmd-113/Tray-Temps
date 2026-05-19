@@ -5,33 +5,40 @@
 [![GitHub forks](https://img.shields.io/github/forks/nmd-113/Tray-Temps?style=flat-square)](https://github.com/nmd-113/Tray-Temps/network/members)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/nmd-113/Tray-Temps?style=flat-square)](https://github.com/nmd-113/Tray-Temps/releases/latest)
 
-A lightweight and customizable Windows utility that displays your **CPU and GPU temperatures** directly in your system's **notification area (system tray)**. Keep an eye on your hardware's health at a glance without cluttering your desktop!
+A lightweight and customizable Windows utility that displays your **CPU and GPU temperatures** directly in your system's **notification area/system tray**.
+
+TrayTemps helps you keep an eye on your hardware at a glance, without keeping a full monitoring window open.
 
 ---
 
 ## ✨ Features
 
-* **Real-time Temperature Monitoring:** Accurate readings for CPU and GPU powered by [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor).
-* **Hardware Diagnostics:** Detailed component information (CPU architecture, GPU driver version, RAM part numbers, etc.) and live sensor feeds.
-* **Dynamic Temperature Coloring:** Automatically change icon colors based on temperature thresholds (Normal, Warm, and Critical).
-* **Combined Tray Mode:** Display both CPU and GPU temperatures in a single, space-saving tray icon optimized with the `Consolas` font.
-* **High-Quality Icon Rendering:** Uses Anti-Aliasing and high-quality rendering modes to ensure numbers are crisp and readable.
-* **Fully Customizable Visuals:**
-    * **Static Mode:** Choose any custom ARGB color for each sensor.
-    * **Dynamic Mode:** Configure specific temperature ranges and colors for alerts.
-* **Configurable Update Interval:** Set how frequently the temperatures refresh.
-* **High-DPI Support:** Properly scales icons for 1080p, 1440p, and 480K displays.
-* **Minimalist Design:** Low resource usage and a clean UI.
-* **Optional Autostart:** Integrated Windows Task Scheduler setup for silent launch on startup.
+* **Real-time Temperature Monitoring:** CPU and GPU temperature readings powered by [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor).
+* **CPU and GPU Tray Icons:** Display CPU and GPU temperatures directly in the system tray.
+* **Combined Tray Mode:** Show both CPU and GPU temperatures in one compact tray icon.
+* **Dynamic Temperature Coloring:** Automatically change tray icon colors based on configurable temperature thresholds.
+* **Static Custom Colors:** Choose custom CPU/GPU tray icon colors when temperature-based coloring is disabled.
+* **Non-Admin Fallback Handling:** TrayTemps now uses available fallback sensor data when possible, even without administrator rights.
+* **Smarter Missing-Sensor Behavior:** CPU/GPU tray options are automatically disabled when no usable temperature sensor exists, avoiding fake or misleading readings.
+* **Storage Detection Fallback:** If storage sensors are unavailable but Windows can still detect disks through WMI, detected disks are still shown in the main UI.
+* **Hardware Diagnostics:** Detailed CPU, GPU, RAM, motherboard, BIOS, and storage information.
+* **Live Sensor Details:** Open detailed live sensor views for supported hardware.
+* **Storage Health / SMART Details:** Shows available storage health, lifetime, and SMART-related information when supported.
+* **Customizable Update Interval:** Adjust how often tray temperatures refresh.
+* **High-DPI Friendly Tray Rendering:** Tray icon rendering is optimized for clear text and stable display.
+* **Optional Autostart:** Integrated Windows Task Scheduler setup for silent startup.
+* **Light/Dark Theme Support:** Simple modern UI with theme-aware controls.
 
 ---
 
 ## 📸 Screenshots
 
 **Main Window:**
-![TrayTemps Main Window](https://naetech.ro/wp-content/uploads/2024/traytemps/traytemps.jpg?v2.0.1)
+
+![TrayTemps Main Window](https://naetech.ro/wp-content/uploads/2024/traytemps/traytemps.jpg?v2.0.2)
 
 **CPU & GPU in Tray:**
+
 ![TrayTemps CPU GPU Tray](https://naetech.ro/wp-content/uploads/2024/traytemps/traytemps-tray.jpg)
 
 ---
@@ -46,50 +53,86 @@ A lightweight and customizable Windows utility that displays your **CPU and GPU 
 ### Installation
 
 1. Go to the [Releases page](https://github.com/nmd-113/Tray-Temps/releases).
-2. Download the `TrayTemps.exe` file from the latest release.
+2. Download `TrayTemps.exe` from the latest release.
 3. Run `TrayTemps.exe`.
 
-### ⚠️ Note on Antivirus Flags (WinRing0)
-TrayTemps utilizes the **WinRing0** driver (via LibreHardwareMonitor) to access low-level hardware sensors. Because this driver provides direct access to hardware registers, Windows Defender or other security software may flag it as a "potentially unwanted application" or a "driver threat."
+---
 
-**This is a false positive.** The driver is a standard component used by many open-source monitoring tools and is completely safe. If your antivirus prevents the app from reading temperatures, you may need to add an exclusion for `TrayTemps.exe`.
+## ⚠️ Administrator Access and Security Notice
+
+TrayTemps can read more complete hardware sensor data when run as administrator.
+
+If you continue without administrator rights, some temperatures, storage health data, or hardware details may be missing, partial, or less reliable. The app will still try to show any available fallback data where possible.
+
+TrayTemps uses LibreHardwareMonitor, which may rely on low-level hardware access. Windows Security / Microsoft Defender or other antivirus software may block this kind of access.
+
+Only allow the app or add an exclusion if you trust this specific build/source.
+
+---
+
+## ⚠️ Note on Antivirus Flags
+
+TrayTemps uses [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) to access hardware sensors. Some systems or antivirus tools may flag low-level sensor access because it can involve driver-level hardware communication.
+
+If Windows Security or another antivirus blocks the app, some readings may be unavailable.
+
+Only allow the app or add an exclusion if you trust the downloaded file or built it yourself from this repository.
 
 ---
 
 ## ⚙️ Usage & Configuration
 
-Once launched, TrayTemps resides in your system tray. 
+Once launched, TrayTemps runs in the system tray.
 
-### Advanced Diagnostics
-Click on the hardware names (e.g., "CPU", "GPU") in the main window to open a **Detailed Hardware** view. This shows live sensor data, including clock speeds, voltages, and specific memory information.
+### Tray Controls
 
-### Customizing Colors
-* **Individual Icons:** Click color boxes to open a full ARGB color dialog.
-* **Dynamic Mode:** Enable "Temperature-Based Coloring" for automatic transitions based on your thresholds.
-* **Combined Mode:** Enable the combined icon to view both temperatures in one slot.
+* **Double-click** a TrayTemps tray icon to open the main window.
+* **Right-click** the tray icon for quick actions.
+* Use the settings page to enable or disable CPU/GPU tray icons.
+* Enable **Combined Tray Mode** to show CPU and GPU temperatures in one icon.
 
-### Controls
-* **Double-click** any TrayTemps icon to open the main dashboard.
-* **Right-click** for a quick exit or access to settings.
-* **Update Interval:** Adjust the slider to change the polling frequency.
+### Temperature Colors
+
+TrayTemps supports two color modes:
+
+* **Static Mode:** Choose fixed custom colors for CPU and GPU tray icons.
+* **Temperature-Based Coloring:** Automatically change icon colors based on normal, warm, and critical thresholds.
+
+### Hardware Details
+
+Click the hardware labels in the main window to open detailed information:
+
+* CPU details and live sensors
+* GPU details and live sensors
+* RAM details
+* Motherboard and BIOS details
+* Storage details, health, SMART information, and live storage sensors where available
+
+### Storage Fallback
+
+If LibreHardwareMonitor cannot expose live storage sensors, TrayTemps can still show disks detected through Windows WMI. Storage details may still be available even when live storage sensors are not.
+
+### Missing Sensor Behavior
+
+Some integrated GPUs/APUs or limited-access systems may not expose a usable GPU temperature sensor.
+
+When no usable CPU/GPU temperature sensor is available:
+
+* The main temperature may show `N/A`.
+* The related tray icon option is disabled.
+* TrayTemps does **not** fake GPU temperature using CPU temperature.
 
 ---
 
-## 🤝 Contributing
+## 🛠️ Build From Source
 
-Contributions are welcome! If you have suggestions, bug reports, or want to contribute code, please feel free to:
+### Requirements
 
-1. **Open an issue** for bugs or feature requests.
-2. **Fork the repository** and create a pull request.
+* Visual Studio 2022 recommended.
+* .NET Framework 4.8 Developer Pack.
+* Windows 10 or newer.
 
----
+### Build
 
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 🙏 Acknowledgements
-
-* [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) for providing a robust library for hardware monitoring.
+```powershell
+dotnet build Tray-Temps.sln -p:Configuration=Debug -p:Platform=x64
