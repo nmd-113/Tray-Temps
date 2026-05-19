@@ -1,6 +1,7 @@
 ﻿public class AppSettings
 {
     public bool Autostart { get; set; } = false;
+    public bool LightMode { get; set; } = false;
     public bool TempsFahrenheit { get; set; } = false;
     public bool SingleIconTray { get; set; } = false;
     public bool CpuTrayIcon { get; set; } = true;
@@ -8,6 +9,7 @@
     public bool TempBasedIconColor { get; set; } = false;
     public decimal UpdateInterval { get; set; } = 0.50M;
     public int FontFamily { get; set; } = 0;
+    public string TrayFontFamily { get; set; } = "";
     public int CpuColor { get; set; }
     public int GpuColor { get; set; }
     public int IconSize { get; set; } = 75;
@@ -21,6 +23,10 @@
     public int WindowHeight { get; set; } = 0;
     public int WindowX { get; set; } = -1;
     public int WindowY { get; set; } = -1;
+    public int HardwareDialogWidth { get; set; } = 0;
+    public int HardwareDialogHeight { get; set; } = 0;
+    public int HardwareDialogX { get; set; } = -1;
+    public int HardwareDialogY { get; set; } = -1;
     public int NormalTempColor { get; set; }
     public int WarmTempColor { get; set; }
     public int HotTempColor { get; set; }

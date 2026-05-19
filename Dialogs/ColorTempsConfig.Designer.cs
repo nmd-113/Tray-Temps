@@ -55,7 +55,7 @@
             this.exitBtn.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.exitBtn.FlatAppearance.MouseOverBackColor = System.Drawing.Color.Red;
             this.exitBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.exitBtn.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.exitBtn.Font = new System.Drawing.Font("Bunken Tech Sans Pro Bold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.exitBtn.ForeColor = System.Drawing.Color.White;
             this.exitBtn.Location = new System.Drawing.Point(244, 1);
             this.exitBtn.Margin = new System.Windows.Forms.Padding(4);
@@ -98,6 +98,7 @@
             // warmTempMax
             // 
             this.warmTempMax.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
+            this.warmTempMax.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.warmTempMax.ForeColor = System.Drawing.Color.White;
             this.warmTempMax.Location = new System.Drawing.Point(174, 98);
             this.warmTempMax.Maximum = new decimal(new int[] {
@@ -106,7 +107,7 @@
             0,
             0});
             this.warmTempMax.Name = "warmTempMax";
-            this.warmTempMax.Size = new System.Drawing.Size(74, 25);
+            this.warmTempMax.Size = new System.Drawing.Size(74, 24);
             this.warmTempMax.TabIndex = 7;
             this.warmTempMax.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             this.warmTempMax.Value = new decimal(new int[] {
@@ -119,6 +120,7 @@
             // warmTempMin
             // 
             this.warmTempMin.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
+            this.warmTempMin.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.warmTempMin.ForeColor = System.Drawing.Color.White;
             this.warmTempMin.Location = new System.Drawing.Point(52, 98);
             this.warmTempMin.Maximum = new decimal(new int[] {
@@ -127,7 +129,7 @@
             0,
             0});
             this.warmTempMin.Name = "warmTempMin";
-            this.warmTempMin.Size = new System.Drawing.Size(74, 25);
+            this.warmTempMin.Size = new System.Drawing.Size(74, 24);
             this.warmTempMin.TabIndex = 6;
             this.warmTempMin.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             this.warmTempMin.Value = new decimal(new int[] {
@@ -140,11 +142,11 @@
             // tempsIntervalLabel
             // 
             this.tempsIntervalLabel.AutoSize = true;
-            this.tempsIntervalLabel.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.tempsIntervalLabel.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.tempsIntervalLabel.ForeColor = System.Drawing.Color.LightGray;
-            this.tempsIntervalLabel.Location = new System.Drawing.Point(43, 72);
+            this.tempsIntervalLabel.Location = new System.Drawing.Point(61, 72);
             this.tempsIntervalLabel.Name = "tempsIntervalLabel";
-            this.tempsIntervalLabel.Size = new System.Drawing.Size(174, 17);
+            this.tempsIntervalLabel.Size = new System.Drawing.Size(178, 17);
             this.tempsIntervalLabel.TabIndex = 5;
             this.tempsIntervalLabel.Text = "Temperature interval (Warm)";
             // 
@@ -153,7 +155,7 @@
             this.saveBtn.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(120)))), ((int)(((byte)(212)))));
             this.saveBtn.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
             this.saveBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.saveBtn.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.saveBtn.Font = new System.Drawing.Font("Bunken Tech Sans Pro Bold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.saveBtn.ForeColor = System.Drawing.Color.White;
             this.saveBtn.Location = new System.Drawing.Point(22, 148);
             this.saveBtn.Name = "saveBtn";
@@ -166,11 +168,11 @@
             // colorsetLabel
             // 
             this.colorsetLabel.AutoSize = true;
-            this.colorsetLabel.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.colorsetLabel.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.colorsetLabel.ForeColor = System.Drawing.Color.LightGray;
-            this.colorsetLabel.Location = new System.Drawing.Point(38, 8);
+            this.colorsetLabel.Location = new System.Drawing.Point(57, 8);
             this.colorsetLabel.Name = "colorsetLabel";
-            this.colorsetLabel.Size = new System.Drawing.Size(183, 17);
+            this.colorsetLabel.Size = new System.Drawing.Size(187, 17);
             this.colorsetLabel.TabIndex = 3;
             this.colorsetLabel.Text = "Set temperature-based colors";
             // 
@@ -179,7 +181,7 @@
             this.hotTempColor.BackColor = System.Drawing.Color.Red;
             this.hotTempColor.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
             this.hotTempColor.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.hotTempColor.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.hotTempColor.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.hotTempColor.ForeColor = System.Drawing.Color.DimGray;
             this.hotTempColor.Location = new System.Drawing.Point(204, 34);
             this.hotTempColor.Name = "hotTempColor";
@@ -194,7 +196,7 @@
             this.warmTempColor.BackColor = System.Drawing.Color.Yellow;
             this.warmTempColor.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
             this.warmTempColor.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.warmTempColor.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.warmTempColor.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.warmTempColor.ForeColor = System.Drawing.Color.DimGray;
             this.warmTempColor.Location = new System.Drawing.Point(113, 34);
             this.warmTempColor.Name = "warmTempColor";
@@ -209,7 +211,7 @@
             this.normalTempColor.BackColor = System.Drawing.Color.White;
             this.normalTempColor.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
             this.normalTempColor.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.normalTempColor.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.normalTempColor.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.normalTempColor.ForeColor = System.Drawing.Color.DimGray;
             this.normalTempColor.Location = new System.Drawing.Point(22, 34);
             this.normalTempColor.Name = "normalTempColor";
@@ -222,11 +224,11 @@
             // formTitle
             // 
             this.formTitle.AutoSize = true;
-            this.formTitle.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.formTitle.Font = new System.Drawing.Font("Bunken Tech Sans Pro Bold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.formTitle.ForeColor = System.Drawing.Color.WhiteSmoke;
             this.formTitle.Location = new System.Drawing.Point(22, 15);
             this.formTitle.Name = "formTitle";
-            this.formTitle.Size = new System.Drawing.Size(69, 17);
+            this.formTitle.Size = new System.Drawing.Size(68, 17);
             this.formTitle.TabIndex = 6;
             this.formTitle.Text = "Configure";
             // 
@@ -242,7 +244,7 @@
             this.Controls.Add(this.mainPanel);
             this.Controls.Add(this.exitBtn);
             this.DoubleBuffered = true;
-            this.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.ForeColor = System.Drawing.Color.White;
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));

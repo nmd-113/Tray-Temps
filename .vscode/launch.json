@@ -1,0 +1,14 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "TrayTemps",
+            "type": "clr",
+            "request": "launch",
+            "program": "${workspaceFolder}\\bin\\x64\\Debug\\TrayTemps.exe",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "build TrayTemps"
+        }
+    ]
+}

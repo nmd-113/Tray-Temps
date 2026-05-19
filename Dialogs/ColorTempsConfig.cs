@@ -12,15 +12,29 @@ namespace TrayTemps
         private Point dragFormPoint;
 
         private bool _updating = false;
+        private const int CsDropShadow = 0x00020000;
 
         public ColorTempsConfig(MainForm mainForm)
         {
             InitializeComponent();
+            EmbeddedFonts.ApplyTo(this);
 
             _mainForm = mainForm;
+            ApplyTheme();
+            _mainForm.ThemeChanged += MainForm_ThemeChanged;
 
             warmTempMin.ValueChanged += NumericRange_ValueChanged;
             warmTempMax.ValueChanged += NumericRange_ValueChanged;
+        }
+
+        protected override CreateParams CreateParams
+        {
+            get
+            {
+                CreateParams createParams = base.CreateParams;
+                createParams.ClassStyle |= CsDropShadow;
+                return createParams;
+            }
         }
 
         private void ColorTempsConfig_Load(object sender, EventArgs e)
@@ -46,6 +60,19 @@ namespace TrayTemps
         private void ColorTempsConfig_MouseUp(object sender, MouseEventArgs e)
         {
             dragging = false;
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            if (_mainForm != null)
+                _mainForm.ThemeChanged -= MainForm_ThemeChanged;
+
+            base.OnFormClosed(e);
+        }
+
+        private void MainForm_ThemeChanged(object sender, EventArgs e)
+        {
+            ApplyTheme();
         }
 
         private void ApplyColor(Button target)
@@ -99,6 +126,57 @@ namespace TrayTemps
 
             warmTempMin.Value = Clamp(_mainForm.WarmTempMin, warmTempMin.Minimum, warmTempMin.Maximum);
             warmTempMax.Value = Clamp(_mainForm.WarmTempMax, warmTempMax.Minimum, warmTempMax.Maximum);
+        }
+
+        private void ApplyTheme()
+        {
+            bool light = _mainForm != null && _mainForm.IsLightModeEnabled;
+
+            Color windowBack = light ? Color.FromArgb(218, 226, 238) : Color.FromArgb(21, 21, 21);
+            Color surfaceBack = light ? Color.White : Color.FromArgb(40, 40, 40);
+            Color inputBack = light ? Color.White : Color.FromArgb(40, 40, 40);
+            Color text = light ? Color.FromArgb(31, 41, 55) : Color.LightGray;
+            Color titleText = light ? Color.FromArgb(15, 23, 42) : Color.WhiteSmoke;
+            Color mutedText = light ? Color.FromArgb(91, 103, 122) : Color.LightGray;
+            Color accent = light ? Color.FromArgb(37, 99, 235) : Color.FromArgb(0, 120, 212);
+            Color border = light ? Color.FromArgb(210, 218, 230) : Color.FromArgb(30, 30, 30);
+
+            BackColor = windowBack;
+            ForeColor = text;
+            mainPanel.BackColor = surfaceBack;
+
+            formTitle.ForeColor = titleText;
+            colorsetLabel.ForeColor = mutedText;
+            tempsIntervalLabel.ForeColor = mutedText;
+            lineLabel.ForeColor = mutedText;
+
+            ApplyInputTheme(warmTempMin, inputBack, text);
+            ApplyInputTheme(warmTempMax, inputBack, text);
+
+            saveBtn.BackColor = accent;
+            saveBtn.ForeColor = Color.White;
+            saveBtn.FlatAppearance.BorderColor = border;
+
+            exitBtn.BackColor = windowBack;
+            exitBtn.ForeColor = titleText;
+            exitBtn.FlatAppearance.BorderColor = windowBack;
+            exitBtn.FlatAppearance.MouseDownBackColor = light ? Color.FromArgb(226, 239, 255) : Color.FromArgb(40, 40, 40);
+
+            ApplyColorButtonTheme(normalTempColor, border);
+            ApplyColorButtonTheme(warmTempColor, border);
+            ApplyColorButtonTheme(hotTempColor, border);
+        }
+
+        private static void ApplyInputTheme(NumericUpDown input, Color backColor, Color foreColor)
+        {
+            input.BackColor = backColor;
+            input.ForeColor = foreColor;
+        }
+
+        private static void ApplyColorButtonTheme(Button button, Color border)
+        {
+            button.ForeColor = Color.Black;
+            button.FlatAppearance.BorderColor = border;
         }
 
         private decimal Clamp(decimal value, decimal min, decimal max)

@@ -1,0 +1,21 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build TrayTemps",
+            "type": "process",
+            "command": "dotnet",
+            "args": [
+                "build",
+                "Tray-Temps.sln",
+                "-p:Configuration=Debug",
+                "-p:Platform=x64"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": "$msCompile"
+        }
+    ]
+}

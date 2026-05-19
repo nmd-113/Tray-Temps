@@ -1,0 +1,54 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Management;
+
+namespace TrayTemps
+{
+    internal static class WmiQueryHelper
+    {
+        internal static List<ManagementObject> WmiQuery(string query)
+        {
+            var list = new List<ManagementObject>();
+
+            try
+            {
+                using (var searcher = new ManagementObjectSearcher(query))
+                using (var results = searcher.Get())
+                {
+                    foreach (ManagementObject obj in results.Cast<ManagementObject>())
+                        list.Add(obj);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("WmiQuery failed: " + ex);
+            }
+
+            return list;
+        }
+
+        internal static List<ManagementObject> WmiQuery(string scopePath, string query)
+        {
+            var list = new List<ManagementObject>();
+
+            try
+            {
+                var scope = new ManagementScope(scopePath);
+                using (var searcher = new ManagementObjectSearcher(scope, new ObjectQuery(query)))
+                using (var results = searcher.Get())
+                {
+                    foreach (ManagementObject obj in results.Cast<ManagementObject>())
+                        list.Add(obj);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("WmiQuery (scoped) failed: " + ex);
+            }
+
+            return list;
+        }
+    }
+}
