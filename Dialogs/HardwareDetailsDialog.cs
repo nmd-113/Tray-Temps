@@ -30,11 +30,15 @@ public partial class HardwareDetailsDialog : Form
     private static extern bool ReleaseCapture();
     [DllImport("user32.dll")]
     private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+    [DllImport("user32.dll")]
+    private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, ref Point lParam);
     private const int WM_NCLBUTTONDOWN = 0xA1;
     private const int HTCAPTION = 0x2;
 
     // API for Anti-Flicker
     private const int WM_SETREDRAW = 0x000B;
+    private const int EM_GETSCROLLPOS = 0x04DD;
+    private const int EM_SETSCROLLPOS = 0x04DE;
 
     public HardwareDetailsDialog()
     {
@@ -331,11 +335,13 @@ public partial class HardwareDetailsDialog : Form
             redrawDisabled = true;
 
             int oldSelectionStart = _liveBox.SelectionStart;
+            Point oldScrollPosition = GetScrollPosition(_liveBox);
 
             _liveBox.Text = string.IsNullOrWhiteSpace(text) ? "No sensors detected." : text;
 
             _liveBox.SelectionStart = Math.Min(oldSelectionStart, _liveBox.TextLength);
             _liveBox.SelectionLength = 0;
+            SetScrollPosition(_liveBox, oldScrollPosition);
         }
         catch
         {
@@ -375,6 +381,18 @@ public partial class HardwareDetailsDialog : Form
         if (box == null) return;
         box.SelectionStart = 0;
         box.SelectionLength = 0;
+    }
+
+    private static Point GetScrollPosition(RichTextBox box)
+    {
+        Point position = Point.Empty;
+        SendMessage(box.Handle, EM_GETSCROLLPOS, IntPtr.Zero, ref position);
+        return position;
+    }
+
+    private static void SetScrollPosition(RichTextBox box, Point position)
+    {
+        SendMessage(box.Handle, EM_SETSCROLLPOS, IntPtr.Zero, ref position);
     }
 
     private static void CopyToClipboard(string text)

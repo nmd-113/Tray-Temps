@@ -68,53 +68,53 @@ namespace TrayTemps
                 ApplyTo(root.ContextMenuStrip);
         }
 
-    public static void ApplyTo(ToolStrip toolStrip)
-    {
-        if (toolStrip == null)
-            return;
-
-        Initialize();
-        // Safely replace the ToolStrip font and dispose the previous font if it is not shared.
-        Font oldFont = toolStrip.Font;
-        Font newFont = CreateReplacementFont(oldFont, false);
-        toolStrip.Font = newFont;
-        if (oldFont != null && !ReferenceEquals(oldFont, newFont) && !ReferenceEquals(oldFont, toolStrip.Parent?.Font))
-            oldFont.Dispose();
-
-        foreach (ToolStripItem item in toolStrip.Items)
-            ApplyTo(item);
-    }
-
-    private static void ApplyTo(ToolStripItem item)
-    {
-        if (item == null)
-            return;
-
-        // Safely replace the ToolStripItem font and dispose the previous font if it is not shared.
-        Font oldFont = item.Font;
-        Font newFont = CreateReplacementFont(oldFont, false);
-        item.Font = newFont;
-        if (oldFont != null && !ReferenceEquals(oldFont, newFont) && !ReferenceEquals(oldFont, item.Owner?.Font))
-            oldFont.Dispose();
-
-        if (item is ToolStripDropDownItem dropDownItem)
+        public static void ApplyTo(ToolStrip toolStrip)
         {
-            foreach (ToolStripItem child in dropDownItem.DropDownItems)
-                ApplyTo(child);
-        }
-    }
+            if (toolStrip == null)
+                return;
 
-    private static void ApplyFont(Control control)
-    {
-        if (control == null) return;
-        bool preserveSystemFont = IsSystemSpecialCase(control);
-        // Capture the old font, assign the replacement, then dispose the old font if it is safe to do so.
-        Font oldFont = control.Font;
-        Font newFont = CreateReplacementFont(oldFont, preserveSystemFont);
-        control.Font = newFont;
-        if (!preserveSystemFont && oldFont != null && !ReferenceEquals(oldFont, newFont) && !ReferenceEquals(oldFont, control.Parent?.Font))
-            oldFont.Dispose();
-    }
+            Initialize();
+            // Safely replace the ToolStrip font and dispose the previous font if it is not shared.
+            Font oldFont = toolStrip.Font;
+            Font newFont = CreateReplacementFont(oldFont, false);
+            toolStrip.Font = newFont;
+            if (oldFont != null && !ReferenceEquals(oldFont, newFont) && !ReferenceEquals(oldFont, toolStrip.Parent?.Font))
+                oldFont.Dispose();
+
+            foreach (ToolStripItem item in toolStrip.Items)
+                ApplyTo(item);
+        }
+
+        private static void ApplyTo(ToolStripItem item)
+        {
+            if (item == null)
+                return;
+
+            // Safely replace the ToolStripItem font and dispose the previous font if it is not shared.
+            Font oldFont = item.Font;
+            Font newFont = CreateReplacementFont(oldFont, false);
+            item.Font = newFont;
+            if (oldFont != null && !ReferenceEquals(oldFont, newFont) && !ReferenceEquals(oldFont, item.Owner?.Font))
+                oldFont.Dispose();
+
+            if (item is ToolStripDropDownItem dropDownItem)
+            {
+                foreach (ToolStripItem child in dropDownItem.DropDownItems)
+                    ApplyTo(child);
+            }
+        }
+
+        private static void ApplyFont(Control control)
+        {
+            if (control == null) return;
+            bool preserveSystemFont = IsSystemSpecialCase(control);
+            // Capture the old font, assign the replacement, then dispose the old font if it is safe to do so.
+            Font oldFont = control.Font;
+            Font newFont = CreateReplacementFont(oldFont, preserveSystemFont);
+            control.Font = newFont;
+            if (!preserveSystemFont && oldFont != null && !ReferenceEquals(oldFont, newFont) && !ReferenceEquals(oldFont, control.Parent?.Font))
+                oldFont.Dispose();
+        }
 
         private static Font CreateReplacementFont(Font source, bool preserveSystemFont)
         {

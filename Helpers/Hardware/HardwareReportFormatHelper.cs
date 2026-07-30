@@ -300,7 +300,7 @@ namespace TrayTemps
 
                 case SensorType.Throughput:
                     return IsStorageReadWriteThroughputSensor(sensor)
-                        ? $"{value:0.0} KB/s"
+                        ? FormatBytesPerSecond(value)
                         : $"{value:0.0} MB/s";
 
                 case SensorType.TimeSpan:
@@ -322,6 +322,23 @@ namespace TrayTemps
             string sensorName = Safe(sensor.Name);
             return sensorName.IndexOf("Read Rate", StringComparison.OrdinalIgnoreCase) >= 0 ||
                    sensorName.IndexOf("Write Rate", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        // LibreHardwareMonitor storage "Read Rate" and "Write Rate" sensors are bytes per second.
+        // Convert before displaying so the value and unit agree.
+        private static string FormatBytesPerSecond(float bytesPerSecond)
+        {
+            double value = bytesPerSecond;
+            string[] suffixes = { "B/s", "KB/s", "MB/s", "GB/s", "TB/s" };
+            int index = 0;
+
+            while (value >= 1024 && index < suffixes.Length - 1)
+            {
+                value /= 1024;
+                index++;
+            }
+
+            return $"{value:0.0} {suffixes[index]}";
         }
 
         internal static string NormalizeGpuText(string text)
