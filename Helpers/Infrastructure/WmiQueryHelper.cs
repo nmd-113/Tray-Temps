@@ -50,5 +50,17 @@ namespace TrayTemps
 
             return list;
         }
+
+        internal static void DisposeAll(IEnumerable<ManagementObject> objects)
+        {
+            if (objects == null)
+                return;
+
+            foreach (ManagementObject obj in objects)
+            {
+                try { obj?.Dispose(); }
+                catch (Exception ex) { Debug.WriteLine("Disposing WMI object failed: " + ex); }
+            }
+        }
     }
 }

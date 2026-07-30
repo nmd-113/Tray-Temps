@@ -149,35 +149,42 @@ namespace TrayTemps
                 ? new List<IHardware>()
                 : storageHardwares.Where(d => d != null).ToList();
 
-            if (disks.Count == 0)
+            try
             {
-                sb.AppendLine();
-                sb.AppendLine("  No storage information found.");
+                if (disks.Count == 0)
+                {
+                    sb.AppendLine();
+                    sb.AppendLine("  No storage information found.");
+
+                    AppendUnmatchedStorageHardwaresSection(sb, unmatchedStorageHardwares, disks, smartLifeInfos, unmatchedSmartLifeInfos, updateHardwareRecursive);
+                    AppendUnmatchedSmartLifeInfosSection(sb, unmatchedSmartLifeInfos);
+
+                    return sb.ToString();
+                }
+
+                foreach (var disk in disks)
+                {
+                    string diskDisplayName = HardwareReportFormatHelper.GetDiskDisplayTitle(disk["Model"], disk["SerialNumber"]);
+
+                    sb.Append(HardwareReportFormatHelper.Group(diskDisplayName));
+                    AppendStorageStaticDiskFields(sb, disk);
+
+                    IHardware matchedDrive = FindStorageHardwareForDisk(disk, unmatchedStorageHardwares);
+                    SmartLifeInfo smartLifeInfo = StorageSmartInfoHelper.FindSmartLifeInfoForDisk(disk, smartLifeInfos);
+
+                    if (matchedDrive != null || smartLifeInfo != null)
+                        AppendStorageHealthSectionForDisk(sb, matchedDrive, smartLifeInfo, unmatchedStorageHardwares, unmatchedSmartLifeInfos, updateHardwareRecursive);
+                }
 
                 AppendUnmatchedStorageHardwaresSection(sb, unmatchedStorageHardwares, disks, smartLifeInfos, unmatchedSmartLifeInfos, updateHardwareRecursive);
                 AppendUnmatchedSmartLifeInfosSection(sb, unmatchedSmartLifeInfos);
 
                 return sb.ToString();
             }
-
-            foreach (var disk in disks)
+            finally
             {
-                string diskDisplayName = HardwareReportFormatHelper.GetDiskDisplayTitle(disk["Model"], disk["SerialNumber"]);
-
-                sb.Append(HardwareReportFormatHelper.Group(diskDisplayName));
-                AppendStorageStaticDiskFields(sb, disk);
-
-                IHardware matchedDrive = FindStorageHardwareForDisk(disk, unmatchedStorageHardwares);
-                SmartLifeInfo smartLifeInfo = StorageSmartInfoHelper.FindSmartLifeInfoForDisk(disk, smartLifeInfos);
-
-                if (matchedDrive != null || smartLifeInfo != null)
-                    AppendStorageHealthSectionForDisk(sb, matchedDrive, smartLifeInfo, unmatchedStorageHardwares, unmatchedSmartLifeInfos, updateHardwareRecursive);
+                WmiQueryHelper.DisposeAll(disks);
             }
-
-            AppendUnmatchedStorageHardwaresSection(sb, unmatchedStorageHardwares, disks, smartLifeInfos, unmatchedSmartLifeInfos, updateHardwareRecursive);
-            AppendUnmatchedSmartLifeInfosSection(sb, unmatchedSmartLifeInfos);
-
-            return sb.ToString();
         }
 
         internal static void AppendStorageHealthSectionForDisk(

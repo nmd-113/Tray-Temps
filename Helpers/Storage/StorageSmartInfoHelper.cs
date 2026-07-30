@@ -12,27 +12,30 @@ namespace TrayTemps
         {
             var infos = new List<SmartLifeInfo>();
             var rows = scopedWmiQuery(@"root\wmi", "SELECT InstanceName, VendorSpecific FROM MSStorageDriver_FailurePredictData");
-
-            foreach (var row in rows)
+            try
             {
-                try
+                foreach (var row in rows)
                 {
-                    string instanceName = HardwareReportFormatHelper.Safe(row["InstanceName"]);
-                    byte[] data = row["VendorSpecific"] as byte[];
+                    try
+                    {
+                        string instanceName = HardwareReportFormatHelper.Safe(row["InstanceName"]);
+                        byte[] data = row["VendorSpecific"] as byte[];
 
-                    if (data == null || data.Length < 362)
-                        continue;
+                        if (data == null || data.Length < 362)
+                            continue;
 
-                    SmartLifeInfo info = ParseSmartLifeInfo(instanceName, data);
+                        SmartLifeInfo info = ParseSmartLifeInfo(instanceName, data);
 
-                    if (info != null)
-                        infos.Add(info);
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine("GetSmartLifeInfos: failed to parse row: " + ex);
+                        if (info != null)
+                            infos.Add(info);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine("GetSmartLifeInfos: failed to parse row: " + ex);
+                    }
                 }
             }
+            finally { WmiQueryHelper.DisposeAll(rows); }
 
             return infos;
         }

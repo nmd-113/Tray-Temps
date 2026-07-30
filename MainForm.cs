@@ -1,5 +1,4 @@
 using LibreHardwareMonitor.Hardware;
-using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -13,7 +12,6 @@ using System.Linq;
 using System.Management;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -32,6 +30,9 @@ namespace TrayTemps
         private const int MainMenuShadowWidth = 10;
         private const decimal MinimumRefreshIntervalSeconds = 0.25M;
         private const decimal DefaultRefreshIntervalSeconds = 0.50M;
+        private const decimal MaximumRefreshIntervalSeconds = 10M;
+        private const int MinimumIconSizePercent = 30;
+        private const int MaximumIconSizePercent = 100;
         private const int StartupTaskQueryTimeoutMs = 2000;
         private static readonly Size HardwareDialogMinimumSize = new Size(640, 440);
 
@@ -53,6 +54,9 @@ namespace TrayTemps
         private int _savedCpuIndex = 0;
         private int _savedGpuIndex = 0;
         private int _savedStorageIndex = 0;
+        private string _savedCpuIdentifier;
+        private string _savedGpuIdentifier;
+        private string _savedStorageIdentifier;
 
         public int WarmTempMin;
         public int WarmTempMax;
@@ -64,6 +68,7 @@ namespace TrayTemps
         public FontFamily BunkenBold;
         public FontFamily BunkenRegular;
         public bool IsLightModeEnabled => lightModeSwitch != null && lightModeSwitch.Checked;
+        public bool UsesFahrenheit => tempsFahrenheit != null && tempsFahrenheit.Checked;
         public event EventHandler ThemeChanged;
 
         private ISensor _cpuTempSensor;
@@ -87,6 +92,9 @@ namespace TrayTemps
         private bool _sensorElevationPromptShown = false;
         private bool _isInitializingHardwareSelectors = false;
         private bool _temperatureTimerConfigured = false;
+        private bool _isExplicitExitRequested = false;
+        private int _cpuInvalidSensorCycles;
+        private int _gpuInvalidSensorCycles;
         private Rectangle? _savedHardwareDialogBounds;
 
         private readonly object _hardwareUpdateLock = new object();
@@ -199,6 +207,16 @@ namespace TrayTemps
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
+            if (!_isShutdownInitiated &&
+                !_isExplicitExitRequested &&
+                e.CloseReason != CloseReason.WindowsShutDown &&
+                minimizeOnClose.Checked)
+            {
+                e.Cancel = true;
+                HideToTray();
+                return;
+            }
+
             if (_settingsLoaded)
                 SaveSettings();
             ExecuteShutdownSequence();
@@ -256,14 +274,6 @@ namespace TrayTemps
             }
         }
 
-        private void MainForm_MouseMove(object sender, MouseEventArgs e)
-        {
-        }
-
-        private void MainForm_MouseUp(object sender, MouseEventArgs e)
-        {
-        }
-
         #endregion
 
         #region [ Startup / Hardware Initialization ]
@@ -313,7 +323,16 @@ namespace TrayTemps
                         newComputer.Open();
 
                         foreach (var hardware in newComputer.Hardware)
-                            UpdateHardwareRecursive(hardware);
+                        {
+                            try
+                            {
+                                hardware.Update();
+                            }
+                            catch (Exception ex)
+                            {
+                                Debug.WriteLine("Hardware update failed during initialization: " + ex);
+                            }
+                        }
 
                         cpuHardwares = newComputer.Hardware
                             .Where(h => h.HardwareType == HardwareType.Cpu)
@@ -355,10 +374,10 @@ namespace TrayTemps
 
                         try
                         {
-                            PopulateHardwareSelector(cpuIndexSelect, _cpuHardwares, _savedCpuIndex, cpuModel, "CPU");
-                            PopulateHardwareSelector(gpuIndexSelect, _gpuHardwares, _savedGpuIndex, gpuModel, "GPU");
+                            PopulateHardwareSelector(cpuIndexSelect, _cpuHardwares, GetSavedHardwareIndex(_cpuHardwares, _savedCpuIdentifier, _savedCpuIndex), cpuModel, "CPU");
+                            PopulateHardwareSelector(gpuIndexSelect, _gpuHardwares, GetSavedHardwareIndex(_gpuHardwares, _savedGpuIdentifier, _savedGpuIndex), gpuModel, "GPU");
                             _wmiStorageDisplayNames = wmiStorageDisplayNames;
-                            PopulateStorageSelector(_savedStorageIndex);
+                            PopulateStorageSelector(GetSavedStorageIndex());
                         }
                         finally
                         {
@@ -451,7 +470,7 @@ namespace TrayTemps
 
         private void UpdateTimerInterval()
         {
-            _tempTimer.Interval = Math.Max(250, (int)(refreshValue.Value * 1000));
+            _tempTimer.Interval = Math.Max(250, (int)(GetSelectedRefreshInterval() * 1000));
         }
 
         private async void TempTimer_Tick(object sender, EventArgs e)
@@ -484,6 +503,8 @@ namespace TrayTemps
 
                         if (_selectedGpuHardware != null)
                             UpdateHardwareRecursive(_selectedGpuHardware);
+
+                        RefreshUnavailableTemperatureSensors();
                     }
                 });
 
@@ -499,6 +520,7 @@ namespace TrayTemps
                     : null;
 
                 UpdateTemperatures(cpuTemp, gpuTemp);
+                UpdateTemperatureTrayCheckboxAvailability();
                 UpdateAllTrayIcons(cpuTemp, gpuTemp);
             }
             catch (Exception ex)
@@ -532,6 +554,7 @@ namespace TrayTemps
         {
             Show();
             WindowState = FormWindowState.Normal;
+            BringToFront();
             UpdateTrayIcons();
         }
 
@@ -619,17 +642,25 @@ namespace TrayTemps
             {
                 if (cpuTemp.HasValue)
                 {
-                    float val = TemperatureFormatHelper.GetDisplayTemp(cpuTemp.Value, useFahrenheit);
+                    float val = cpuTemp.Value;
                     if (val < WarmTempMin) _cpuBrush.Color = NormalColor;
                     else if (val <= WarmTempMax) _cpuBrush.Color = WarningColor;
                     else _cpuBrush.Color = CriticalColor;
                 }
+                else
+                {
+                    _cpuBrush.Color = Color.Gray;
+                }
                 if (gpuTemp.HasValue)
                 {
-                    float val = TemperatureFormatHelper.GetDisplayTemp(gpuTemp.Value, useFahrenheit);
+                    float val = gpuTemp.Value;
                     if (val < WarmTempMin) _gpuBrush.Color = NormalColor;
                     else if (val <= WarmTempMax) _gpuBrush.Color = WarningColor;
                     else _gpuBrush.Color = CriticalColor;
+                }
+                else
+                {
+                    _gpuBrush.Color = Color.Gray;
                 }
             }
             else
@@ -844,7 +875,8 @@ namespace TrayTemps
                 g.PixelOffsetMode = PixelOffsetMode.HighQuality;
                 g.CompositingQuality = CompositingQuality.HighQuality;
 
-                float rowHeight = size / 2f;
+                float rowGap = Math.Max(1f, size * 0.04f);
+                float rowHeight = (size - rowGap) / 2f;
                 float maxTextWidth = size * occupancy;
                 float maxTextHeight = rowHeight * occupancy;
                 string referenceText = TrayTextHelper.GetTrayReferenceText(cpuText, gpuText);
@@ -872,7 +904,7 @@ namespace TrayTemps
                     gpuText,
                     combinedFont,
                     sharedLayout,
-                    new RectangleF(0, rowHeight, size, rowHeight),
+                    new RectangleF(0, rowHeight + rowGap, size, rowHeight),
                     _gpuBrush);
 
                 IntPtr hIcon = bmp.GetHicon();
@@ -885,28 +917,7 @@ namespace TrayTemps
         private Font CreateCombinedTrayFont(int iconPixelSize)
         {
             float fontSize = Math.Max(IconSize, iconPixelSize) * 0.95f;
-            string[] candidateFamilies = { "Unicode", "Tahoma", "Segoe UI" };
-
-            foreach (string familyName in candidateFamilies)
-            {
-                try
-                {
-                    var font = new Font(familyName, fontSize, FontStyle.Bold, GraphicsUnit.Pixel);
-
-                    if (string.Equals(font.FontFamily.Name, familyName, StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(familyName, "Segoe UI Variable", StringComparison.OrdinalIgnoreCase))
-                    {
-                        return font;
-                    }
-
-                    font.Dispose();
-                }
-                catch
-                {
-                }
-            }
-
-            return new Font(EmbeddedFonts.Bold, fontSize, GetEmbeddedBoldStyle(), GraphicsUnit.Pixel);
+            return CreateTrayFont(_trayFontFamily, fontSize);
         }
 
         private void DrawStableTrayText(
@@ -1258,7 +1269,7 @@ namespace TrayTemps
 
         private float GetTrayTextOccupancy()
         {
-            float requested = (float)iconsizeValue.Value / 100f;
+            float requested = GetSelectedIconSize() / 100f;
             return Math.Max(0.3f, Math.Min(1f, requested));
         }
 
@@ -1288,9 +1299,6 @@ namespace TrayTemps
 
         private void SetDefaultControlValues()
         {
-            refreshValue.Minimum = MinimumRefreshIntervalSeconds;
-            refreshValue.Value = DefaultRefreshIntervalSeconds;
-            iconsizeValue.Value = 75;
             lightModeSwitch.Checked = false;
 
             cpuColorValue.BackColor = Color.Aqua;
@@ -1322,16 +1330,21 @@ namespace TrayTemps
                     _openHardwareDialogs,
                     bounds => _savedHardwareDialogBounds = bounds);
 
+                bool isInstalled = IsInstalledAppPresent();
+                bool hasStartupTask = isInstalled && IsStartupEntryPresent();
+
                 var settings = new AppSettings
                 {
-                    Autostart = autostartInstall.Checked,
+                    // Autostart is retained for backward-compatible readers; it now
+                    // correctly represents the scheduled task rather than install state.
+                    Autostart = hasStartupTask,
                     LightMode = lightModeSwitch.Checked,
                     TempsFahrenheit = tempsFahrenheit.Checked,
                     SingleIconTray = _desiredSingleIconTray,
                     CpuTrayIcon = _desiredEnableCpuTray,
                     GpuTrayIcon = _desiredEnableGpuTray,
                     TempBasedIconColor = _desiredColorTempsEnabled,
-                    UpdateInterval = refreshValue.Value,
+                    UpdateInterval = GetSelectedRefreshInterval(),
                     MinWarmTemp = WarmTempMin,
                     MaxWarmTemp = WarmTempMax,
                     NormalTempColor = NormalColor.ToArgb(),
@@ -1341,11 +1354,15 @@ namespace TrayTemps
                     TrayFontFamily = fontFamilyValue.Text,
                     CpuColor = cpuColorValue.BackColor.ToArgb(),
                     GpuColor = gpuColorValue.BackColor.ToArgb(),
-                    IconSize = (int)iconsizeValue.Value,
+                    IconSize = GetSelectedIconSize(),
                     CpuIndex = cpuIndexSelect.SelectedIndex,
                     GpuIndex = gpuIndexSelect.SelectedIndex,
                     StorageIndex = storageIndexSelect.SelectedIndex,
-                    InstallFolder = InstallPath
+                    CpuIdentifier = _selectedCpuIdentifier,
+                    GpuIdentifier = _selectedGpuIdentifier,
+                    StorageIdentifier = _selectedStorageIdentifier,
+                    InstallFolder = InstallPath,
+                    MinimizeOnClose = minimizeOnClose.Checked
                 };
 
                 if (this.WindowState == FormWindowState.Normal)
@@ -1381,12 +1398,10 @@ namespace TrayTemps
                 {
                     sw.Write(json);
                     sw.Flush();
+                    fs.Flush(true);
                 }
 
-                if (File.Exists(SettingsFilePath))
-                    File.Replace(tempPath, SettingsFilePath, null);
-                else
-                    File.Move(tempPath, SettingsFilePath);
+                ReplaceSettingsFile(tempPath);
             }
             catch (Exception ex)
             {
@@ -1398,7 +1413,7 @@ namespace TrayTemps
         {
             try
             {
-                if (!File.Exists(SettingsFilePath))
+                if (!File.Exists(SettingsFilePath) && !File.Exists(SettingsFilePath + ".tmp") && !File.Exists(SettingsFilePath + ".bak"))
                 {
                     CenterToScreen();
                     SetDefaultControlValues();
@@ -1406,7 +1421,7 @@ namespace TrayTemps
                     return;
                 }
 
-                string json = File.ReadAllText(SettingsFilePath);
+                string json = ReadSettingsJson();
                 var settings = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(json);
 
                 if (settings == null)
@@ -1436,6 +1451,56 @@ namespace TrayTemps
             }
         }
 
+        private string ReadSettingsJson()
+        {
+            string[] candidates = { SettingsFilePath, SettingsFilePath + ".tmp", SettingsFilePath + ".bak" };
+
+            foreach (string path in candidates)
+            {
+                if (!File.Exists(path))
+                    continue;
+
+                try
+                {
+                    string json = File.ReadAllText(path);
+                    System.Text.Json.JsonSerializer.Deserialize<AppSettings>(json);
+                    return json;
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Ignoring invalid settings candidate '{path}': {ex.Message}");
+                }
+            }
+
+            throw new InvalidDataException("No valid settings file was found.");
+        }
+
+        private void ReplaceSettingsFile(string tempPath)
+        {
+            string backupPath = SettingsFilePath + ".bak";
+
+            try
+            {
+                if (File.Exists(SettingsFilePath))
+                    File.Replace(tempPath, SettingsFilePath, backupPath);
+                else
+                    File.Move(tempPath, SettingsFilePath);
+
+                if (File.Exists(backupPath))
+                    File.Delete(backupPath);
+            }
+            catch (PlatformNotSupportedException)
+            {
+                File.Copy(tempPath, SettingsFilePath, true);
+                File.Delete(tempPath);
+            }
+            catch (IOException) when (File.Exists(tempPath))
+            {
+                File.Copy(tempPath, SettingsFilePath, true);
+                File.Delete(tempPath);
+            }
+        }
+
         private void ApplySavedWindowBounds(AppSettings settings)
         {
             if (settings.WindowWidth > 0 && settings.WindowHeight > 0)
@@ -1460,9 +1525,9 @@ namespace TrayTemps
 
         private void ApplyLoadedBasicControlSettings(AppSettings settings)
         {
-            autostartInstall.Checked = settings.Autostart;
             lightModeSwitch.Checked = settings.LightMode;
             tempsFahrenheit.Checked = settings.TempsFahrenheit;
+            minimizeOnClose.Checked = settings.MinimizeOnClose;
             singleIconTray.Checked = settings.SingleIconTray;
             enableCpuTray.Checked = settings.CpuTrayIcon;
             enableGpuTray.Checked = settings.GpuTrayIcon;
@@ -1473,8 +1538,8 @@ namespace TrayTemps
             _desiredSingleIconTray = singleIconTray.Checked;
             _desiredColorTempsEnabled = colortempsEnable.Checked;
 
-            refreshValue.Value = ValueHelper.ClampDecimal(settings.UpdateInterval, MinimumRefreshIntervalSeconds, refreshValue.Maximum);
-            iconsizeValue.Value = ValueHelper.ClampDecimal(settings.IconSize, iconsizeValue.Minimum, iconsizeValue.Maximum);
+            SelectRefreshInterval(settings.UpdateInterval);
+            SelectIconSize(settings.IconSize);
         }
 
         private void ApplyLoadedVisualAndThresholdSettings(AppSettings settings)
@@ -1498,6 +1563,9 @@ namespace TrayTemps
             _savedCpuIndex = Math.Max(0, settings.CpuIndex);
             _savedGpuIndex = Math.Max(0, settings.GpuIndex);
             _savedStorageIndex = Math.Max(0, settings.StorageIndex);
+            _savedCpuIdentifier = settings.CpuIdentifier;
+            _savedGpuIdentifier = settings.GpuIdentifier;
+            _savedStorageIdentifier = settings.StorageIdentifier;
 
             InstallPath = settings.InstallFolder;
         }
@@ -1767,8 +1835,7 @@ namespace TrayTemps
 
         private void ApplyThemeToInputsAndButtons(ThemePalette theme)
         {
-            ApplyInputTheme(theme, refreshValue, iconsizeValue);
-            ApplyComboBoxTheme(theme, IsLightModeEnabled, fontFamilyValue, cpuIndexSelect, gpuIndexSelect, storageIndexSelect);
+            ApplyComboBoxTheme(theme, IsLightModeEnabled, refreshValue, iconsizeValue, fontFamilyValue, cpuIndexSelect, gpuIndexSelect, storageIndexSelect);
             ApplyNavButtonTheme(theme, homeBtn, settingsBtn, aboutBtn);
             ApplyWindowButtonTheme(theme, minimizeBtn);
             ApplyWindowButtonTheme(theme, exitBtn);
@@ -1780,10 +1847,31 @@ namespace TrayTemps
         {
             contextMenuStrip.BackColor = theme.SurfaceBack;
             contextMenuStrip.ForeColor = theme.Text;
-            ShowForm.BackColor = theme.SurfaceBack;
-            ShowForm.ForeColor = theme.Text;
+            contextMenuStrip.Renderer = new ToolStripProfessionalRenderer(new TrayMenuColorTable(theme));
+            trayDisplayMenu.DropDown.BackColor = theme.SurfaceBack;
+            trayDisplayMenu.DropDown.ForeColor = theme.Text;
+            trayDisplayMenu.DropDown.Font = contextMenuStrip.Font;
+            ApplyTrayMenuTheme(theme, ShowForm, trayDisplayMenu, openSettingsTray);
+            ApplyTrayMenuTheme(theme,
+                trayCpuEnabledMenu,
+                trayGpuEnabledMenu,
+                trayCombinedMenu,
+                trayFahrenheitMenu,
+                trayTemperatureColorsMenu,
+                trayConfigureColorsMenu);
             SettingsTray.BackColor = theme.SurfaceBack;
             SettingsTray.ForeColor = theme.Danger;
+            SettingsTray.Font = contextMenuStrip.Font;
+        }
+
+        private void ApplyTrayMenuTheme(ThemePalette theme, params ToolStripMenuItem[] menuItems)
+        {
+            foreach (ToolStripMenuItem menuItem in menuItems)
+            {
+                menuItem.BackColor = theme.SurfaceBack;
+                menuItem.ForeColor = theme.Text;
+                menuItem.Font = contextMenuStrip.Font;
+            }
         }
 
         private void ApplyThemeInvalidation()
@@ -1888,7 +1976,7 @@ namespace TrayTemps
         private static void ApplyComboBoxTheme(ThemePalette theme, bool lightTheme, params ComboBox[] comboBoxes)
         {
             Color backColor = lightTheme
-                ? Color.FromArgb(248, 250, 252)
+                ? Color.FromArgb(230, 235, 240)
                 : theme.InputBack;
 
             foreach (ComboBox comboBox in comboBoxes)
@@ -2013,6 +2101,34 @@ namespace TrayTemps
             public Color HardwareHoverText;
         }
 
+        private sealed class TrayMenuColorTable : ProfessionalColorTable
+        {
+            private readonly ThemePalette _theme;
+
+            public TrayMenuColorTable(ThemePalette theme)
+            {
+                _theme = theme;
+            }
+
+            public override Color ToolStripDropDownBackground => _theme.SurfaceBack;
+            public override Color MenuItemSelected => _theme.NavSelected;
+            public override Color MenuItemSelectedGradientBegin => _theme.NavSelected;
+            public override Color MenuItemSelectedGradientEnd => _theme.NavSelected;
+            public override Color MenuItemPressedGradientBegin => _theme.NavSelected;
+            public override Color MenuItemPressedGradientMiddle => _theme.NavSelected;
+            public override Color MenuItemPressedGradientEnd => _theme.NavSelected;
+            public override Color MenuItemBorder => _theme.Border;
+            public override Color ToolStripBorder => _theme.Border;
+            public override Color ImageMarginGradientBegin => _theme.SurfaceBack;
+            public override Color ImageMarginGradientMiddle => _theme.SurfaceBack;
+            public override Color ImageMarginGradientEnd => _theme.SurfaceBack;
+            public override Color SeparatorDark => _theme.Border;
+            public override Color SeparatorLight => _theme.SurfaceBack;
+            public override Color CheckBackground => _theme.NavSelected;
+            public override Color CheckSelectedBackground => _theme.NavSelected;
+            public override Color CheckPressedBackground => _theme.NavSelected;
+        }
+
         #endregion
 
         #region [ Window / Navigation / UI Events ]
@@ -2078,6 +2194,12 @@ namespace TrayTemps
 
         private void ExitBtn_Click(object sender, EventArgs e)
         {
+            if (minimizeOnClose.Checked)
+            {
+                HideToTray();
+                return;
+            }
+
             ConfirmExitOrHideToTray();
         }
 
@@ -2101,8 +2223,74 @@ namespace TrayTemps
             ShowWindowFromEvent();
         }
 
+        private void OpenSettingsTray_Click(object sender, EventArgs e)
+        {
+            ShowWindow();
+            SetTab(1);
+        }
+
+        private void ContextMenuStrip_Opening(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            SyncTrayMenuState();
+        }
+
+        private void SyncTrayMenuState()
+        {
+            trayCpuEnabledMenu.Checked = enableCpuTray.Checked;
+            trayCpuEnabledMenu.Enabled = enableCpuTray.Enabled;
+            trayGpuEnabledMenu.Checked = enableGpuTray.Checked;
+            trayGpuEnabledMenu.Enabled = enableGpuTray.Enabled;
+
+            bool canCombine = enableCpuTray.Checked && enableGpuTray.Checked && singleIconTray.Enabled;
+            trayCombinedMenu.Checked = singleIconTray.Checked;
+            trayCombinedMenu.Enabled = canCombine;
+
+            trayFahrenheitMenu.Checked = tempsFahrenheit.Checked;
+            trayTemperatureColorsMenu.Checked = colortempsEnable.Checked;
+            trayTemperatureColorsMenu.Enabled = colortempsEnable.Enabled;
+            trayConfigureColorsMenu.Enabled = colortempsEnable.Checked && colortempsConfig.Enabled;
+        }
+
+        private void TrayCpuEnabledMenu_Click(object sender, EventArgs e)
+        {
+            if (enableCpuTray.Enabled)
+                enableCpuTray.Checked = !enableCpuTray.Checked;
+        }
+
+        private void TrayGpuEnabledMenu_Click(object sender, EventArgs e)
+        {
+            if (enableGpuTray.Enabled)
+                enableGpuTray.Checked = !enableGpuTray.Checked;
+        }
+
+        private void TrayCombinedMenu_Click(object sender, EventArgs e)
+        {
+            if (singleIconTray.Enabled)
+                singleIconTray.Checked = !singleIconTray.Checked;
+        }
+
+        private void TrayFahrenheitMenu_Click(object sender, EventArgs e)
+        {
+            tempsFahrenheit.Checked = !tempsFahrenheit.Checked;
+        }
+
+        private void TrayTemperatureColorsMenu_Click(object sender, EventArgs e)
+        {
+            if (colortempsEnable.Enabled)
+                colortempsEnable.Checked = !colortempsEnable.Checked;
+        }
+
+        private void TrayConfigureColorsMenu_Click(object sender, EventArgs e)
+        {
+            if (!colortempsEnable.Checked || !colortempsConfig.Enabled)
+                return;
+
+            ColortempsConfig_Click(colortempsConfig, EventArgs.Empty);
+        }
+
         private void ExitForm_Click(object sender, EventArgs e)
         {
+            _isExplicitExitRequested = true;
             this.Close();
         }
 
@@ -2143,13 +2331,21 @@ namespace TrayTemps
 
         private void ConfirmExitOrHideToTray()
         {
-            if (MessageBox.Show(this, "Are you sure you want to exit TrayTemps?\nClick \"No\" to hide the app to tray.", "Exit Confirmation", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.No)
+            DialogResult result = MessageBox.Show(
+                this,
+                "Are you sure you want to exit TrayTemps?\nClick \"No\" to hide the app to tray.",
+                "Exit Confirmation",
+                MessageBoxButtons.YesNoCancel,
+                MessageBoxIcon.Question);
+
+            if (result == DialogResult.No)
             {
                 HideToTray();
             }
-            else
+            else if (result == DialogResult.Yes)
             {
-                this.Close();
+                _isExplicitExitRequested = true;
+                Close();
             }
         }
 
@@ -2157,7 +2353,7 @@ namespace TrayTemps
 
         #region [ Theme / UI State ]
 
-        private void clearSettings_Click(object sender, EventArgs e)
+        private void ClearSettings_Click(object sender, EventArgs e)
         {
             DialogResult result = MessageBox.Show(
                 "All settings will be reset to default values and the application will restart. Do you want to continue?",
@@ -2412,13 +2608,13 @@ namespace TrayTemps
             if (singleIconTray.Checked)
             {
                 iconsizeValue.Enabled = false;
-                fontFamilyValue.Enabled = false;
             }
             else
             {
                 iconsizeValue.Enabled = true;
-                fontFamilyValue.Enabled = true;
             }
+
+            fontFamilyValue.Enabled = true;
         }
 
         private void ApplyGpuTrayVisibilityForMultiIconMode()
@@ -2437,12 +2633,82 @@ namespace TrayTemps
 
         private void RefreshValue_ValueChanged(object sender, EventArgs e)
         {
-            UpdateTimerInterval();
+            if (refreshValue.SelectedIndex >= 0)
+                UpdateTimerInterval();
         }
 
         private void IconsizeValue_ValueChanged(object sender, EventArgs e)
         {
-            RefreshTrayPreviewAfterDisplaySettingChange();
+            if (iconsizeValue.SelectedIndex >= 0)
+                RefreshTrayPreviewAfterDisplaySettingChange();
+        }
+
+        private void SelectRefreshInterval(decimal value)
+        {
+            decimal clamped = ValueHelper.ClampDecimal(value, MinimumRefreshIntervalSeconds, MaximumRefreshIntervalSeconds);
+            decimal snapped = Math.Round(clamped * 4M, MidpointRounding.AwayFromZero) / 4M;
+            SelectComboBoxText(refreshValue, FormatRefreshInterval(snapped));
+        }
+
+        private void SelectIconSize(int value)
+        {
+            int clamped = Math.Max(MinimumIconSizePercent, Math.Min(MaximumIconSizePercent, value));
+            int snapped = Math.Max(MinimumIconSizePercent, Math.Min(MaximumIconSizePercent, ((int)Math.Round(clamped / 5d, MidpointRounding.AwayFromZero)) * 5));
+            SelectComboBoxText(iconsizeValue, snapped.ToString(CultureInfo.InvariantCulture));
+        }
+
+        private decimal GetSelectedRefreshInterval()
+        {
+            if (TryGetComboBoxDecimalValue(refreshValue, out decimal value))
+                return value;
+
+            return DefaultRefreshIntervalSeconds;
+        }
+
+        private int GetSelectedIconSize()
+        {
+            if (TryGetComboBoxIntValue(iconsizeValue, out int value))
+                return value;
+
+            return 75;
+        }
+
+        private static bool TryGetComboBoxDecimalValue(ComboBox comboBox, out decimal value)
+        {
+            string text = comboBox?.Text?.Trim();
+
+            if (decimal.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out value))
+                return true;
+
+            return decimal.TryParse(text, NumberStyles.Number, CultureInfo.CurrentCulture, out value);
+        }
+
+        private static bool TryGetComboBoxIntValue(ComboBox comboBox, out int value)
+        {
+            string text = comboBox?.Text?.Trim();
+            return int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out value) ||
+                   int.TryParse(text, NumberStyles.Integer, CultureInfo.CurrentCulture, out value);
+        }
+
+        private static void SelectComboBoxText(ComboBox comboBox, string text)
+        {
+            if (comboBox == null)
+                return;
+
+            int index = comboBox.FindStringExact(text);
+            if (index >= 0)
+            {
+                comboBox.SelectedIndex = index;
+            }
+            else if (comboBox.Items.Count > 0)
+            {
+                comboBox.SelectedIndex = 0;
+            }
+        }
+
+        private static string FormatRefreshInterval(decimal value)
+        {
+            return value.ToString("0.##", CultureInfo.InvariantCulture);
         }
 
         private void RefreshTrayPreviewAfterDisplaySettingChange()
@@ -2463,7 +2729,7 @@ namespace TrayTemps
             TempTimer_Tick(this, EventArgs.Empty);
         }
 
-        private void RefreshTemperatureDisplayFromCurrentValues()
+        public void RefreshTemperatureDisplayFromCurrentValues()
         {
             float? cpuTemp = GetCurrentKnownTemperature(_cpuTempSensor);
             float? gpuTemp = GetCurrentKnownTemperature(_gpuTempSensor);
@@ -2477,14 +2743,6 @@ namespace TrayTemps
             return TemperatureFormatHelper.IsValidTemp(sensor?.Value)
                 ? sensor.Value
                 : (float?)null;
-        }
-
-        private void RefreshTrayIconsFromCurrentValues()
-        {
-            float? cpuTemp = GetCurrentKnownTemperature(_cpuTempSensor);
-            float? gpuTemp = GetCurrentKnownTemperature(_gpuTempSensor);
-
-            RefreshTrayIconsFromCurrentValues(cpuTemp, gpuTemp);
         }
 
         private void RefreshTrayIconsFromCurrentValues(float? cpuTemp, float? gpuTemp)
@@ -2566,6 +2824,7 @@ namespace TrayTemps
                 UpdateHardwareRecursive(_selectedCpuHardware);
 
             _cpuTempSensor = SelectPreferredCpuTemperatureSensor(_selectedCpuHardware);
+            _cpuInvalidSensorCycles = 0;
         }
 
         private void SetupSelectedGpuHardware(bool updateHardware)
@@ -2577,6 +2836,7 @@ namespace TrayTemps
                 UpdateHardwareRecursive(_selectedGpuHardware);
 
             _gpuTempSensor = SelectPreferredGpuTemperatureSensor(_selectedGpuHardware);
+            _gpuInvalidSensorCycles = 0;
         }
 
         private static ISensor SelectPreferredCpuTemperatureSensor(IHardware cpuHardware)
@@ -2650,6 +2910,60 @@ namespace TrayTemps
                 return;
 
             sensorHardware.Update();
+        }
+
+        private void RefreshUnavailableTemperatureSensors()
+        {
+            const int RescanAfterInvalidCycles = 3;
+
+            if (IsUsableTemperatureSensor(_cpuTempSensor))
+            {
+                _cpuInvalidSensorCycles = 0;
+            }
+            else if (++_cpuInvalidSensorCycles >= RescanAfterInvalidCycles && _selectedCpuHardware != null)
+            {
+                _cpuTempSensor = SelectPreferredCpuTemperatureSensor(_selectedCpuHardware);
+                _cpuInvalidSensorCycles = 0;
+            }
+
+            if (IsUsableTemperatureSensor(_gpuTempSensor))
+            {
+                _gpuInvalidSensorCycles = 0;
+            }
+            else if (++_gpuInvalidSensorCycles >= RescanAfterInvalidCycles && _selectedGpuHardware != null)
+            {
+                _gpuTempSensor = SelectPreferredGpuTemperatureSensor(_selectedGpuHardware);
+                _gpuInvalidSensorCycles = 0;
+            }
+        }
+
+        private static int GetSavedHardwareIndex(List<IHardware> hardwares, string savedIdentifier, int fallbackIndex)
+        {
+            if (hardwares == null || hardwares.Count == 0)
+                return 0;
+
+            if (!string.IsNullOrWhiteSpace(savedIdentifier))
+            {
+                int identifierIndex = hardwares.FindIndex(h =>
+                    h != null && string.Equals(h.Identifier.ToString(), savedIdentifier, StringComparison.OrdinalIgnoreCase));
+                if (identifierIndex >= 0)
+                    return identifierIndex;
+            }
+
+            return fallbackIndex >= 0 && fallbackIndex < hardwares.Count ? fallbackIndex : 0;
+        }
+
+        private int GetSavedStorageIndex()
+        {
+            if (_storageHardwares != null && _storageHardwares.Count > 0 && !string.IsNullOrWhiteSpace(_savedStorageIdentifier))
+            {
+                int identifierIndex = _storageHardwares.FindIndex(h =>
+                    h != null && string.Equals(h.Identifier.ToString(), _savedStorageIdentifier, StringComparison.OrdinalIgnoreCase));
+                if (identifierIndex >= 0)
+                    return identifierIndex;
+            }
+
+            return _savedStorageIndex;
         }
 
         private static IEnumerable<ISensor> EnumerateTemperatureSensorsRecursive(IEnumerable<IHardware> hardwares)
@@ -2844,10 +3158,14 @@ namespace TrayTemps
         {
             var displayNames = new List<string>();
             List<ManagementObject> disks = WmiQueryHelper.WmiQuery("SELECT * FROM Win32_DiskDrive");
-
-            foreach (ManagementObject disk in disks)
+            try
             {
-                displayNames.Add(HardwareReportFormatHelper.GetDiskDisplayTitle(disk["Model"], disk["SerialNumber"]));
+                foreach (ManagementObject disk in disks)
+                    displayNames.Add(HardwareReportFormatHelper.GetDiskDisplayTitle(disk["Model"], disk["SerialNumber"]));
+            }
+            finally
+            {
+                WmiQueryHelper.DisposeAll(disks);
             }
 
             return displayNames;
@@ -2895,7 +3213,7 @@ namespace TrayTemps
                 () => HardwareCpuInfoQueryHelper.GetCpuDetails(
                     _selectedCpuHardware != null,
                     _selectedCpuHardware?.Name,
-                    _selectedCpuHardware != null ? _selectedCpuHardware.Identifier.ToString() : null,
+                    _selectedCpuHardware?.Identifier.ToString(),
                     WmiQueryHelper.WmiQuery),
                 _hardwareUpdateLock,
                 UpdateHardwareRecursive,
@@ -2915,7 +3233,7 @@ namespace TrayTemps
                 "GPU",
                 () => HardwareGpuInfoQueryHelper.GetGpuDetails(
                     _selectedGpuHardware?.Name,
-                    _selectedGpuHardware != null ? _selectedGpuHardware.Identifier.ToString() : null,
+                    _selectedGpuHardware?.Identifier.ToString(),
                     WmiQueryHelper.WmiQuery),
                 _hardwareUpdateLock,
                 UpdateHardwareRecursive,
@@ -3005,14 +3323,7 @@ namespace TrayTemps
 
 
         // =========================
-        // Text / Formatting Helpers
-        // =========================
-
-        private const int InfoLabelWidth = 28;
-
-        // =========================
         // Live Sensors
-        // =========================
 
         private Task<string> BuildAllStorageSensorsTextAsync()
         {
@@ -3167,11 +3478,6 @@ namespace TrayTemps
             {
                 return false;
             }
-        }
-
-        private bool PromptForElevatedSensorRestart(Exception hardwareError)
-        {
-            return PromptForElevatedSensorRestart(hardwareError.Message);
         }
 
         private bool PromptForElevatedSensorRestart(string reason)
@@ -3655,11 +3961,11 @@ namespace TrayTemps
             }
             else if (hasStartupEntry)
             {
-                autostartInstall.Text = "Start with Windows (Installed)";
+                autostartInstall.Text = "Installed — startup task enabled";
             }
             else
             {
-                autostartInstall.Text = "Installed app (Uninstall)";
+                autostartInstall.Text = "Installed — startup task disabled";
             }
         }
 

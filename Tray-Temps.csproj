@@ -61,6 +61,10 @@
     <StartupObject>TrayTemps.Program</StartupObject>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="System.Collections.Immutable" Version="10.0.8" />
+    <PackageReference Include="System.Formats.Nrbf" Version="10.0.8" />
+  </ItemGroup>
+  <ItemGroup>
     <Reference Include="HidSharp">
       <HintPath>$(NuGetPackageRoot)hidsharp\2.6.4\lib\net35\HidSharp.dll</HintPath>
       <Private>True</Private>

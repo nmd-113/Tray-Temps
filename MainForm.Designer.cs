@@ -102,10 +102,11 @@
             this.settingsTitle = new System.Windows.Forms.Label();
             this.genSettings = new System.Windows.Forms.Label();
             this.generalSettingsPanel = new System.Windows.Forms.TableLayoutPanel();
+            this.minimizeOnClose = new System.Windows.Forms.CheckBox();
             this.clearSettings = new System.Windows.Forms.Button();
             this.refreshPanel = new System.Windows.Forms.TableLayoutPanel();
             this.refreshLabel = new System.Windows.Forms.Label();
-            this.refreshValue = new System.Windows.Forms.NumericUpDown();
+            this.refreshValue = new System.Windows.Forms.ComboBox();
             this.autostartInstall = new System.Windows.Forms.CheckBox();
             this.tempsFahrenheit = new System.Windows.Forms.CheckBox();
             this.lightModeSwitch = new System.Windows.Forms.CheckBox();
@@ -127,7 +128,7 @@
             this.gpuColorLabel = new System.Windows.Forms.Label();
             this.iconsizePanel = new System.Windows.Forms.TableLayoutPanel();
             this.iconsizeLabel = new System.Windows.Forms.Label();
-            this.iconsizeValue = new System.Windows.Forms.NumericUpDown();
+            this.iconsizeValue = new System.Windows.Forms.ComboBox();
             this.divider3 = new System.Windows.Forms.Panel();
             this.traySettingsLabel = new System.Windows.Forms.Label();
             this.aboutPage = new System.Windows.Forms.TabPage();
@@ -142,6 +143,17 @@
             this.cpuTrayIcon = new System.Windows.Forms.NotifyIcon(this.components);
             this.contextMenuStrip = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.ShowForm = new System.Windows.Forms.ToolStripMenuItem();
+            this.trayMenuSeparatorTop = new System.Windows.Forms.ToolStripSeparator();
+            this.trayDisplayMenu = new System.Windows.Forms.ToolStripMenuItem();
+            this.trayCpuEnabledMenu = new System.Windows.Forms.ToolStripMenuItem();
+            this.trayGpuEnabledMenu = new System.Windows.Forms.ToolStripMenuItem();
+            this.trayCombinedMenu = new System.Windows.Forms.ToolStripMenuItem();
+            this.trayMenuSeparatorDisplay = new System.Windows.Forms.ToolStripSeparator();
+            this.trayFahrenheitMenu = new System.Windows.Forms.ToolStripMenuItem();
+            this.trayTemperatureColorsMenu = new System.Windows.Forms.ToolStripMenuItem();
+            this.trayConfigureColorsMenu = new System.Windows.Forms.ToolStripMenuItem();
+            this.trayMenuSeparatorBottom = new System.Windows.Forms.ToolStripSeparator();
+            this.openSettingsTray = new System.Windows.Forms.ToolStripMenuItem();
             this.SettingsTray = new System.Windows.Forms.ToolStripMenuItem();
             this.gpuTrayIcon = new System.Windows.Forms.NotifyIcon(this.components);
             this.NotifyIcon = new System.Windows.Forms.NotifyIcon(this.components);
@@ -168,14 +180,12 @@
             this.settingsPage.SuspendLayout();
             this.generalSettingsPanel.SuspendLayout();
             this.refreshPanel.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.refreshValue)).BeginInit();
             this.traySettingsPanel.SuspendLayout();
             this.colortempsPanel.SuspendLayout();
             this.fontFamilyPanel.SuspendLayout();
             this.cpuColorPanel.SuspendLayout();
             this.gpuColorPanel.SuspendLayout();
             this.iconsizePanel.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.iconsizeValue)).BeginInit();
             this.aboutPage.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.donatePic)).BeginInit();
             this.panelWrapper.SuspendLayout();
@@ -208,8 +218,6 @@
             this.mainMenu.Size = new System.Drawing.Size(110, 598);
             this.mainMenu.TabIndex = 0;
             this.mainMenu.MouseDown += new System.Windows.Forms.MouseEventHandler(this.MainForm_MouseDown);
-            this.mainMenu.MouseMove += new System.Windows.Forms.MouseEventHandler(this.MainForm_MouseMove);
-            this.mainMenu.MouseUp += new System.Windows.Forms.MouseEventHandler(this.MainForm_MouseUp);
             // 
             // aboutPanel
             // 
@@ -236,7 +244,7 @@
             this.aboutBtn.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(50)))), ((int)(((byte)(50)))), ((int)(((byte)(50)))));
             this.aboutBtn.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(50)))), ((int)(((byte)(50)))), ((int)(((byte)(50)))));
             this.aboutBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.aboutBtn.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.aboutBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.aboutBtn.ForeColor = System.Drawing.Color.WhiteSmoke;
             this.aboutBtn.Location = new System.Drawing.Point(3, 0);
             this.aboutBtn.Margin = new System.Windows.Forms.Padding(0);
@@ -282,7 +290,7 @@
             this.settingsBtn.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(50)))), ((int)(((byte)(50)))), ((int)(((byte)(50)))));
             this.settingsBtn.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(50)))), ((int)(((byte)(50)))), ((int)(((byte)(50)))));
             this.settingsBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.settingsBtn.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.settingsBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.settingsBtn.ForeColor = System.Drawing.Color.WhiteSmoke;
             this.settingsBtn.Location = new System.Drawing.Point(3, 0);
             this.settingsBtn.Margin = new System.Windows.Forms.Padding(0);
@@ -334,11 +342,11 @@
             // 
             this.appTitle.AutoSize = true;
             this.appTitle.Dock = System.Windows.Forms.DockStyle.Top;
-            this.appTitle.Font = new System.Drawing.Font("Bunken Tech Sans Pro Bold", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.appTitle.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.appTitle.ForeColor = System.Drawing.Color.WhiteSmoke;
             this.appTitle.Location = new System.Drawing.Point(3, 48);
             this.appTitle.Name = "appTitle";
-            this.appTitle.Size = new System.Drawing.Size(98, 21);
+            this.appTitle.Size = new System.Drawing.Size(98, 20);
             this.appTitle.TabIndex = 4;
             this.appTitle.Text = "TrayTemps";
             this.appTitle.TextAlign = System.Drawing.ContentAlignment.TopCenter;
@@ -369,7 +377,7 @@
             this.homeBtn.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(50)))), ((int)(((byte)(50)))), ((int)(((byte)(50)))));
             this.homeBtn.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(50)))), ((int)(((byte)(50)))), ((int)(((byte)(50)))));
             this.homeBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.homeBtn.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.homeBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.homeBtn.ForeColor = System.Drawing.Color.WhiteSmoke;
             this.homeBtn.Location = new System.Drawing.Point(3, 0);
             this.homeBtn.Margin = new System.Windows.Forms.Padding(0);
@@ -463,7 +471,7 @@
             // 
             // mainComponentsTitle
             // 
-            this.mainComponentsTitle.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.mainComponentsTitle.Font = new System.Drawing.Font("Microsoft Sans Serif", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.mainComponentsTitle.ForeColor = System.Drawing.Color.WhiteSmoke;
             this.mainComponentsTitle.Location = new System.Drawing.Point(33, 286);
             this.mainComponentsTitle.Name = "mainComponentsTitle";
@@ -584,7 +592,7 @@
             this.componentType.Anchor = System.Windows.Forms.AnchorStyles.Left;
             this.componentType.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.mainComponentsPanel.SetColumnSpan(this.componentType, 2);
-            this.componentType.Font = new System.Drawing.Font("Bunken Tech Sans Pro Bold", 8.999999F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.componentType.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.999999F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.componentType.ForeColor = System.Drawing.Color.Gray;
             this.componentType.Location = new System.Drawing.Point(5, 13);
             this.componentType.Margin = new System.Windows.Forms.Padding(0);
@@ -599,7 +607,7 @@
             // 
             this.indexLabel.Anchor = System.Windows.Forms.AnchorStyles.Left;
             this.indexLabel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
-            this.indexLabel.Font = new System.Drawing.Font("Bunken Tech Sans Pro Bold", 8.999999F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.indexLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.999999F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.indexLabel.ForeColor = System.Drawing.Color.Gray;
             this.indexLabel.Location = new System.Drawing.Point(550, 13);
             this.indexLabel.Margin = new System.Windows.Forms.Padding(0);
@@ -614,7 +622,7 @@
             // 
             this.componentModel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.componentModel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
-            this.componentModel.Font = new System.Drawing.Font("Bunken Tech Sans Pro Bold", 8.999999F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.componentModel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.999999F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.componentModel.ForeColor = System.Drawing.Color.Gray;
             this.componentModel.Location = new System.Drawing.Point(115, 13);
             this.componentModel.Margin = new System.Windows.Forms.Padding(0);
@@ -629,7 +637,7 @@
             // 
             this.compCpuLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.compCpuLabel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
-            this.compCpuLabel.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.compCpuLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.compCpuLabel.ForeColor = System.Drawing.Color.DarkGray;
             this.compCpuLabel.Location = new System.Drawing.Point(45, 45);
             this.compCpuLabel.Margin = new System.Windows.Forms.Padding(0);
@@ -646,17 +654,17 @@
             this.cpuIndexSelect.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.cpuIndexSelect.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cpuIndexSelect.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.cpuIndexSelect.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.cpuIndexSelect.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.cpuIndexSelect.ForeColor = System.Drawing.Color.DarkGray;
             this.cpuIndexSelect.FormattingEnabled = true;
             this.cpuIndexSelect.IntegralHeight = false;
-            this.cpuIndexSelect.ItemHeight = 14;
+            this.cpuIndexSelect.ItemHeight = 13;
             this.cpuIndexSelect.Items.AddRange(new object[] {
             "0"});
             this.cpuIndexSelect.Location = new System.Drawing.Point(550, 44);
             this.cpuIndexSelect.Margin = new System.Windows.Forms.Padding(0);
             this.cpuIndexSelect.Name = "cpuIndexSelect";
-            this.cpuIndexSelect.Size = new System.Drawing.Size(52, 22);
+            this.cpuIndexSelect.Size = new System.Drawing.Size(52, 21);
             this.cpuIndexSelect.TabIndex = 23;
             this.cpuIndexSelect.SelectedIndexChanged += new System.EventHandler(this.CpuIndexSelect_SelectedIndexChanged);
             // 
@@ -665,7 +673,7 @@
             this.cpuModel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.cpuModel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.cpuModel.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.cpuModel.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.cpuModel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.cpuModel.ForeColor = System.Drawing.Color.DarkGray;
             this.cpuModel.Location = new System.Drawing.Point(115, 45);
             this.cpuModel.Margin = new System.Windows.Forms.Padding(0);
@@ -681,7 +689,7 @@
             // 
             this.compGpuLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.compGpuLabel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
-            this.compGpuLabel.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.compGpuLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.compGpuLabel.ForeColor = System.Drawing.Color.DarkGray;
             this.compGpuLabel.Location = new System.Drawing.Point(45, 73);
             this.compGpuLabel.Margin = new System.Windows.Forms.Padding(0);
@@ -698,17 +706,17 @@
             this.gpuIndexSelect.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.gpuIndexSelect.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.gpuIndexSelect.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.gpuIndexSelect.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.gpuIndexSelect.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.gpuIndexSelect.ForeColor = System.Drawing.Color.DarkGray;
             this.gpuIndexSelect.FormattingEnabled = true;
             this.gpuIndexSelect.IntegralHeight = false;
-            this.gpuIndexSelect.ItemHeight = 14;
+            this.gpuIndexSelect.ItemHeight = 13;
             this.gpuIndexSelect.Items.AddRange(new object[] {
             "0"});
             this.gpuIndexSelect.Location = new System.Drawing.Point(550, 72);
             this.gpuIndexSelect.Margin = new System.Windows.Forms.Padding(0);
             this.gpuIndexSelect.Name = "gpuIndexSelect";
-            this.gpuIndexSelect.Size = new System.Drawing.Size(52, 22);
+            this.gpuIndexSelect.Size = new System.Drawing.Size(52, 21);
             this.gpuIndexSelect.TabIndex = 24;
             this.gpuIndexSelect.SelectedIndexChanged += new System.EventHandler(this.GpuIndexSelect_SelectedIndexChanged);
             // 
@@ -717,7 +725,7 @@
             this.gpuModel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.gpuModel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.gpuModel.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.gpuModel.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.gpuModel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.gpuModel.ForeColor = System.Drawing.Color.DarkGray;
             this.gpuModel.Location = new System.Drawing.Point(115, 73);
             this.gpuModel.Margin = new System.Windows.Forms.Padding(0);
@@ -733,7 +741,7 @@
             // 
             this.compRamLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.compRamLabel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
-            this.compRamLabel.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.compRamLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.compRamLabel.ForeColor = System.Drawing.Color.DarkGray;
             this.compRamLabel.Location = new System.Drawing.Point(45, 101);
             this.compRamLabel.Margin = new System.Windows.Forms.Padding(0);
@@ -749,7 +757,7 @@
             this.ramDetails.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.ramDetails.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.ramDetails.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.ramDetails.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.ramDetails.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.ramDetails.ForeColor = System.Drawing.Color.DarkGray;
             this.ramDetails.Location = new System.Drawing.Point(115, 101);
             this.ramDetails.Margin = new System.Windows.Forms.Padding(0);
@@ -766,7 +774,7 @@
             // 
             this.CompStorageLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.CompStorageLabel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
-            this.CompStorageLabel.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.CompStorageLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.CompStorageLabel.ForeColor = System.Drawing.Color.DarkGray;
             this.CompStorageLabel.Location = new System.Drawing.Point(45, 129);
             this.CompStorageLabel.Margin = new System.Windows.Forms.Padding(0);
@@ -783,17 +791,17 @@
             this.storageIndexSelect.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.storageIndexSelect.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.storageIndexSelect.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.storageIndexSelect.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.storageIndexSelect.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.storageIndexSelect.ForeColor = System.Drawing.Color.DarkGray;
             this.storageIndexSelect.FormattingEnabled = true;
             this.storageIndexSelect.IntegralHeight = false;
-            this.storageIndexSelect.ItemHeight = 14;
+            this.storageIndexSelect.ItemHeight = 13;
             this.storageIndexSelect.Items.AddRange(new object[] {
             "0"});
             this.storageIndexSelect.Location = new System.Drawing.Point(550, 128);
             this.storageIndexSelect.Margin = new System.Windows.Forms.Padding(0);
             this.storageIndexSelect.Name = "storageIndexSelect";
-            this.storageIndexSelect.Size = new System.Drawing.Size(52, 22);
+            this.storageIndexSelect.Size = new System.Drawing.Size(52, 21);
             this.storageIndexSelect.TabIndex = 25;
             this.storageIndexSelect.SelectedIndexChanged += new System.EventHandler(this.StorageIndexSelect_SelectedIndexChanged);
             // 
@@ -802,7 +810,7 @@
             this.storageDetails.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.storageDetails.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.storageDetails.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.storageDetails.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.storageDetails.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.storageDetails.ForeColor = System.Drawing.Color.DarkGray;
             this.storageDetails.Location = new System.Drawing.Point(115, 129);
             this.storageDetails.Margin = new System.Windows.Forms.Padding(0);
@@ -818,7 +826,7 @@
             // 
             this.CompMotherboardLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.CompMotherboardLabel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
-            this.CompMotherboardLabel.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.CompMotherboardLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.CompMotherboardLabel.ForeColor = System.Drawing.Color.DarkGray;
             this.CompMotherboardLabel.Location = new System.Drawing.Point(45, 158);
             this.CompMotherboardLabel.Margin = new System.Windows.Forms.Padding(0, 0, 0, 10);
@@ -834,7 +842,7 @@
             this.motherboardDetails.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.motherboardDetails.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.motherboardDetails.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.motherboardDetails.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.motherboardDetails.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.motherboardDetails.ForeColor = System.Drawing.Color.DarkGray;
             this.motherboardDetails.Location = new System.Drawing.Point(115, 158);
             this.motherboardDetails.Margin = new System.Windows.Forms.Padding(0, 0, 0, 10);
@@ -850,7 +858,7 @@
             // 
             this.placeholderLabel1.Anchor = System.Windows.Forms.AnchorStyles.Left;
             this.placeholderLabel1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
-            this.placeholderLabel1.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.placeholderLabel1.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.placeholderLabel1.ForeColor = System.Drawing.Color.DarkGray;
             this.placeholderLabel1.Location = new System.Drawing.Point(550, 158);
             this.placeholderLabel1.Margin = new System.Windows.Forms.Padding(0, 0, 0, 10);
@@ -865,7 +873,7 @@
             // 
             this.placeholderLabel2.Anchor = System.Windows.Forms.AnchorStyles.Left;
             this.placeholderLabel2.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
-            this.placeholderLabel2.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.placeholderLabel2.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.placeholderLabel2.ForeColor = System.Drawing.Color.DarkGray;
             this.placeholderLabel2.Location = new System.Drawing.Point(550, 101);
             this.placeholderLabel2.Margin = new System.Windows.Forms.Padding(0);
@@ -939,7 +947,7 @@
             this.gpuTempLabel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.gpuPanel.SetColumnSpan(this.gpuTempLabel, 2);
             this.gpuTempLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.gpuTempLabel.Font = new System.Drawing.Font("Bunken Tech Sans Pro Bold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.gpuTempLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.gpuTempLabel.ForeColor = System.Drawing.Color.DarkGray;
             this.gpuTempLabel.Location = new System.Drawing.Point(12, 12);
             this.gpuTempLabel.Margin = new System.Windows.Forms.Padding(0);
@@ -955,7 +963,7 @@
             this.gpuName.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.gpuPanel.SetColumnSpan(this.gpuName, 3);
             this.gpuName.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.gpuName.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 8.999999F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.gpuName.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.999999F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.gpuName.ForeColor = System.Drawing.Color.Silver;
             this.gpuName.Location = new System.Drawing.Point(12, 36);
             this.gpuName.Margin = new System.Windows.Forms.Padding(0);
@@ -970,7 +978,7 @@
             this.gpuTempCurLabel.AutoSize = true;
             this.gpuTempCurLabel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.gpuTempCurLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.gpuTempCurLabel.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.gpuTempCurLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.gpuTempCurLabel.ForeColor = System.Drawing.Color.DarkGray;
             this.gpuTempCurLabel.Location = new System.Drawing.Point(12, 84);
             this.gpuTempCurLabel.Margin = new System.Windows.Forms.Padding(0);
@@ -985,7 +993,7 @@
             this.gpuTempMinLabel.AutoSize = true;
             this.gpuTempMinLabel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.gpuTempMinLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.gpuTempMinLabel.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.gpuTempMinLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.gpuTempMinLabel.ForeColor = System.Drawing.Color.DarkGray;
             this.gpuTempMinLabel.Location = new System.Drawing.Point(103, 84);
             this.gpuTempMinLabel.Margin = new System.Windows.Forms.Padding(0);
@@ -1000,7 +1008,7 @@
             this.gpuTempMaxLabel.AutoSize = true;
             this.gpuTempMaxLabel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.gpuTempMaxLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.gpuTempMaxLabel.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.gpuTempMaxLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.gpuTempMaxLabel.ForeColor = System.Drawing.Color.DarkGray;
             this.gpuTempMaxLabel.Location = new System.Drawing.Point(194, 84);
             this.gpuTempMaxLabel.Margin = new System.Windows.Forms.Padding(0);
@@ -1015,7 +1023,7 @@
             this.gpuTempCur.AutoSize = true;
             this.gpuTempCur.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.gpuTempCur.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.gpuTempCur.Font = new System.Drawing.Font("Bunken Tech Sans Pro Bold", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.gpuTempCur.Font = new System.Drawing.Font("Microsoft Sans Serif", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.gpuTempCur.ForeColor = System.Drawing.Color.LightGray;
             this.gpuTempCur.Location = new System.Drawing.Point(12, 105);
             this.gpuTempCur.Margin = new System.Windows.Forms.Padding(0);
@@ -1030,7 +1038,7 @@
             this.gpuTempMin.AutoSize = true;
             this.gpuTempMin.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.gpuTempMin.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.gpuTempMin.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.gpuTempMin.Font = new System.Drawing.Font("Microsoft Sans Serif", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.gpuTempMin.ForeColor = System.Drawing.Color.LimeGreen;
             this.gpuTempMin.Location = new System.Drawing.Point(103, 105);
             this.gpuTempMin.Margin = new System.Windows.Forms.Padding(0);
@@ -1045,7 +1053,7 @@
             this.gpuTempMax.AutoSize = true;
             this.gpuTempMax.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.gpuTempMax.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.gpuTempMax.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.gpuTempMax.Font = new System.Drawing.Font("Microsoft Sans Serif", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.gpuTempMax.ForeColor = System.Drawing.Color.Red;
             this.gpuTempMax.Location = new System.Drawing.Point(194, 105);
             this.gpuTempMax.Margin = new System.Windows.Forms.Padding(0);
@@ -1099,7 +1107,7 @@
             this.cpuTempLabel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.cpuPanel.SetColumnSpan(this.cpuTempLabel, 2);
             this.cpuTempLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.cpuTempLabel.Font = new System.Drawing.Font("Bunken Tech Sans Pro Bold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.cpuTempLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.cpuTempLabel.ForeColor = System.Drawing.Color.DarkGray;
             this.cpuTempLabel.Location = new System.Drawing.Point(12, 12);
             this.cpuTempLabel.Margin = new System.Windows.Forms.Padding(0);
@@ -1115,7 +1123,7 @@
             this.cpuName.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.cpuPanel.SetColumnSpan(this.cpuName, 3);
             this.cpuName.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.cpuName.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 8.999999F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.cpuName.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.999999F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.cpuName.ForeColor = System.Drawing.Color.Silver;
             this.cpuName.Location = new System.Drawing.Point(12, 36);
             this.cpuName.Margin = new System.Windows.Forms.Padding(0);
@@ -1130,7 +1138,7 @@
             this.cpuTempCurLabel.AutoSize = true;
             this.cpuTempCurLabel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.cpuTempCurLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.cpuTempCurLabel.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.cpuTempCurLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.cpuTempCurLabel.ForeColor = System.Drawing.Color.DarkGray;
             this.cpuTempCurLabel.Location = new System.Drawing.Point(12, 84);
             this.cpuTempCurLabel.Margin = new System.Windows.Forms.Padding(0);
@@ -1145,7 +1153,7 @@
             this.cpuTempMinLabel.AutoSize = true;
             this.cpuTempMinLabel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.cpuTempMinLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.cpuTempMinLabel.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.cpuTempMinLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.cpuTempMinLabel.ForeColor = System.Drawing.Color.DarkGray;
             this.cpuTempMinLabel.Location = new System.Drawing.Point(103, 84);
             this.cpuTempMinLabel.Margin = new System.Windows.Forms.Padding(0);
@@ -1160,7 +1168,7 @@
             this.cpuTempMaxLabel.AutoSize = true;
             this.cpuTempMaxLabel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.cpuTempMaxLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.cpuTempMaxLabel.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.cpuTempMaxLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.cpuTempMaxLabel.ForeColor = System.Drawing.Color.DarkGray;
             this.cpuTempMaxLabel.Location = new System.Drawing.Point(195, 84);
             this.cpuTempMaxLabel.Margin = new System.Windows.Forms.Padding(0);
@@ -1175,7 +1183,7 @@
             this.cpuTempCur.AutoSize = true;
             this.cpuTempCur.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.cpuTempCur.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.cpuTempCur.Font = new System.Drawing.Font("Bunken Tech Sans Pro Bold", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.cpuTempCur.Font = new System.Drawing.Font("Microsoft Sans Serif", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.cpuTempCur.ForeColor = System.Drawing.Color.LightGray;
             this.cpuTempCur.Location = new System.Drawing.Point(12, 105);
             this.cpuTempCur.Margin = new System.Windows.Forms.Padding(0);
@@ -1190,7 +1198,7 @@
             this.cpuTempMin.AutoSize = true;
             this.cpuTempMin.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.cpuTempMin.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.cpuTempMin.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.cpuTempMin.Font = new System.Drawing.Font("Microsoft Sans Serif", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.cpuTempMin.ForeColor = System.Drawing.Color.LimeGreen;
             this.cpuTempMin.Location = new System.Drawing.Point(103, 105);
             this.cpuTempMin.Margin = new System.Windows.Forms.Padding(0);
@@ -1205,7 +1213,7 @@
             this.cpuTempMax.AutoSize = true;
             this.cpuTempMax.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.cpuTempMax.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.cpuTempMax.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.cpuTempMax.Font = new System.Drawing.Font("Microsoft Sans Serif", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.cpuTempMax.ForeColor = System.Drawing.Color.Red;
             this.cpuTempMax.Location = new System.Drawing.Point(195, 105);
             this.cpuTempMax.Margin = new System.Windows.Forms.Padding(0);
@@ -1217,7 +1225,7 @@
             // 
             // sysmonTitle
             // 
-            this.sysmonTitle.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 15.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.sysmonTitle.Font = new System.Drawing.Font("Microsoft Sans Serif", 15.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.sysmonTitle.ForeColor = System.Drawing.Color.WhiteSmoke;
             this.sysmonTitle.Location = new System.Drawing.Point(33, 28);
             this.sysmonTitle.Name = "sysmonTitle";
@@ -1237,7 +1245,7 @@
             // 
             // tempTitle
             // 
-            this.tempTitle.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.tempTitle.Font = new System.Drawing.Font("Microsoft Sans Serif", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.tempTitle.ForeColor = System.Drawing.Color.WhiteSmoke;
             this.tempTitle.Location = new System.Drawing.Point(33, 88);
             this.tempTitle.Name = "tempTitle";
@@ -1263,7 +1271,7 @@
             // 
             // settingsTitle
             // 
-            this.settingsTitle.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 15.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.settingsTitle.Font = new System.Drawing.Font("Microsoft Sans Serif", 15.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.settingsTitle.ForeColor = System.Drawing.Color.WhiteSmoke;
             this.settingsTitle.Location = new System.Drawing.Point(33, 28);
             this.settingsTitle.Name = "settingsTitle";
@@ -1273,7 +1281,7 @@
             // 
             // genSettings
             // 
-            this.genSettings.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.genSettings.Font = new System.Drawing.Font("Microsoft Sans Serif", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.genSettings.ForeColor = System.Drawing.Color.WhiteSmoke;
             this.genSettings.Location = new System.Drawing.Point(33, 92);
             this.genSettings.Name = "genSettings";
@@ -1289,8 +1297,9 @@
             this.generalSettingsPanel.ColumnCount = 2;
             this.generalSettingsPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 51F));
             this.generalSettingsPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 49F));
-            this.generalSettingsPanel.Controls.Add(this.clearSettings, 1, 1);
-            this.generalSettingsPanel.Controls.Add(this.refreshPanel, 1, 0);
+            this.generalSettingsPanel.Controls.Add(this.minimizeOnClose, 1, 0);
+            this.generalSettingsPanel.Controls.Add(this.clearSettings, 1, 2);
+            this.generalSettingsPanel.Controls.Add(this.refreshPanel, 1, 1);
             this.generalSettingsPanel.Controls.Add(this.autostartInstall, 0, 0);
             this.generalSettingsPanel.Controls.Add(this.tempsFahrenheit, 0, 1);
             this.generalSettingsPanel.Controls.Add(this.lightModeSwitch, 0, 2);
@@ -1305,22 +1314,36 @@
             this.generalSettingsPanel.Size = new System.Drawing.Size(625, 135);
             this.generalSettingsPanel.TabIndex = 7;
             // 
+            // minimizeOnClose
+            // 
+            this.minimizeOnClose.AutoSize = true;
+            this.minimizeOnClose.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.minimizeOnClose.Dock = System.Windows.Forms.DockStyle.Left;
+            this.minimizeOnClose.ForeColor = System.Drawing.Color.LightGray;
+            this.minimizeOnClose.Location = new System.Drawing.Point(321, 8);
+            this.minimizeOnClose.Name = "minimizeOnClose";
+            this.minimizeOnClose.Padding = new System.Windows.Forms.Padding(3, 5, 5, 5);
+            this.minimizeOnClose.Size = new System.Drawing.Size(156, 35);
+            this.minimizeOnClose.TabIndex = 25;
+            this.minimizeOnClose.Text = "Hide to tray on close";
+            this.minimizeOnClose.UseVisualStyleBackColor = true;
+            // 
             // clearSettings
             // 
             this.clearSettings.Anchor = System.Windows.Forms.AnchorStyles.Left;
             this.clearSettings.BackColor = System.Drawing.Color.Crimson;
             this.clearSettings.FlatAppearance.BorderColor = System.Drawing.Color.DimGray;
             this.clearSettings.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.clearSettings.Font = new System.Drawing.Font("Bunken Tech Sans Pro Bold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.clearSettings.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.clearSettings.ForeColor = System.Drawing.Color.White;
-            this.clearSettings.Location = new System.Drawing.Point(327, 49);
+            this.clearSettings.Location = new System.Drawing.Point(327, 91);
             this.clearSettings.Margin = new System.Windows.Forms.Padding(9, 0, 0, 0);
             this.clearSettings.Name = "clearSettings";
-            this.clearSettings.Size = new System.Drawing.Size(214, 34);
+            this.clearSettings.Size = new System.Drawing.Size(236, 34);
             this.clearSettings.TabIndex = 24;
             this.clearSettings.Text = "🔁 Reset Settings";
             this.clearSettings.UseVisualStyleBackColor = false;
-            this.clearSettings.Click += new System.EventHandler(this.clearSettings_Click);
+            this.clearSettings.Click += new System.EventHandler(this.ClearSettings_Click);
             // 
             // refreshPanel
             // 
@@ -1331,12 +1354,12 @@
             this.refreshPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.refreshPanel.Controls.Add(this.refreshLabel, 0, 0);
             this.refreshPanel.Controls.Add(this.refreshValue, 1, 0);
-            this.refreshPanel.Location = new System.Drawing.Point(321, 8);
+            this.refreshPanel.Location = new System.Drawing.Point(321, 49);
             this.refreshPanel.Name = "refreshPanel";
             this.refreshPanel.Padding = new System.Windows.Forms.Padding(3);
             this.refreshPanel.RowCount = 1;
             this.refreshPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.refreshPanel.Size = new System.Drawing.Size(225, 35);
+            this.refreshPanel.Size = new System.Drawing.Size(245, 35);
             this.refreshPanel.TabIndex = 23;
             // 
             // refreshLabel
@@ -1356,36 +1379,60 @@
             // 
             this.refreshValue.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.refreshValue.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
-            this.refreshValue.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.refreshValue.DecimalPlaces = 2;
-            this.refreshValue.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.refreshValue.DropDownHeight = 200;
+            this.refreshValue.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.refreshValue.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.refreshValue.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.refreshValue.ForeColor = System.Drawing.Color.LightGray;
-            this.refreshValue.Increment = new decimal(new int[] {
-            25,
-            0,
-            0,
-            131072});
-            this.refreshValue.Location = new System.Drawing.Point(146, 6);
-            this.refreshValue.Maximum = new decimal(new int[] {
-            10,
-            0,
-            0,
-            0});
-            this.refreshValue.Minimum = new decimal(new int[] {
-            25,
-            0,
-            0,
-            131072});
+            this.refreshValue.FormattingEnabled = true;
+            this.refreshValue.IntegralHeight = false;
+            this.refreshValue.Items.AddRange(new object[] {
+            "0.25",
+            "0.5",
+            "0.75",
+            "1",
+            "1.25",
+            "1.5",
+            "1.75",
+            "2",
+            "2.25",
+            "2.5",
+            "2.75",
+            "3",
+            "3.25",
+            "3.5",
+            "3.75",
+            "4",
+            "4.25",
+            "4.5",
+            "4.75",
+            "5",
+            "5.25",
+            "5.5",
+            "5.75",
+            "6",
+            "6.25",
+            "6.5",
+            "6.75",
+            "7",
+            "7.25",
+            "7.5",
+            "7.75",
+            "8",
+            "8.25",
+            "8.5",
+            "8.75",
+            "9",
+            "9.25",
+            "9.5",
+            "9.75",
+            "10"});
+            this.refreshValue.Location = new System.Drawing.Point(145, 5);
+            this.refreshValue.Margin = new System.Windows.Forms.Padding(2, 0, 0, 0);
             this.refreshValue.Name = "refreshValue";
-            this.refreshValue.Size = new System.Drawing.Size(73, 24);
+            this.refreshValue.Size = new System.Drawing.Size(97, 24);
             this.refreshValue.TabIndex = 3;
-            this.refreshValue.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
-            this.refreshValue.Value = new decimal(new int[] {
-            50,
-            0,
-            0,
-            131072});
-            this.refreshValue.ValueChanged += new System.EventHandler(this.RefreshValue_ValueChanged);
+            this.refreshValue.SelectedIndexChanged += new System.EventHandler(this.RefreshValue_ValueChanged);
             // 
             // autostartInstall
             // 
@@ -1396,9 +1443,9 @@
             this.autostartInstall.Location = new System.Drawing.Point(8, 8);
             this.autostartInstall.Name = "autostartInstall";
             this.autostartInstall.Padding = new System.Windows.Forms.Padding(5);
-            this.autostartInstall.Size = new System.Drawing.Size(255, 35);
+            this.autostartInstall.Size = new System.Drawing.Size(177, 35);
             this.autostartInstall.TabIndex = 0;
-            this.autostartInstall.Text = "Autostart at windows boot (Install)";
+            this.autostartInstall.Text = "Autostart at boot (Install)";
             this.autostartInstall.UseVisualStyleBackColor = true;
             this.autostartInstall.CheckedChanged += new System.EventHandler(this.AutostartInstall_CheckedChanged);
             // 
@@ -1411,9 +1458,9 @@
             this.tempsFahrenheit.Location = new System.Drawing.Point(8, 49);
             this.tempsFahrenheit.Name = "tempsFahrenheit";
             this.tempsFahrenheit.Padding = new System.Windows.Forms.Padding(5);
-            this.tempsFahrenheit.Size = new System.Drawing.Size(265, 35);
+            this.tempsFahrenheit.Size = new System.Drawing.Size(223, 35);
             this.tempsFahrenheit.TabIndex = 1;
-            this.tempsFahrenheit.Text = "Show temperatures in Fahrenheit (°F)";
+            this.tempsFahrenheit.Text = "Temperatures in Fahrenheit (°F)";
             this.tempsFahrenheit.UseVisualStyleBackColor = true;
             this.tempsFahrenheit.CheckedChanged += new System.EventHandler(this.Setting_CheckedChanged);
             // 
@@ -1426,7 +1473,7 @@
             this.lightModeSwitch.Location = new System.Drawing.Point(8, 90);
             this.lightModeSwitch.Name = "lightModeSwitch";
             this.lightModeSwitch.Padding = new System.Windows.Forms.Padding(5);
-            this.lightModeSwitch.Size = new System.Drawing.Size(152, 37);
+            this.lightModeSwitch.Size = new System.Drawing.Size(148, 37);
             this.lightModeSwitch.TabIndex = 2;
             this.lightModeSwitch.Text = "Enable Light mode";
             this.lightModeSwitch.UseVisualStyleBackColor = true;
@@ -1484,7 +1531,7 @@
             this.colortempsEnable.ForeColor = System.Drawing.Color.LightGray;
             this.colortempsEnable.Location = new System.Drawing.Point(4, 4);
             this.colortempsEnable.Name = "colortempsEnable";
-            this.colortempsEnable.Size = new System.Drawing.Size(183, 36);
+            this.colortempsEnable.Size = new System.Drawing.Size(187, 36);
             this.colortempsEnable.TabIndex = 13;
             this.colortempsEnable.Text = "Temperature-based colors";
             this.colortempsEnable.UseVisualStyleBackColor = true;
@@ -1496,11 +1543,11 @@
             this.colortempsConfig.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(120)))), ((int)(((byte)(212)))));
             this.colortempsConfig.FlatAppearance.BorderColor = System.Drawing.Color.DarkGray;
             this.colortempsConfig.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.colortempsConfig.Font = new System.Drawing.Font("Bunken Tech Sans Pro Bold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.colortempsConfig.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.colortempsConfig.ForeColor = System.Drawing.Color.LightGray;
             this.colortempsConfig.Location = new System.Drawing.Point(204, 7);
             this.colortempsConfig.Name = "colortempsConfig";
-            this.colortempsConfig.Size = new System.Drawing.Size(30, 30);
+            this.colortempsConfig.Size = new System.Drawing.Size(51, 30);
             this.colortempsConfig.TabIndex = 14;
             this.colortempsConfig.Text = "⛭";
             this.colortempsConfig.UseVisualStyleBackColor = false;
@@ -1542,15 +1589,15 @@
             this.fontFamilyValue.DropDownHeight = 200;
             this.fontFamilyValue.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.fontFamilyValue.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.fontFamilyValue.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.fontFamilyValue.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.fontFamilyValue.ForeColor = System.Drawing.Color.LightGray;
             this.fontFamilyValue.FormattingEnabled = true;
             this.fontFamilyValue.IntegralHeight = false;
-            this.fontFamilyValue.ItemHeight = 14;
+            this.fontFamilyValue.ItemHeight = 13;
             this.fontFamilyValue.Location = new System.Drawing.Point(108, 11);
             this.fontFamilyValue.Margin = new System.Windows.Forms.Padding(1);
             this.fontFamilyValue.Name = "fontFamilyValue";
-            this.fontFamilyValue.Size = new System.Drawing.Size(137, 22);
+            this.fontFamilyValue.Size = new System.Drawing.Size(137, 21);
             this.fontFamilyValue.TabIndex = 24;
             this.fontFamilyValue.SelectedIndexChanged += new System.EventHandler(this.Setting_SelectedIndexChanged);
             // 
@@ -1563,7 +1610,7 @@
             this.singleIconTray.Location = new System.Drawing.Point(8, 108);
             this.singleIconTray.Name = "singleIconTray";
             this.singleIconTray.Padding = new System.Windows.Forms.Padding(5);
-            this.singleIconTray.Size = new System.Drawing.Size(165, 44);
+            this.singleIconTray.Size = new System.Drawing.Size(158, 44);
             this.singleIconTray.TabIndex = 22;
             this.singleIconTray.Text = "Single tray icon style";
             this.singleIconTray.UseVisualStyleBackColor = true;
@@ -1578,7 +1625,7 @@
             this.enableCpuTray.Location = new System.Drawing.Point(8, 8);
             this.enableCpuTray.Name = "enableCpuTray";
             this.enableCpuTray.Padding = new System.Windows.Forms.Padding(5);
-            this.enableCpuTray.Size = new System.Drawing.Size(165, 44);
+            this.enableCpuTray.Size = new System.Drawing.Size(169, 44);
             this.enableCpuTray.TabIndex = 0;
             this.enableCpuTray.Text = "Enable CPU Tray icon";
             this.enableCpuTray.UseVisualStyleBackColor = true;
@@ -1593,7 +1640,7 @@
             this.enableGpuTray.Location = new System.Drawing.Point(8, 58);
             this.enableGpuTray.Name = "enableGpuTray";
             this.enableGpuTray.Padding = new System.Windows.Forms.Padding(5);
-            this.enableGpuTray.Size = new System.Drawing.Size(166, 44);
+            this.enableGpuTray.Size = new System.Drawing.Size(170, 44);
             this.enableGpuTray.TabIndex = 12;
             this.enableGpuTray.Text = "Enable GPU Tray icon";
             this.enableGpuTray.UseVisualStyleBackColor = true;
@@ -1622,7 +1669,7 @@
             this.cpuColorValue.BackColor = System.Drawing.Color.Aqua;
             this.cpuColorValue.FlatAppearance.BorderColor = System.Drawing.Color.DarkGray;
             this.cpuColorValue.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.cpuColorValue.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.cpuColorValue.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.cpuColorValue.ForeColor = System.Drawing.Color.Black;
             this.cpuColorValue.Location = new System.Drawing.Point(107, 5);
             this.cpuColorValue.Margin = new System.Windows.Forms.Padding(0);
@@ -1668,7 +1715,7 @@
             this.gpuColorValue.BackColor = System.Drawing.Color.Gold;
             this.gpuColorValue.FlatAppearance.BorderColor = System.Drawing.Color.DarkGray;
             this.gpuColorValue.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.gpuColorValue.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.gpuColorValue.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.gpuColorValue.ForeColor = System.Drawing.Color.Black;
             this.gpuColorValue.Location = new System.Drawing.Point(107, 5);
             this.gpuColorValue.Margin = new System.Windows.Forms.Padding(0);
@@ -1693,18 +1740,19 @@
             // 
             // iconsizePanel
             // 
+            this.iconsizePanel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left)));
             this.iconsizePanel.ColumnCount = 2;
             this.iconsizePanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 100F));
             this.iconsizePanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.iconsizePanel.Controls.Add(this.iconsizeLabel, 0, 0);
             this.iconsizePanel.Controls.Add(this.iconsizeValue, 1, 0);
-            this.iconsizePanel.Dock = System.Windows.Forms.DockStyle.Left;
             this.iconsizePanel.Location = new System.Drawing.Point(321, 158);
             this.iconsizePanel.Name = "iconsizePanel";
             this.iconsizePanel.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
             this.iconsizePanel.RowCount = 1;
             this.iconsizePanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.iconsizePanel.Size = new System.Drawing.Size(195, 44);
+            this.iconsizePanel.Size = new System.Drawing.Size(251, 44);
             this.iconsizePanel.TabIndex = 21;
             // 
             // iconsizeLabel
@@ -1723,30 +1771,35 @@
             // 
             this.iconsizeValue.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.iconsizeValue.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
-            this.iconsizeValue.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.iconsizeValue.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.iconsizeValue.DropDownHeight = 200;
+            this.iconsizeValue.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.iconsizeValue.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.iconsizeValue.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.iconsizeValue.ForeColor = System.Drawing.Color.LightGray;
-            this.iconsizeValue.Increment = new decimal(new int[] {
-            5,
-            0,
-            0,
-            0});
+            this.iconsizeValue.FormattingEnabled = true;
+            this.iconsizeValue.IntegralHeight = false;
+            this.iconsizeValue.Items.AddRange(new object[] {
+            "30",
+            "35",
+            "40",
+            "45",
+            "50",
+            "55",
+            "60",
+            "65",
+            "70",
+            "75",
+            "80",
+            "85",
+            "90",
+            "95",
+            "100"});
             this.iconsizeValue.Location = new System.Drawing.Point(108, 10);
-            this.iconsizeValue.Minimum = new decimal(new int[] {
-            30,
-            0,
-            0,
-            0});
+            this.iconsizeValue.Margin = new System.Windows.Forms.Padding(3, 0, 0, 0);
             this.iconsizeValue.Name = "iconsizeValue";
-            this.iconsizeValue.Size = new System.Drawing.Size(79, 24);
+            this.iconsizeValue.Size = new System.Drawing.Size(138, 24);
             this.iconsizeValue.TabIndex = 2;
-            this.iconsizeValue.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
-            this.iconsizeValue.Value = new decimal(new int[] {
-            75,
-            0,
-            0,
-            0});
-            this.iconsizeValue.ValueChanged += new System.EventHandler(this.IconsizeValue_ValueChanged);
+            this.iconsizeValue.SelectedIndexChanged += new System.EventHandler(this.IconsizeValue_ValueChanged);
             // 
             // divider3
             // 
@@ -1760,7 +1813,7 @@
             // 
             // traySettingsLabel
             // 
-            this.traySettingsLabel.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.traySettingsLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.traySettingsLabel.ForeColor = System.Drawing.Color.WhiteSmoke;
             this.traySettingsLabel.Location = new System.Drawing.Point(33, 274);
             this.traySettingsLabel.Name = "traySettingsLabel";
@@ -1787,7 +1840,7 @@
             // 
             // aboutTitle
             // 
-            this.aboutTitle.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 15.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.aboutTitle.Font = new System.Drawing.Font("Microsoft Sans Serif", 15.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.aboutTitle.ForeColor = System.Drawing.Color.WhiteSmoke;
             this.aboutTitle.Location = new System.Drawing.Point(33, 28);
             this.aboutTitle.Name = "aboutTitle";
@@ -1807,7 +1860,7 @@
             // 
             // appTitleAbout
             // 
-            this.appTitleAbout.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.appTitleAbout.Font = new System.Drawing.Font("Microsoft Sans Serif", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.appTitleAbout.ForeColor = System.Drawing.Color.WhiteSmoke;
             this.appTitleAbout.Location = new System.Drawing.Point(33, 89);
             this.appTitleAbout.Name = "appTitleAbout";
@@ -1820,7 +1873,7 @@
             this.appAboutExtra.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.appAboutExtra.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
-            this.appAboutExtra.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.appAboutExtra.Font = new System.Drawing.Font("Microsoft Sans Serif", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.appAboutExtra.ForeColor = System.Drawing.Color.DarkGray;
             this.appAboutExtra.Location = new System.Drawing.Point(33, 126);
             this.appAboutExtra.Name = "appAboutExtra";
@@ -1833,7 +1886,7 @@
             // appVersion
             // 
             this.appVersion.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.appVersion.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.appVersion.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.appVersion.ForeColor = System.Drawing.Color.DimGray;
             this.appVersion.Location = new System.Drawing.Point(33, 499);
             this.appVersion.Name = "appVersion";
@@ -1844,7 +1897,7 @@
             // githubLink
             // 
             this.githubLink.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.githubLink.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.githubLink.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.githubLink.ForeColor = System.Drawing.Color.SeaGreen;
             this.githubLink.Location = new System.Drawing.Point(33, 377);
             this.githubLink.Name = "githubLink";
@@ -1889,35 +1942,104 @@
             // 
             this.contextMenuStrip.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(25)))), ((int)(((byte)(25)))), ((int)(((byte)(25)))));
             this.contextMenuStrip.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
-            this.contextMenuStrip.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.contextMenuStrip.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.contextMenuStrip.ImageScalingSize = new System.Drawing.Size(32, 32);
             this.contextMenuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.ShowForm,
+            this.trayMenuSeparatorTop,
+            this.trayDisplayMenu,
+            this.openSettingsTray,
+            this.trayMenuSeparatorBottom,
             this.SettingsTray});
             this.contextMenuStrip.LayoutStyle = System.Windows.Forms.ToolStripLayoutStyle.Table;
             this.contextMenuStrip.Name = "contextMenuStrip1";
             this.contextMenuStrip.RenderMode = System.Windows.Forms.ToolStripRenderMode.Professional;
             this.contextMenuStrip.ShowImageMargin = false;
-            this.contextMenuStrip.Size = new System.Drawing.Size(164, 86);
+            this.contextMenuStrip.Size = new System.Drawing.Size(220, 130);
+            this.contextMenuStrip.Opening += new System.ComponentModel.CancelEventHandler(this.ContextMenuStrip_Opening);
             // 
             // ShowForm
             // 
             this.ShowForm.AutoSize = false;
-            this.ShowForm.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.ShowForm.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.ShowForm.ForeColor = System.Drawing.Color.White;
             this.ShowForm.ImageTransparentColor = System.Drawing.Color.FromArgb(((int)(((byte)(25)))), ((int)(((byte)(25)))), ((int)(((byte)(25)))));
             this.ShowForm.Name = "ShowForm";
-            this.ShowForm.Size = new System.Drawing.Size(165, 30);
+            this.ShowForm.Size = new System.Drawing.Size(219, 30);
             this.ShowForm.Text = "🖥️ Show Window";
             this.ShowForm.Click += new System.EventHandler(this.ShowForm_Click);
+            //
+            // trayDisplayMenu
+            //
+            this.trayDisplayMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.trayCpuEnabledMenu,
+            this.trayGpuEnabledMenu,
+            this.trayCombinedMenu,
+            this.trayMenuSeparatorDisplay,
+            this.trayFahrenheitMenu,
+            this.trayTemperatureColorsMenu,
+            this.trayConfigureColorsMenu});
+            ((System.Windows.Forms.ToolStripDropDownMenu)(this.trayDisplayMenu.DropDown)).ShowCheckMargin = true;
+            this.trayDisplayMenu.Name = "trayDisplayMenu";
+            this.trayDisplayMenu.Size = new System.Drawing.Size(219, 22);
+            this.trayDisplayMenu.Text = "Display";
+            //
+            // trayCpuEnabledMenu
+            //
+            this.trayCpuEnabledMenu.Name = "trayCpuEnabledMenu";
+            this.trayCpuEnabledMenu.Size = new System.Drawing.Size(230, 22);
+            this.trayCpuEnabledMenu.Text = "Show CPU temperature";
+            this.trayCpuEnabledMenu.Click += new System.EventHandler(this.TrayCpuEnabledMenu_Click);
+            //
+            // trayGpuEnabledMenu
+            //
+            this.trayGpuEnabledMenu.Name = "trayGpuEnabledMenu";
+            this.trayGpuEnabledMenu.Size = new System.Drawing.Size(230, 22);
+            this.trayGpuEnabledMenu.Text = "Show GPU temperature";
+            this.trayGpuEnabledMenu.Click += new System.EventHandler(this.TrayGpuEnabledMenu_Click);
+            //
+            // trayCombinedMenu
+            //
+            this.trayCombinedMenu.Name = "trayCombinedMenu";
+            this.trayCombinedMenu.Size = new System.Drawing.Size(230, 22);
+            this.trayCombinedMenu.Text = "Combine CPU and GPU";
+            this.trayCombinedMenu.Click += new System.EventHandler(this.TrayCombinedMenu_Click);
+            //
+            // trayFahrenheitMenu
+            //
+            this.trayFahrenheitMenu.Name = "trayFahrenheitMenu";
+            this.trayFahrenheitMenu.Size = new System.Drawing.Size(230, 22);
+            this.trayFahrenheitMenu.Text = "Use Fahrenheit";
+            this.trayFahrenheitMenu.Click += new System.EventHandler(this.TrayFahrenheitMenu_Click);
+            //
+            // trayTemperatureColorsMenu
+            //
+            this.trayTemperatureColorsMenu.Name = "trayTemperatureColorsMenu";
+            this.trayTemperatureColorsMenu.Size = new System.Drawing.Size(230, 22);
+            this.trayTemperatureColorsMenu.Text = "Temperature-based colors";
+            this.trayTemperatureColorsMenu.Click += new System.EventHandler(this.TrayTemperatureColorsMenu_Click);
+            //
+            // trayConfigureColorsMenu
+            //
+            this.trayConfigureColorsMenu.Name = "trayConfigureColorsMenu";
+            this.trayConfigureColorsMenu.Size = new System.Drawing.Size(230, 22);
+            this.trayConfigureColorsMenu.Text = "Configure temperature colors...";
+            this.trayConfigureColorsMenu.Click += new System.EventHandler(this.TrayConfigureColorsMenu_Click);
+            //
+            // openSettingsTray
+            //
+            this.openSettingsTray.Name = "openSettingsTray";
+            this.openSettingsTray.Size = new System.Drawing.Size(219, 22);
+            this.openSettingsTray.Text = "Open Settings";
+            this.openSettingsTray.Click += new System.EventHandler(this.OpenSettingsTray_Click);
             // 
             // SettingsTray
             // 
             this.SettingsTray.AutoSize = false;
-            this.SettingsTray.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.SettingsTray.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.SettingsTray.ForeColor = System.Drawing.Color.Red;
             this.SettingsTray.Name = "SettingsTray";
-            this.SettingsTray.Size = new System.Drawing.Size(165, 30);
+            this.SettingsTray.Size = new System.Drawing.Size(219, 30);
             this.SettingsTray.Text = "❌ Exit";
             this.SettingsTray.Click += new System.EventHandler(this.ExitForm_Click);
             // 
@@ -1948,7 +2070,7 @@
             this.Controls.Add(this.mainMenu);
             this.Cursor = System.Windows.Forms.Cursors.Default;
             this.DoubleBuffered = true;
-            this.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.ForeColor = System.Drawing.Color.White;
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
@@ -1962,8 +2084,6 @@
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.MainForm_FormClosing);
             this.Load += new System.EventHandler(this.MainForm_Load);
             this.MouseDown += new System.Windows.Forms.MouseEventHandler(this.MainForm_MouseDown);
-            this.MouseMove += new System.Windows.Forms.MouseEventHandler(this.MainForm_MouseMove);
-            this.MouseUp += new System.Windows.Forms.MouseEventHandler(this.MainForm_MouseUp);
             this.mainMenu.ResumeLayout(false);
             this.aboutPanel.ResumeLayout(false);
             this.settingsPanel.ResumeLayout(false);
@@ -1991,7 +2111,6 @@
             this.generalSettingsPanel.PerformLayout();
             this.refreshPanel.ResumeLayout(false);
             this.refreshPanel.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.refreshValue)).EndInit();
             this.traySettingsPanel.ResumeLayout(false);
             this.traySettingsPanel.PerformLayout();
             this.colortempsPanel.ResumeLayout(false);
@@ -2004,7 +2123,6 @@
             this.gpuColorPanel.PerformLayout();
             this.iconsizePanel.ResumeLayout(false);
             this.iconsizePanel.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.iconsizeValue)).EndInit();
             this.aboutPage.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.donatePic)).EndInit();
             this.panelWrapper.ResumeLayout(false);
@@ -2090,7 +2208,7 @@
         private System.Windows.Forms.Label cpuColorLabel;
         private System.Windows.Forms.TableLayoutPanel iconsizePanel;
         private System.Windows.Forms.Label iconsizeLabel;
-        private System.Windows.Forms.NumericUpDown iconsizeValue;
+        private System.Windows.Forms.ComboBox iconsizeValue;
         private System.Windows.Forms.NotifyIcon cpuTrayIcon;
         private System.Windows.Forms.NotifyIcon gpuTrayIcon;
         private System.Windows.Forms.NotifyIcon NotifyIcon;
@@ -2105,6 +2223,17 @@
         private System.Windows.Forms.ContextMenuStrip contextMenuStrip;
         private System.Windows.Forms.ToolStripMenuItem ShowForm;
         private System.Windows.Forms.ToolStripMenuItem SettingsTray;
+        private System.Windows.Forms.ToolStripSeparator trayMenuSeparatorTop;
+        private System.Windows.Forms.ToolStripMenuItem trayDisplayMenu;
+        private System.Windows.Forms.ToolStripMenuItem trayCpuEnabledMenu;
+        private System.Windows.Forms.ToolStripMenuItem trayGpuEnabledMenu;
+        private System.Windows.Forms.ToolStripMenuItem trayCombinedMenu;
+        private System.Windows.Forms.ToolStripSeparator trayMenuSeparatorDisplay;
+        private System.Windows.Forms.ToolStripMenuItem trayFahrenheitMenu;
+        private System.Windows.Forms.ToolStripMenuItem trayTemperatureColorsMenu;
+        private System.Windows.Forms.ToolStripMenuItem trayConfigureColorsMenu;
+        private System.Windows.Forms.ToolStripSeparator trayMenuSeparatorBottom;
+        private System.Windows.Forms.ToolStripMenuItem openSettingsTray;
         private System.Windows.Forms.Button cpuColorValue;
         private System.Windows.Forms.Button gpuColorValue;
         private System.Windows.Forms.TableLayoutPanel homePanel;
@@ -2127,7 +2256,8 @@
         private System.Windows.Forms.Button clearSettings;
         private System.Windows.Forms.TableLayoutPanel refreshPanel;
         private System.Windows.Forms.Label refreshLabel;
-        private System.Windows.Forms.NumericUpDown refreshValue;
+        private System.Windows.Forms.ComboBox refreshValue;
         private System.Windows.Forms.CheckBox lightModeSwitch;
+        private System.Windows.Forms.CheckBox minimizeOnClose;
     }
 }

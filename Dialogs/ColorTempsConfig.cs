@@ -107,12 +107,13 @@ namespace TrayTemps
             _mainForm.NormalColor = normalTempColor.BackColor;
             _mainForm.WarningColor = warmTempColor.BackColor;
             _mainForm.CriticalColor = hotTempColor.BackColor;
-            _mainForm.WarmTempMin = (int)warmTempMin.Value;
-            _mainForm.WarmTempMax = (int)warmTempMax.Value;
+            _mainForm.WarmTempMin = ToCelsiusThreshold(warmTempMin.Value);
+            _mainForm.WarmTempMax = ToCelsiusThreshold(warmTempMax.Value);
 
             _mainForm.SaveSettings();
 
             _mainForm.ResetTrayCache();
+            _mainForm.RefreshTemperatureDisplayFromCurrentValues();
 
             this.Close();
         }
@@ -124,8 +125,32 @@ namespace TrayTemps
             warmTempColor.BackColor = _mainForm.WarningColor;
             hotTempColor.BackColor = _mainForm.CriticalColor;
 
-            warmTempMin.Value = Clamp(_mainForm.WarmTempMin, warmTempMin.Minimum, warmTempMin.Maximum);
-            warmTempMax.Value = Clamp(_mainForm.WarmTempMax, warmTempMax.Minimum, warmTempMax.Maximum);
+            tempsIntervalLabel.Text = _mainForm.UsesFahrenheit
+                ? "Temperature interval (Warm, °F)"
+                : "Temperature interval (Warm, °C)";
+
+            decimal maximumDisplayThreshold = _mainForm.UsesFahrenheit ? 482M : 230M;
+            warmTempMin.Maximum = maximumDisplayThreshold;
+            warmTempMax.Maximum = maximumDisplayThreshold;
+
+            warmTempMin.Value = Clamp(ToDisplayThreshold(_mainForm.WarmTempMin), warmTempMin.Minimum, warmTempMin.Maximum);
+            warmTempMax.Value = Clamp(ToDisplayThreshold(_mainForm.WarmTempMax), warmTempMax.Minimum, warmTempMax.Maximum);
+        }
+
+        private decimal ToDisplayThreshold(int celsius)
+        {
+            return _mainForm.UsesFahrenheit
+                ? Math.Round((decimal)celsius * 1.8M + 32M, MidpointRounding.AwayFromZero)
+                : celsius;
+        }
+
+        private int ToCelsiusThreshold(decimal displayValue)
+        {
+            decimal celsius = _mainForm.UsesFahrenheit
+                ? (displayValue - 32M) / 1.8M
+                : displayValue;
+
+            return Math.Max(0, Math.Min(230, (int)Math.Round(celsius, MidpointRounding.AwayFromZero)));
         }
 
         private void ApplyTheme()

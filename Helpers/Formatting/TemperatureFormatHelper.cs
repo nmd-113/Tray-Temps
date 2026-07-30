@@ -5,8 +5,10 @@ namespace TrayTemps
         internal static bool IsValidTemp(float? value)
         {
             return value.HasValue &&
-                   value.Value > 0 &&
-                   value.Value < 130;
+                   !float.IsNaN(value.Value) &&
+                   !float.IsInfinity(value.Value) &&
+                   value.Value >= -50 &&
+                   value.Value <= 250;
         }
 
         internal static float GetDisplayTemp(float celsius, bool useFahrenheit)

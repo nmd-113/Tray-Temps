@@ -87,39 +87,45 @@ namespace TrayTemps
             sb.Append(HardwareReportFormatHelper.Section("RAM"));
 
             var ram = wmiQuery("SELECT * FROM Win32_PhysicalMemory");
-
-            if (ram.Count == 0)
+            try
             {
-                sb.AppendLine();
-                sb.AppendLine("  No RAM information found.");
+                if (ram.Count == 0)
+                {
+                    sb.AppendLine();
+                    sb.AppendLine("  No RAM information found.");
+                    return sb.ToString();
+                }
+
+                long totalBytes = 0;
+                int index = 1;
+
+                foreach (var mem in ram)
+                {
+                    object capacityObj = mem["Capacity"];
+
+                    try
+                    {
+                        if (capacityObj != null)
+                            totalBytes += Convert.ToInt64(capacityObj);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine("GetMemoryDetails: failed to parse capacity: " + ex);
+                    }
+
+                    modules.Append(HardwareReportFormatHelper.Group($"Module #{index++}"));
+                    AppendRamModuleFields(modules, mem, capacityObj);
+                }
+
+                sb.AppendLine(HardwareReportFormatHelper.Label("Total", HardwareReportFormatHelper.SizeHuman(totalBytes)));
+                sb.Append(modules);
+
                 return sb.ToString();
             }
-
-            long totalBytes = 0;
-            int index = 1;
-
-            foreach (var mem in ram)
+            finally
             {
-                object capacityObj = mem["Capacity"];
-
-                try
-                {
-                    if (capacityObj != null)
-                        totalBytes += Convert.ToInt64(capacityObj);
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine("GetMemoryDetails: failed to parse capacity: " + ex);
-                }
-
-                modules.Append(HardwareReportFormatHelper.Group($"Module #{index++}"));
-                AppendRamModuleFields(modules, mem, capacityObj);
+                WmiQueryHelper.DisposeAll(ram);
             }
-
-            sb.AppendLine(HardwareReportFormatHelper.Label("Total", HardwareReportFormatHelper.SizeHuman(totalBytes)));
-            sb.Append(modules);
-
-            return sb.ToString();
         }
 
         private static void AppendRamModuleFields(StringBuilder sb, ManagementObject mem, object capacityObj)
@@ -142,43 +148,47 @@ namespace TrayTemps
             sb.Append(HardwareReportFormatHelper.Section("MOTHERBOARD"));
 
             var boards = wmiQuery("SELECT * FROM Win32_BaseBoard");
-
-            if (boards.Count == 0)
+            try
             {
-                sb.AppendLine();
-                sb.AppendLine("  No motherboard information found.");
-            }
-            else
-            {
-                int index = 1;
-
-                foreach (var board in boards)
+                if (boards.Count == 0)
                 {
-                    sb.Append(HardwareReportFormatHelper.Group($"Motherboard #{index++}"));
-                    AppendMotherboardStaticFields(sb, board);
+                    sb.AppendLine();
+                    sb.AppendLine("  No motherboard information found.");
+                }
+                else
+                {
+                    int index = 1;
+                    foreach (var board in boards)
+                    {
+                        sb.Append(HardwareReportFormatHelper.Group($"Motherboard #{index++}"));
+                        AppendMotherboardStaticFields(sb, board);
+                    }
                 }
             }
+            finally { WmiQueryHelper.DisposeAll(boards); }
 
             sb.AppendLine();
             sb.Append(HardwareReportFormatHelper.Section("BIOS"));
 
             var biosList = wmiQuery("SELECT * FROM Win32_BIOS");
-
-            if (biosList.Count == 0)
+            try
             {
-                sb.AppendLine();
-                sb.AppendLine("  No BIOS information found.");
-            }
-            else
-            {
-                int index = 1;
-
-                foreach (var bios in biosList)
+                if (biosList.Count == 0)
                 {
-                    sb.Append(HardwareReportFormatHelper.Group($"BIOS #{index++}"));
-                    AppendBiosFields(sb, bios);
+                    sb.AppendLine();
+                    sb.AppendLine("  No BIOS information found.");
+                }
+                else
+                {
+                    int index = 1;
+                    foreach (var bios in biosList)
+                    {
+                        sb.Append(HardwareReportFormatHelper.Group($"BIOS #{index++}"));
+                        AppendBiosFields(sb, bios);
+                    }
                 }
             }
+            finally { WmiQueryHelper.DisposeAll(biosList); }
 
             return sb.ToString();
         }

@@ -23,35 +23,41 @@ namespace TrayTemps
             }
 
             var gpus = wmiQuery("SELECT * FROM Win32_VideoController");
-
-            if (gpus.Count == 0)
+            try
             {
-                sb.AppendLine();
-                sb.AppendLine("  No GPU information found.");
+                if (gpus.Count == 0)
+                {
+                    sb.AppendLine();
+                    sb.AppendLine("  No GPU information found.");
+                    return sb.ToString();
+                }
+
+                int index = 1;
+
+                foreach (var gpu in gpus)
+                {
+                    sb.Append(HardwareReportFormatHelper.Group($"GPU #{index++}"));
+
+                    string width = HardwareReportFormatHelper.Safe(gpu["CurrentHorizontalResolution"]);
+                    string height = HardwareReportFormatHelper.Safe(gpu["CurrentVerticalResolution"]);
+                    string refresh = HardwareReportFormatHelper.Safe(gpu["CurrentRefreshRate"]);
+                    string displayResolutionSummary = GetDisplayResolutionSummary();
+                    bool hasDisplayResolutionSummary = !string.IsNullOrWhiteSpace(displayResolutionSummary);
+                    string resolutionLabel = hasDisplayResolutionSummary
+                        ? (displayResolutionSummary.Contains(";") ? "Current Resolutions" : "Current Resolution")
+                        : "Resolution";
+                    string resolutionValue = hasDisplayResolutionSummary
+                        ? displayResolutionSummary
+                        : $"{width} x {height} @ {refresh}Hz";
+                    AppendGpuDetailsFields(sb, gpu, resolutionLabel, resolutionValue);
+                }
+
                 return sb.ToString();
             }
-
-            int index = 1;
-
-            foreach (var gpu in gpus)
+            finally
             {
-                sb.Append(HardwareReportFormatHelper.Group($"GPU #{index++}"));
-
-                string width = HardwareReportFormatHelper.Safe(gpu["CurrentHorizontalResolution"]);
-                string height = HardwareReportFormatHelper.Safe(gpu["CurrentVerticalResolution"]);
-                string refresh = HardwareReportFormatHelper.Safe(gpu["CurrentRefreshRate"]);
-                string displayResolutionSummary = GetDisplayResolutionSummary();
-                bool hasDisplayResolutionSummary = !string.IsNullOrWhiteSpace(displayResolutionSummary);
-                string resolutionLabel = hasDisplayResolutionSummary
-                    ? (displayResolutionSummary.Contains(";") ? "Current Resolutions" : "Current Resolution")
-                    : "Resolution";
-                string resolutionValue = hasDisplayResolutionSummary
-                    ? displayResolutionSummary
-                    : $"{width} x {height} @ {refresh}Hz";
-                AppendGpuDetailsFields(sb, gpu, resolutionLabel, resolutionValue);
+                WmiQueryHelper.DisposeAll(gpus);
             }
-
-            return sb.ToString();
         }
 
         private static void AppendGpuDetailsFields(StringBuilder sb, ManagementObject gpu, string resolutionLabel, string resolutionValue)

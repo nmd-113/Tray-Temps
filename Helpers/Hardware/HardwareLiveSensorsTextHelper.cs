@@ -21,7 +21,7 @@ namespace TrayTemps
                 return sb.ToString();
             }
 
-            AppendLiveHardwareSensors(sb, hardware, "", false);
+            AppendLiveHardwareSensors(sb, hardware, "");
 
             return sb.ToString();
         }
@@ -114,14 +114,14 @@ namespace TrayTemps
                     Debug.WriteLine("UpdateHardwareRecursive(drive) failed: " + ex);
                 }
 
-                AppendLiveHardwareSensors(sb, drive, "", true);
+                AppendLiveHardwareSensors(sb, drive, "");
                 appendedAnyDrive = true;
             }
 
             return appendedAnyDrive;
         }
 
-        private static void AppendLiveHardwareSensors(StringBuilder sb, IHardware hardware, string indent, bool validateStorageThroughput)
+        private static void AppendLiveHardwareSensors(StringBuilder sb, IHardware hardware, string indent)
         {
             if (hardware == null)
                 return;
@@ -144,7 +144,7 @@ namespace TrayTemps
                 foreach (var sensor in sensors)
                 {
                     sb.AppendLine(
-                        $"{indent}{sensor.SensorType,-13} {HardwareReportFormatHelper.Safe(sensor.Name),-36} {FormatLiveSensorValue(sensor, validateStorageThroughput)}");
+                        $"{indent}{sensor.SensorType,-13} {HardwareReportFormatHelper.Safe(sensor.Name),-36} {HardwareReportFormatHelper.FormatSensorValue(sensor)}");
                 }
             }
 
@@ -161,40 +161,8 @@ namespace TrayTemps
                     Debug.WriteLine("subHardware.Update failed: " + ex);
                 }
 
-                AppendLiveHardwareSensors(sb, subHardware, indent + "  ", validateStorageThroughput);
+                AppendLiveHardwareSensors(sb, subHardware, indent + "  ");
             }
-        }
-
-        private static string FormatLiveSensorValue(ISensor sensor, bool validateStorageThroughput)
-        {
-            if (validateStorageThroughput && IsInvalidStorageThroughputValue(sensor))
-                return "N/A";
-
-            return HardwareReportFormatHelper.FormatSensorValue(sensor);
-        }
-
-        private static bool IsInvalidStorageThroughputValue(ISensor sensor)
-        {
-            if (sensor == null || !sensor.Value.HasValue)
-                return false;
-
-            if (sensor.SensorType != SensorType.Throughput)
-                return false;
-
-            string sensorName = HardwareReportFormatHelper.Safe(sensor.Name);
-            bool isReadOrWriteRate =
-                sensorName.IndexOf("Read Rate", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                sensorName.IndexOf("Write Rate", StringComparison.OrdinalIgnoreCase) >= 0;
-
-            if (!isReadOrWriteRate)
-                return false;
-
-            float value = sensor.Value.Value;
-
-            return float.IsNaN(value) ||
-                   float.IsInfinity(value) ||
-                   value < 0 ||
-                   value > 100000f;
         }
     }
 }

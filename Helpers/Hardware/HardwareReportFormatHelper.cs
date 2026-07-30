@@ -299,7 +299,9 @@ namespace TrayTemps
                     return $"{value:0.0} MB";
 
                 case SensorType.Throughput:
-                    return $"{value:0.0} MB/s";
+                    return IsStorageReadWriteThroughputSensor(sensor)
+                        ? $"{value:0.0} KB/s"
+                        : $"{value:0.0} MB/s";
 
                 case SensorType.TimeSpan:
                     return $"{value:0.0} h";
@@ -310,6 +312,16 @@ namespace TrayTemps
                 default:
                     return value.ToString("0.##", CultureInfo.InvariantCulture);
             }
+        }
+
+        internal static bool IsStorageReadWriteThroughputSensor(ISensor sensor)
+        {
+            if (sensor == null || sensor.SensorType != SensorType.Throughput)
+                return false;
+
+            string sensorName = Safe(sensor.Name);
+            return sensorName.IndexOf("Read Rate", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   sensorName.IndexOf("Write Rate", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         internal static string NormalizeGpuText(string text)

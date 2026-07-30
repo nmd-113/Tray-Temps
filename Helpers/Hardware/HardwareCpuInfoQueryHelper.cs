@@ -19,23 +19,29 @@ namespace TrayTemps
             }
 
             var cpus = wmiQuery("SELECT * FROM Win32_Processor");
-
-            if (cpus.Count == 0)
+            try
             {
-                sb.AppendLine();
-                sb.AppendLine("  No CPU information found.");
+                if (cpus.Count == 0)
+                {
+                    sb.AppendLine();
+                    sb.AppendLine("  No CPU information found.");
+                    return sb.ToString();
+                }
+
+                int index = 1;
+
+                foreach (var cpu in cpus)
+                {
+                    sb.Append(HardwareReportFormatHelper.Group($"CPU #{index++}"));
+                    AppendCpuDetailsFields(sb, cpu);
+                }
+
                 return sb.ToString();
             }
-
-            int index = 1;
-
-            foreach (var cpu in cpus)
+            finally
             {
-                sb.Append(HardwareReportFormatHelper.Group($"CPU #{index++}"));
-                AppendCpuDetailsFields(sb, cpu);
+                WmiQueryHelper.DisposeAll(cpus);
             }
-
-            return sb.ToString();
         }
 
         private static void AppendCpuDetailsFields(StringBuilder sb, ManagementObject cpu)
