@@ -3,17 +3,18 @@
     public bool Autostart { get; set; } = false;
     public bool LightMode { get; set; } = false;
     public bool TempsFahrenheit { get; set; } = false;
-    public bool MinimizeOnClose { get; set; } = true;
+    public bool MinimizeOnClose { get; set; } = false;
     public bool SingleIconTray { get; set; } = false;
-    public bool CpuTrayIcon { get; set; } = true;
+    public bool CpuTrayIcon { get; set; } = false;
     public bool GpuTrayIcon { get; set; } = false;
     public bool TempBasedIconColor { get; set; } = false;
+    public bool ShowTemperatureColorCorners { get; set; } = true;
     public decimal UpdateInterval { get; set; } = 0.50M;
     public int FontFamily { get; set; } = 0;
     public string TrayFontFamily { get; set; } = "";
     public int CpuColor { get; set; }
     public int GpuColor { get; set; }
-    public int IconSize { get; set; } = 75;
+    public int IconSize { get; set; } = 90;
     public int CpuIndex { get; set; } = 0;
     public int GpuIndex { get; set; } = 0;
     public int StorageIndex { get; set; } = 0;

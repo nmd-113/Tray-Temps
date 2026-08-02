@@ -1317,6 +1317,7 @@
             // minimizeOnClose
             // 
             this.minimizeOnClose.AutoSize = true;
+            this.minimizeOnClose.Checked = false;
             this.minimizeOnClose.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.minimizeOnClose.Dock = System.Windows.Forms.DockStyle.Left;
             this.minimizeOnClose.ForeColor = System.Drawing.Color.LightGray;
@@ -1427,6 +1428,7 @@
             "9.5",
             "9.75",
             "10"});
+            this.refreshValue.SelectedIndex = 1;
             this.refreshValue.Location = new System.Drawing.Point(145, 5);
             this.refreshValue.Margin = new System.Windows.Forms.Padding(2, 0, 0, 0);
             this.refreshValue.Name = "refreshValue";
@@ -1452,6 +1454,7 @@
             // tempsFahrenheit
             // 
             this.tempsFahrenheit.AutoSize = true;
+            this.tempsFahrenheit.Checked = false;
             this.tempsFahrenheit.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.tempsFahrenheit.Dock = System.Windows.Forms.DockStyle.Left;
             this.tempsFahrenheit.ForeColor = System.Drawing.Color.LightGray;
@@ -1526,6 +1529,7 @@
             // colortempsEnable
             // 
             this.colortempsEnable.AutoSize = true;
+            this.colortempsEnable.Checked = false;
             this.colortempsEnable.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.colortempsEnable.Dock = System.Windows.Forms.DockStyle.Left;
             this.colortempsEnable.ForeColor = System.Drawing.Color.LightGray;
@@ -1541,6 +1545,7 @@
             // 
             this.colortempsConfig.Anchor = System.Windows.Forms.AnchorStyles.Left;
             this.colortempsConfig.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(120)))), ((int)(((byte)(212)))));
+            this.colortempsConfig.Enabled = false;
             this.colortempsConfig.FlatAppearance.BorderColor = System.Drawing.Color.DarkGray;
             this.colortempsConfig.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.colortempsConfig.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
@@ -1604,6 +1609,7 @@
             // singleIconTray
             // 
             this.singleIconTray.AutoSize = true;
+            this.singleIconTray.Checked = false;
             this.singleIconTray.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.singleIconTray.Dock = System.Windows.Forms.DockStyle.Left;
             this.singleIconTray.ForeColor = System.Drawing.Color.LightGray;
@@ -1619,6 +1625,7 @@
             // enableCpuTray
             // 
             this.enableCpuTray.AutoSize = true;
+            this.enableCpuTray.Checked = false;
             this.enableCpuTray.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.enableCpuTray.Dock = System.Windows.Forms.DockStyle.Left;
             this.enableCpuTray.ForeColor = System.Drawing.Color.LightGray;
@@ -1634,6 +1641,7 @@
             // enableGpuTray
             // 
             this.enableGpuTray.AutoSize = true;
+            this.enableGpuTray.Checked = false;
             this.enableGpuTray.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.enableGpuTray.Dock = System.Windows.Forms.DockStyle.Left;
             this.enableGpuTray.ForeColor = System.Drawing.Color.LightGray;
@@ -1794,6 +1802,7 @@
             "90",
             "95",
             "100"});
+            this.iconsizeValue.SelectedIndex = 12;
             this.iconsizeValue.Location = new System.Drawing.Point(108, 10);
             this.iconsizeValue.Margin = new System.Windows.Forms.Padding(3, 0, 0, 0);
             this.iconsizeValue.Name = "iconsizeValue";

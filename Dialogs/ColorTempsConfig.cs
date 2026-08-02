@@ -22,9 +22,6 @@ namespace TrayTemps
             _mainForm = mainForm;
             ApplyTheme();
             _mainForm.ThemeChanged += MainForm_ThemeChanged;
-
-            warmTempMin.ValueChanged += NumericRange_ValueChanged;
-            warmTempMax.ValueChanged += NumericRange_ValueChanged;
         }
 
         protected override CreateParams CreateParams
@@ -109,10 +106,10 @@ namespace TrayTemps
             _mainForm.CriticalColor = hotTempColor.BackColor;
             _mainForm.WarmTempMin = ToCelsiusThreshold(warmTempMin.Value);
             _mainForm.WarmTempMax = ToCelsiusThreshold(warmTempMax.Value);
+            _mainForm.ShowTemperatureColorCorners = showCornerMarkers.Checked;
 
             _mainForm.SaveSettings();
 
-            _mainForm.ResetTrayCache();
             _mainForm.RefreshTemperatureDisplayFromCurrentValues();
 
             this.Close();
@@ -124,6 +121,7 @@ namespace TrayTemps
             normalTempColor.BackColor = _mainForm.NormalColor;
             warmTempColor.BackColor = _mainForm.WarningColor;
             hotTempColor.BackColor = _mainForm.CriticalColor;
+            showCornerMarkers.Checked = _mainForm.ShowTemperatureColorCorners;
 
             tempsIntervalLabel.Text = _mainForm.UsesFahrenheit
                 ? "Temperature interval (Warm, °F)"
@@ -174,6 +172,7 @@ namespace TrayTemps
             colorsetLabel.ForeColor = mutedText;
             tempsIntervalLabel.ForeColor = mutedText;
             lineLabel.ForeColor = mutedText;
+            showCornerMarkers.ForeColor = mutedText;
 
             ApplyInputTheme(warmTempMin, inputBack, text);
             ApplyInputTheme(warmTempMax, inputBack, text);

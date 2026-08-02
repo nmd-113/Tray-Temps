@@ -31,6 +31,7 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ColorTempsConfig));
             this.exitBtn = new System.Windows.Forms.Button();
             this.mainPanel = new System.Windows.Forms.Panel();
+            this.showCornerMarkers = new System.Windows.Forms.CheckBox();
             this.lineLabel = new System.Windows.Forms.Label();
             this.warmTempMax = new System.Windows.Forms.NumericUpDown();
             this.warmTempMin = new System.Windows.Forms.NumericUpDown();
@@ -72,6 +73,7 @@
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.mainPanel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
+            this.mainPanel.Controls.Add(this.showCornerMarkers);
             this.mainPanel.Controls.Add(this.lineLabel);
             this.mainPanel.Controls.Add(this.warmTempMax);
             this.mainPanel.Controls.Add(this.warmTempMin);
@@ -83,8 +85,20 @@
             this.mainPanel.Controls.Add(this.normalTempColor);
             this.mainPanel.Location = new System.Drawing.Point(2, 46);
             this.mainPanel.Name = "mainPanel";
-            this.mainPanel.Size = new System.Drawing.Size(296, 202);
+            this.mainPanel.Size = new System.Drawing.Size(296, 222);
             this.mainPanel.TabIndex = 5;
+            //
+            // showCornerMarkers
+            //
+            this.showCornerMarkers.AutoSize = true;
+            this.showCornerMarkers.Checked = true;
+            this.showCornerMarkers.ForeColor = System.Drawing.Color.LightGray;
+            this.showCornerMarkers.Location = new System.Drawing.Point(52, 132);
+            this.showCornerMarkers.Name = "showCornerMarkers";
+            this.showCornerMarkers.Size = new System.Drawing.Size(198, 21);
+            this.showCornerMarkers.TabIndex = 8;
+            this.showCornerMarkers.Text = "Show CPU/GPU identity lines";
+            this.showCornerMarkers.UseVisualStyleBackColor = true;
             // 
             // lineLabel
             // 
@@ -157,7 +171,7 @@
             this.saveBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.saveBtn.Font = new System.Drawing.Font("Bunken Tech Sans Pro Bold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.saveBtn.ForeColor = System.Drawing.Color.White;
-            this.saveBtn.Location = new System.Drawing.Point(22, 148);
+            this.saveBtn.Location = new System.Drawing.Point(22, 168);
             this.saveBtn.Name = "saveBtn";
             this.saveBtn.Size = new System.Drawing.Size(256, 34);
             this.saveBtn.TabIndex = 4;
@@ -239,7 +253,7 @@
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
             this.BackgroundImage = global::TrayTemps.Properties.Resources.border;
             this.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
-            this.ClientSize = new System.Drawing.Size(300, 250);
+            this.ClientSize = new System.Drawing.Size(300, 270);
             this.Controls.Add(this.formTitle);
             this.Controls.Add(this.mainPanel);
             this.Controls.Add(this.exitBtn);
@@ -280,5 +294,6 @@
         private System.Windows.Forms.NumericUpDown warmTempMin;
         private System.Windows.Forms.Label tempsIntervalLabel;
         private System.Windows.Forms.Label lineLabel;
+        private System.Windows.Forms.CheckBox showCornerMarkers;
     }
 }

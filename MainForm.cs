@@ -33,6 +33,7 @@ namespace TrayTemps
         private const decimal MaximumRefreshIntervalSeconds = 10M;
         private const int MinimumIconSizePercent = 30;
         private const int MaximumIconSizePercent = 100;
+        private const int DefaultIconSizePercent = 90;
         private const int StartupTaskQueryTimeoutMs = 2000;
         private static readonly Size HardwareDialogMinimumSize = new Size(640, 440);
 
@@ -69,6 +70,19 @@ namespace TrayTemps
         public FontFamily BunkenRegular;
         public bool IsLightModeEnabled => lightModeSwitch != null && lightModeSwitch.Checked;
         public bool UsesFahrenheit => tempsFahrenheit != null && tempsFahrenheit.Checked;
+        private bool _showTemperatureColorCorners = true;
+        internal bool ShowTemperatureColorCorners
+        {
+            get => _showTemperatureColorCorners;
+            set
+            {
+                _showTemperatureColorCorners = value;
+                UpdateTrayColorLabels();
+            }
+        }
+
+        private bool ShowDeviceIdentityMarkers =>
+            colortempsEnable != null && colortempsEnable.Checked && ShowTemperatureColorCorners;
         public event EventHandler ThemeChanged;
 
         private ISensor _cpuTempSensor;
@@ -96,6 +110,8 @@ namespace TrayTemps
         private int _cpuInvalidSensorCycles;
         private int _gpuInvalidSensorCycles;
         private Rectangle? _savedHardwareDialogBounds;
+        private Rectangle? _lastNormalWindowBounds;
+        private bool _restoreLastWindowBoundsWhenShown;
 
         private readonly object _hardwareUpdateLock = new object();
         private readonly List<HardwareDetailsDialog> _openHardwareDialogs = new List<HardwareDetailsDialog>();
@@ -185,6 +201,7 @@ namespace TrayTemps
 
                 SetDefaultControlValues();
                 LoadSettings();
+                RememberNormalWindowBounds();
                 CacheDisplaySettings();
 
                 if (!PromptForElevationAtStartupIfNeeded())
@@ -231,7 +248,19 @@ namespace TrayTemps
         protected override void OnResize(EventArgs e)
         {
             base.OnResize(e);
-            if (WindowState == FormWindowState.Minimized) Hide();
+            if (WindowState == FormWindowState.Minimized)
+            {
+                HideToTray();
+                return;
+            }
+
+            RememberNormalWindowBounds();
+        }
+
+        protected override void OnLocationChanged(EventArgs e)
+        {
+            base.OnLocationChanged(e);
+            RememberNormalWindowBounds();
         }
 
         protected override void WndProc(ref Message m)
@@ -554,8 +583,33 @@ namespace TrayTemps
         {
             Show();
             WindowState = FormWindowState.Normal;
+            RestoreLastWindowBoundsWhenShown();
             BringToFront();
+            Activate();
             UpdateTrayIcons();
+        }
+
+        private void RememberNormalWindowBounds()
+        {
+            if (WindowState != FormWindowState.Normal)
+                return;
+
+            Rectangle bounds = Bounds;
+            if (bounds.Width > 0 && bounds.Height > 0 && IsWindowBoundsVisible(bounds))
+                _lastNormalWindowBounds = bounds;
+        }
+
+        private void RestoreLastWindowBoundsWhenShown()
+        {
+            if (!_restoreLastWindowBoundsWhenShown)
+                return;
+
+            _restoreLastWindowBoundsWhenShown = false;
+
+            if (_lastNormalWindowBounds.HasValue && IsWindowBoundsVisible(_lastNormalWindowBounds.Value))
+                Bounds = _lastNormalWindowBounds.Value;
+            else
+                CenterToScreen();
         }
 
         private void UpdateTrayIcons()
@@ -715,17 +769,25 @@ namespace TrayTemps
             if (icon == null || _cpuBrush == null || _gpuBrush == null)
                 return;
 
+            bool showDeviceIdentityMarkers = ShowDeviceIdentityMarkers;
             string cacheKey = TrayIconCacheKeyHelper.GetCombinedTrayCacheKey(
                 cpuText,
                 gpuText,
                 _cpuBrush.Color.ToArgb(),
-                _gpuBrush.Color.ToArgb());
+                _gpuBrush.Color.ToArgb(),
+                showDeviceIdentityMarkers,
+                showDeviceIdentityMarkers ? cpuColorValue.BackColor.ToArgb() : 0,
+                showDeviceIdentityMarkers ? gpuColorValue.BackColor.ToArgb() : 0);
 
             if (cacheKey == _lastCpuTempText)
                 return;
 
             Icon oldIcon = icon.Icon;
-            Icon newIcon = CreateCombinedTempIcon(cpuText, gpuText);
+            Icon newIcon = CreateCombinedTempIcon(
+                cpuText,
+                gpuText,
+                showDeviceIdentityMarkers ? cpuColorValue.BackColor : (Color?)null,
+                showDeviceIdentityMarkers ? gpuColorValue.BackColor : (Color?)null);
 
             icon.Icon = newIcon;
 
@@ -738,15 +800,26 @@ namespace TrayTemps
         {
             bool cpuEnabled = enableCpuTray.Checked;
             bool gpuEnabled = enableGpuTray.Checked;
+            bool showDeviceIdentityMarkers = ShowDeviceIdentityMarkers;
 
             if ((!cpuEnabled && !gpuEnabled) || _trayFont == null || _cpuBrush == null || _gpuBrush == null)
                 return;
 
             string cpuCacheKey = cpuEnabled
-                ? TrayIconCacheKeyHelper.GetSingleTrayCacheKey(cpuText, referenceText, _cpuBrush.Color.ToArgb())
+                ? TrayIconCacheKeyHelper.GetSingleTrayCacheKey(
+                    cpuText,
+                    referenceText,
+                    _cpuBrush.Color.ToArgb(),
+                    showDeviceIdentityMarkers,
+                    showDeviceIdentityMarkers ? cpuColorValue.BackColor.ToArgb() : 0)
                 : null;
             string gpuCacheKey = gpuEnabled
-                ? TrayIconCacheKeyHelper.GetSingleTrayCacheKey(gpuText, referenceText, _gpuBrush.Color.ToArgb())
+                ? TrayIconCacheKeyHelper.GetSingleTrayCacheKey(
+                    gpuText,
+                    referenceText,
+                    _gpuBrush.Color.ToArgb(),
+                    showDeviceIdentityMarkers,
+                    showDeviceIdentityMarkers ? gpuColorValue.BackColor.ToArgb() : 0)
                 : null;
             bool cpuChanged = cpuEnabled && cpuCacheKey != _lastCpuTempText;
             bool gpuChanged = gpuEnabled && gpuCacheKey != _lastGpuTempText;
@@ -763,10 +836,18 @@ namespace TrayTemps
                 TrayPathTextLayout sharedLayout = CreateSingleTrayTextLayout(cpuEnabled, gpuEnabled, cpuText, gpuText, referenceText);
 
                 if (cpuEnabled && (refreshTogether || cpuChanged))
-                    newCpuIcon = CreateTempIcon(cpuText, _cpuBrush, sharedLayout);
+                    newCpuIcon = CreateTempIcon(
+                        cpuText,
+                        _cpuBrush,
+                        sharedLayout,
+                        showDeviceIdentityMarkers ? cpuColorValue.BackColor : (Color?)null);
 
                 if (gpuEnabled && (refreshTogether || gpuChanged))
-                    newGpuIcon = CreateTempIcon(gpuText, _gpuBrush, sharedLayout);
+                    newGpuIcon = CreateTempIcon(
+                        gpuText,
+                        _gpuBrush,
+                        sharedLayout,
+                        showDeviceIdentityMarkers ? gpuColorValue.BackColor : (Color?)null);
             }
             catch
             {
@@ -813,18 +894,20 @@ namespace TrayTemps
             if (gpuEnabled)
                 texts.Add(gpuText);
 
+            float textHeight = size - (ShowDeviceIdentityMarkers ? GetDeviceIdentityLineReservedSpace(size) : 0f);
+
             return CreateTrayTextLayout(
                 texts,
                 referenceText,
                 _trayFont,
-                new RectangleF(0, 0, size, size),
+                new RectangleF(0, 0, size, textHeight),
                 size * occupancy,
-                size * occupancy,
+                textHeight * occupancy,
                 GetSingleTrayTextPadding(),
                 GetSingleTrayOutlineWidth());
         }
 
-        private Icon CreateTempIcon(string text, SolidBrush brush, TrayPathTextLayout layout)
+        private Icon CreateTempIcon(string text, SolidBrush brush, TrayPathTextLayout layout, Color? deviceMarkerColor)
         {
             int size = GetTrayIconPixelSize();
 
@@ -838,13 +921,19 @@ namespace TrayTemps
                 g.PixelOffsetMode = PixelOffsetMode.HighQuality;
                 g.CompositingQuality = CompositingQuality.HighQuality;
 
+                float textHeight = size - (deviceMarkerColor.HasValue ? GetDeviceIdentityLineReservedSpace(size) : 0f);
+                var textTarget = new RectangleF(0, 0, size, textHeight);
+
                 DrawTrayPathText(
                     g,
                     text,
                     _trayFont,
                     layout,
-                    new RectangleF(0, 0, size, size),
+                    textTarget,
                     brush);
+
+                if (deviceMarkerColor.HasValue)
+                    DrawDeviceIdentityLine(g, new RectangleF(0, 0, size, size), deviceMarkerColor.Value, DeviceIdentityLineEdge.Bottom);
 
                 IntPtr hIcon = bmp.GetHicon();
                 Icon icon = (Icon)Icon.FromHandle(hIcon).Clone();
@@ -858,7 +947,15 @@ namespace TrayTemps
             return Math.Max(IconSize, (int)Math.Round(IconSize * _dpiScale));
         }
 
-        private Icon CreateCombinedTempIcon(string cpuText, string gpuText)
+        private static float GetDeviceIdentityLineReservedSpace(int iconPixelSize)
+        {
+            float scale = iconPixelSize / (float)IconSize;
+            float lineThickness = Math.Max(1f, scale);
+            float lineGap = Math.Max(1f, scale);
+            return lineThickness + lineGap;
+        }
+
+        private Icon CreateCombinedTempIcon(string cpuText, string gpuText, Color? cpuMarkerColor, Color? gpuMarkerColor)
         {
             int size = GetTrayIconPixelSize();
 
@@ -877,16 +974,24 @@ namespace TrayTemps
 
                 float rowGap = Math.Max(1f, size * 0.04f);
                 float rowHeight = (size - rowGap) / 2f;
-                float maxTextWidth = size * occupancy;
-                float maxTextHeight = rowHeight * occupancy;
+                float lineReservedSpace = (cpuMarkerColor.HasValue || gpuMarkerColor.HasValue)
+                    ? GetDeviceIdentityLineReservedSpace(size)
+                    : 0f;
+                bool useVerticalIdentityLines = lineReservedSpace > 0f && !UsesFahrenheit;
+                float textRowHeight = useVerticalIdentityLines
+                    ? rowHeight
+                    : Math.Max(1f, rowHeight - lineReservedSpace);
+                float textWidth = useVerticalIdentityLines
+                    ? Math.Max(1f, size - lineReservedSpace)
+                    : size;
                 string referenceText = TrayTextHelper.GetTrayReferenceText(cpuText, gpuText);
                 TrayTextLayout sharedLayout = CreateTrayTextLayout(
                     new[] { cpuText, gpuText },
                     referenceText,
                     combinedFont,
-                    new RectangleF(0, 0, size, rowHeight),
-                    maxTextWidth,
-                    maxTextHeight,
+                    new RectangleF(0, 0, textWidth, textRowHeight),
+                    textWidth * occupancy,
+                    textRowHeight * occupancy,
                     GetCombinedTrayTextPadding(),
                     GetCombinedTrayOutlineWidth(),
                     GetCombinedTraySlotAdvanceFactor());
@@ -896,7 +1001,7 @@ namespace TrayTemps
                     cpuText,
                     combinedFont,
                     sharedLayout,
-                    new RectangleF(0, 0, size, rowHeight),
+                    new RectangleF(useVerticalIdentityLines ? lineReservedSpace : 0f, useVerticalIdentityLines ? 0f : lineReservedSpace, textWidth, textRowHeight),
                     _cpuBrush);
 
                 DrawStableTrayText(
@@ -904,8 +1009,22 @@ namespace TrayTemps
                     gpuText,
                     combinedFont,
                     sharedLayout,
-                    new RectangleF(0, rowHeight + rowGap, size, rowHeight),
+                    new RectangleF(useVerticalIdentityLines ? lineReservedSpace : 0f, rowHeight + rowGap, textWidth, textRowHeight),
                     _gpuBrush);
+
+                if (cpuMarkerColor.HasValue)
+                    DrawDeviceIdentityLine(
+                        g,
+                        new RectangleF(0, 0, size, rowHeight),
+                        cpuMarkerColor.Value,
+                        useVerticalIdentityLines ? DeviceIdentityLineEdge.Left : DeviceIdentityLineEdge.Top);
+
+                if (gpuMarkerColor.HasValue)
+                    DrawDeviceIdentityLine(
+                        g,
+                        new RectangleF(0, rowHeight + rowGap, size, rowHeight),
+                        gpuMarkerColor.Value,
+                        useVerticalIdentityLines ? DeviceIdentityLineEdge.Left : DeviceIdentityLineEdge.Bottom);
 
                 IntPtr hIcon = bmp.GetHicon();
                 Icon icon = (Icon)Icon.FromHandle(hIcon).Clone();
@@ -1007,6 +1126,45 @@ namespace TrayTemps
             {
                 pen.LineJoin = LineJoin.Round;
                 g.DrawPath(pen, glyphPath);
+            }
+        }
+
+        private enum DeviceIdentityLineEdge
+        {
+            Top,
+            Bottom,
+            Left,
+            Right
+        }
+
+        private static void DrawDeviceIdentityLine(Graphics g, RectangleF target, Color color, DeviceIdentityLineEdge edge)
+        {
+            float scale = target.Width / IconSize;
+            float lineThickness = Math.Max(1f, scale);
+            float edgeInset = Math.Max(1f, scale);
+
+            using (var brush = new SolidBrush(color))
+            {
+                switch (edge)
+                {
+                    case DeviceIdentityLineEdge.Top:
+                        g.FillRectangle(brush, target.Left + edgeInset, target.Top, Math.Max(1f, target.Width - (edgeInset * 2f)), lineThickness);
+                        break;
+
+                    case DeviceIdentityLineEdge.Bottom:
+                        g.FillRectangle(brush, target.Left + edgeInset, target.Bottom - lineThickness, Math.Max(1f, target.Width - (edgeInset * 2f)), lineThickness);
+                        break;
+
+                    case DeviceIdentityLineEdge.Left:
+                        float leftLineHeight = Math.Min(target.Height, Math.Max(5f, 5f * scale));
+                        g.FillRectangle(brush, target.Left, target.Top + ((target.Height - leftLineHeight) / 2f), lineThickness, leftLineHeight);
+                        break;
+
+                    case DeviceIdentityLineEdge.Right:
+                        float rightLineHeight = Math.Min(target.Height, Math.Max(5f, 5f * scale));
+                        g.FillRectangle(brush, target.Right - lineThickness, target.Top + ((target.Height - rightLineHeight) / 2f), lineThickness, rightLineHeight);
+                        break;
+                }
             }
         }
 
@@ -1300,6 +1458,21 @@ namespace TrayTemps
         private void SetDefaultControlValues()
         {
             lightModeSwitch.Checked = false;
+            tempsFahrenheit.Checked = false;
+            minimizeOnClose.Checked = false;
+            enableCpuTray.Checked = false;
+            enableGpuTray.Checked = false;
+            singleIconTray.Checked = false;
+            colortempsEnable.Checked = false;
+
+            _desiredEnableCpuTray = false;
+            _desiredEnableGpuTray = false;
+            _desiredSingleIconTray = false;
+            _desiredColorTempsEnabled = false;
+            ShowTemperatureColorCorners = true;
+
+            SelectRefreshInterval(DefaultRefreshIntervalSeconds);
+            SelectIconSize(DefaultIconSizePercent);
 
             cpuColorValue.BackColor = Color.Aqua;
             gpuColorValue.BackColor = Color.Gold;
@@ -1344,6 +1517,7 @@ namespace TrayTemps
                     CpuTrayIcon = _desiredEnableCpuTray,
                     GpuTrayIcon = _desiredEnableGpuTray,
                     TempBasedIconColor = _desiredColorTempsEnabled,
+                    ShowTemperatureColorCorners = ShowTemperatureColorCorners,
                     UpdateInterval = GetSelectedRefreshInterval(),
                     MinWarmTemp = WarmTempMin,
                     MaxWarmTemp = WarmTempMax,
@@ -1365,12 +1539,17 @@ namespace TrayTemps
                     MinimizeOnClose = minimizeOnClose.Checked
                 };
 
-                if (this.WindowState == FormWindowState.Normal)
+                Rectangle? windowBounds = this.WindowState == FormWindowState.Normal
+                    ? Bounds
+                    : _lastNormalWindowBounds;
+
+                if (windowBounds.HasValue)
                 {
-                    settings.WindowWidth = this.Width;
-                    settings.WindowHeight = this.Height;
-                    settings.WindowX = this.Location.X;
-                    settings.WindowY = this.Location.Y;
+                    Rectangle bounds = windowBounds.Value;
+                    settings.WindowWidth = bounds.Width;
+                    settings.WindowHeight = bounds.Height;
+                    settings.WindowX = bounds.X;
+                    settings.WindowY = bounds.Y;
                 }
 
                 if (_savedHardwareDialogBounds.HasValue)
@@ -1532,6 +1711,7 @@ namespace TrayTemps
             enableCpuTray.Checked = settings.CpuTrayIcon;
             enableGpuTray.Checked = settings.GpuTrayIcon;
             colortempsEnable.Checked = settings.TempBasedIconColor;
+            ShowTemperatureColorCorners = settings.ShowTemperatureColorCorners;
 
             _desiredEnableCpuTray = enableCpuTray.Checked;
             _desiredEnableGpuTray = enableGpuTray.Checked;
@@ -2220,7 +2400,7 @@ namespace TrayTemps
 
         private void ShowForm_Click(object sender, EventArgs e)
         {
-            ShowWindowFromEvent();
+            ShowWindow();
         }
 
         private void OpenSettingsTray_Click(object sender, EventArgs e)
@@ -2296,20 +2476,15 @@ namespace TrayTemps
 
         private void NotifyIcon_MouseDoubleClick(object sender, MouseEventArgs e)
         {
-            ShowWindowFromEvent();
+            ShowWindow();
         }
 
         private void GpuTrayIcon_MouseDoubleClick(object sender, MouseEventArgs e)
         {
-            ShowWindowFromEvent();
+            ShowWindow();
         }
 
         private void CpuTrayIcon_MouseDoubleClick(object sender, MouseEventArgs e)
-        {
-            ShowWindowFromEvent();
-        }
-
-        private void ShowWindowFromEvent()
         {
             ShowWindow();
         }
@@ -2325,6 +2500,8 @@ namespace TrayTemps
 
         private void HideToTray()
         {
+            RememberNormalWindowBounds();
+            _restoreLastWindowBoundsWhenShown = _lastNormalWindowBounds.HasValue;
             Hide();
             UpdateTrayIcons();
         }
@@ -2369,10 +2546,11 @@ namespace TrayTemps
                     // does not overwrite our deletion with current memory values.
                     _settingsLoaded = false;
 
-                    // 2. Delete the physical settings file
-                    if (File.Exists(SettingsFilePath))
+                    // 2. Delete the primary file and all recovery candidates.
+                    foreach (string settingsPath in new[] { SettingsFilePath, SettingsFilePath + ".tmp", SettingsFilePath + ".bak" })
                     {
-                        File.Delete(SettingsFilePath);
+                        if (File.Exists(settingsPath))
+                            File.Delete(settingsPath);
                     }
 
                     // 3. Restart the application
@@ -2410,11 +2588,10 @@ namespace TrayTemps
                 else if (chk.Name == nameof(enableGpuTray))
                     _desiredEnableGpuTray = enableGpuTray.Checked;
 
-                UpdateTrayIcons();
-
                 if (HandleTemperatureUnitCheckboxChanged(chk))
                     return;
 
+                UpdateTrayIcons();
                 HandleTrayVisibilityCheckboxChanged(chk);
             }
         }
@@ -2430,9 +2607,6 @@ namespace TrayTemps
 
         private void HandleTrayVisibilityCheckboxChanged(CheckBox chk)
         {
-            if (_isInternalCheckChange)
-                return;
-
             if (chk.Name == nameof(enableCpuTray) || chk.Name == nameof(enableGpuTray))
             {
                 if (_settingsLoaded)
@@ -2575,8 +2749,7 @@ namespace TrayTemps
 
             bool useTempColors = colortempsEnable.Checked;
 
-            cpuColorValue.Enabled = !useTempColors;
-            gpuColorValue.Enabled = !useTempColors;
+            UpdateTrayColorLabels();
 
             colortempsConfig.Enabled = useTempColors;
 
@@ -2584,6 +2757,16 @@ namespace TrayTemps
             {
                 RefreshDisplaySettingPreview(resetCpuTrayCacheText: true, resetGpuTrayCacheText: true);
             }
+        }
+
+        private void UpdateTrayColorLabels()
+        {
+            if (cpuColorLabel == null || gpuColorLabel == null)
+                return;
+
+            bool useIdentityLines = ShowDeviceIdentityMarkers;
+            cpuColorLabel.Text = useIdentityLines ? "CPU Line:" : "CPU Color:";
+            gpuColorLabel.Text = useIdentityLines ? "GPU Line:" : "GPU Color:";
         }
 
         private void SingleIconTray_CheckedChanged(object sender, EventArgs e)
@@ -2640,7 +2823,7 @@ namespace TrayTemps
         private void IconsizeValue_ValueChanged(object sender, EventArgs e)
         {
             if (iconsizeValue.SelectedIndex >= 0)
-                RefreshTrayPreviewAfterDisplaySettingChange();
+                RefreshDisplaySettingPreview(resetCpuTrayCacheText: true, resetGpuTrayCacheText: true);
         }
 
         private void SelectRefreshInterval(decimal value)
@@ -2670,7 +2853,7 @@ namespace TrayTemps
             if (TryGetComboBoxIntValue(iconsizeValue, out int value))
                 return value;
 
-            return 75;
+            return DefaultIconSizePercent;
         }
 
         private static bool TryGetComboBoxDecimalValue(ComboBox comboBox, out decimal value)
@@ -2709,11 +2892,6 @@ namespace TrayTemps
         private static string FormatRefreshInterval(decimal value)
         {
             return value.ToString("0.##", CultureInfo.InvariantCulture);
-        }
-
-        private void RefreshTrayPreviewAfterDisplaySettingChange()
-        {
-            RefreshDisplaySettingPreview(resetCpuTrayCacheText: true, resetGpuTrayCacheText: true);
         }
 
         private void RefreshDisplaySettingPreview(bool resetCpuTrayCacheText, bool resetGpuTrayCacheText)
@@ -3793,14 +3971,33 @@ namespace TrayTemps
             {
                 var installedOnlyResult = MessageBox.Show(
                     this,
-                    "The startup entry is already removed.\n\nOK = Uninstall app\nCancel = Keep installed",
+                    "The startup entry is already removed.\n\nYes = Re-add startup entry\nNo = Remove app\nCancel = Keep installed",
                     "Confirm Remove",
-                    MessageBoxButtons.OKCancel,
+                    MessageBoxButtons.YesNoCancel,
                     MessageBoxIcon.Warning);
 
                 switch (installedOnlyResult)
                 {
-                    case DialogResult.OK:
+                    case DialogResult.Yes:
+                        if (!IsRunningAsAdministrator())
+                        {
+                            HandleAutostartAdminRequired(
+                                "Adding the startup task needs administrator rights.\n\nTrayTemps will restart elevated; then choose Re-add startup entry again.",
+                                true);
+                            break;
+                        }
+
+                        await AddStartupTaskAsync();
+                        SaveSettings();
+                        MessageBox.Show(
+                            this,
+                            "Startup entry added.",
+                            "Startup",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Information);
+                        break;
+
+                    case DialogResult.No:
                         await HandleAutostartDisableYes();
                         break;
 
@@ -3860,8 +4057,11 @@ namespace TrayTemps
                 return;
             }
 
+            string error = await RemoveStartupTaskAsync();
+            if (!string.IsNullOrWhiteSpace(error))
+                throw new Exception("Could not remove startup task:\n" + error);
+
             SaveSettings();
-            await RemoveStartupTaskAsync();
 
             MessageBox.Show(
                 this,
@@ -4018,21 +4218,11 @@ namespace TrayTemps
 
                     File.Copy(currentExePath, destExe, true);
 
-                    SaveSettings();
-
-
-                    string createTaskArgs =
-                        $"/Create /F /RL HIGHEST /SC ONLOGON /TN \"{AppName}\" /TR \"\\\"{destExe}\\\" -silent\"";
-
-                    if (!RunProcessAndWait("schtasks.exe", createTaskArgs, out string error))
+                    if (!CreateStartupTask(destExe, out string error))
                         throw new Exception("Could not create startup task:\n" + error);
 
-                    string powerShellArgs =
-                        $"-NoProfile -ExecutionPolicy Bypass -Command \"Set-ScheduledTask -TaskName '{AppName}' -Settings (New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries)\"";
-
-                    RunProcessAndWait("powershell.exe", powerShellArgs, out error);
-
                     CreateShortcutOnDesktop(destExe);
+                    SaveSettings();
 
                     if (IsHandleCreated && !IsDisposed)
                     {
@@ -4115,6 +4305,13 @@ namespace TrayTemps
 
         private void UninstallAndExit()
         {
+            MessageBox.Show(
+                this,
+                "TrayTemps will now uninstall and exit.\n\nIf TrayTemps is running from the installed location, it will be removed after exit.",
+                "Uninstall",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+
             if (string.IsNullOrEmpty(InstallPath) || !Directory.Exists(InstallPath))
             {
                 MessageBox.Show(
@@ -4236,15 +4433,45 @@ if exist ""{shortcutPath}"" del /f /q ""{shortcutPath}""
             }
         }
 
-        private Task RemoveStartupTaskAsync()
+        private Task AddStartupTaskAsync()
+        {
+            string installedExePath = GetInstalledExePath();
+
+            return Task.Run(() =>
+            {
+                if (string.IsNullOrWhiteSpace(installedExePath) || !File.Exists(installedExePath))
+                    throw new FileNotFoundException("Installed executable was not found.", installedExePath);
+
+                if (!CreateStartupTask(installedExePath, out string error))
+                    throw new Exception("Could not create startup task:\n" + error);
+            });
+        }
+
+        private bool CreateStartupTask(string executablePath, out string error)
+        {
+            string createTaskArgs =
+                $"/Create /F /RL HIGHEST /SC ONLOGON /TN \"{AppName}\" /TR \"\\\"{executablePath}\\\" -silent\"";
+
+            if (!RunProcessAndWait("schtasks.exe", createTaskArgs, out error))
+                return false;
+
+            string powerShellArgs =
+                $"-NoProfile -Command \"Set-ScheduledTask -TaskName '{AppName}' -Settings (New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries)\"";
+
+            RunProcessAndWait("powershell.exe", powerShellArgs, out string _);
+            return true;
+        }
+
+        private Task<string> RemoveStartupTaskAsync()
         {
             return Task.Run(() =>
             {
+                if (RunProcessAndWait("schtasks.exe", $"/Delete /TN \"{AppName}\" /F", out string error))
+                    return null;
 
-                if (!RunProcessAndWait("schtasks.exe", $"/Delete /TN \"{AppName}\" /F", out string error))
-                {
-                    Debug.WriteLine("Could not remove startup task: " + error);
-                }
+                return string.IsNullOrWhiteSpace(error)
+                    ? "schtasks.exe did not complete successfully."
+                    : error;
             });
         }
 

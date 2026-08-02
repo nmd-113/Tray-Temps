@@ -299,9 +299,7 @@ namespace TrayTemps
                     return $"{value:0.0} MB";
 
                 case SensorType.Throughput:
-                    return IsStorageReadWriteThroughputSensor(sensor)
-                        ? FormatBytesPerSecond(value)
-                        : $"{value:0.0} MB/s";
+                    return FormatBytesPerSecond(value);
 
                 case SensorType.TimeSpan:
                     return $"{value:0.0} h";
@@ -314,18 +312,7 @@ namespace TrayTemps
             }
         }
 
-        internal static bool IsStorageReadWriteThroughputSensor(ISensor sensor)
-        {
-            if (sensor == null || sensor.SensorType != SensorType.Throughput)
-                return false;
-
-            string sensorName = Safe(sensor.Name);
-            return sensorName.IndexOf("Read Rate", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                   sensorName.IndexOf("Write Rate", StringComparison.OrdinalIgnoreCase) >= 0;
-        }
-
-        // LibreHardwareMonitor storage "Read Rate" and "Write Rate" sensors are bytes per second.
-        // Convert before displaying so the value and unit agree.
+        // LibreHardwareMonitor throughput sensors are reported in bytes per second.
         private static string FormatBytesPerSecond(float bytesPerSecond)
         {
             double value = bytesPerSecond;
