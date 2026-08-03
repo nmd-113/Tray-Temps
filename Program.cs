@@ -54,13 +54,7 @@ namespace TrayTemps
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
 
-                var mainForm = new MainForm();
-
-                if (HasArgument(args, "-silent"))
-                {
-                    mainForm.WindowState = FormWindowState.Minimized;
-                    mainForm.ShowInTaskbar = false;
-                }
+                var mainForm = new MainForm(HasArgument(args, "-silent"));
 
                 Application.Run(mainForm);
             }

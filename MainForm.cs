@@ -104,18 +104,26 @@ namespace TrayTemps
         private bool _desiredEnableGpuTray = false;
         private bool _desiredSingleIconTray = false;
         private bool _desiredColorTempsEnabled = false;
+        private bool _startMinimizedWithAdminRights = true;
         private bool _isShutdownInitiated = false;
         private bool _isRefreshingTemps = false;
         private bool _resourcesDisposed = false;
         private bool _sensorElevationPromptShown = false;
         private bool _isInitializingHardwareSelectors = false;
         private bool _temperatureTimerConfigured = false;
-        private bool _isExplicitExitRequested = false;
+        private readonly bool _startHiddenFromCommandLine;
+        private bool _initialWindowDisplaySuppressed = true;
         private int _cpuInvalidSensorCycles;
         private int _gpuInvalidSensorCycles;
         private Rectangle? _savedHardwareDialogBounds;
         private Rectangle? _lastNormalWindowBounds;
         private bool _restoreLastWindowBoundsWhenShown;
+
+        private bool IsStartMinimizedWithAdminRights =>
+            minimizeOnStart != null && minimizeOnStart.Checked && _startMinimizedWithAdminRights;
+
+        private bool ShouldStartHidden =>
+            _startHiddenFromCommandLine || (minimizeOnStart != null && minimizeOnStart.Checked);
 
         private readonly object _hardwareUpdateLock = new object();
         private readonly List<HardwareDetailsDialog> _openHardwareDialogs = new List<HardwareDetailsDialog>();
@@ -150,8 +158,9 @@ namespace TrayTemps
 
         #region [ Constructor / Form Lifecycle ]
 
-        public MainForm()
+        public MainForm(bool startHiddenFromCommandLine = false)
         {
+            _startHiddenFromCommandLine = startHiddenFromCommandLine;
             LoadFonts();
             InitializeComponent();
 
@@ -180,6 +189,12 @@ namespace TrayTemps
                 ramDetails,
                 storageDetails,
                 motherboardDetails);
+
+            // WinForms shows the startup form before its Load handler can hide it.
+            // Keep that first show invisible until the loaded settings decide whether
+            // the app should open normally or remain in the notification area.
+            Opacity = 0;
+            ShowInTaskbar = false;
         }
 
         protected override CreateParams CreateParams
@@ -211,7 +226,16 @@ namespace TrayTemps
                 if (!PromptForElevationAtStartupIfNeeded())
                     return;
 
+                bool startHidden = ShouldStartHidden;
+
+                if (!startHidden)
+                    RestoreInitialWindowDisplay();
+
                 UpdateTrayIcons();
+
+                if (startHidden)
+                    BeginInvoke((MethodInvoker)HideToTrayAfterStartup);
+
                 SelectedTabChanged(this, EventArgs.Empty);
 
                 await InitializeHardwareAsync();
@@ -222,22 +246,13 @@ namespace TrayTemps
             catch (Exception ex)
             {
                 Debug.WriteLine("Unhandled exception in MainForm_Load: " + ex);
+                RestoreInitialWindowDisplay();
                 try { MessageBox.Show(this, $"An unexpected error occurred:\n{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error); } catch { Debug.WriteLine("Failed to show error MessageBox in MainForm_Load."); }
             }
         }
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (!_isShutdownInitiated &&
-                !_isExplicitExitRequested &&
-                e.CloseReason != CloseReason.WindowsShutDown &&
-                minimizeOnClose.Checked)
-            {
-                e.Cancel = true;
-                HideToTray();
-                return;
-            }
-
             if (_settingsLoaded)
                 SaveSettings();
             ExecuteShutdownSequence();
@@ -585,17 +600,31 @@ namespace TrayTemps
 
         private void ShowWindow()
         {
-            Show();
+            RestoreInitialWindowDisplay();
             WindowState = FormWindowState.Normal;
+            // Keep bounds tracking suspended until the form is visible again.
+            // Windows can report a temporary position while displays resume.
             RestoreLastWindowBoundsWhenShown();
+            Show();
+            _restoreLastWindowBoundsWhenShown = false;
             BringToFront();
             Activate();
             UpdateTrayIcons();
         }
 
+        private void RestoreInitialWindowDisplay()
+        {
+            if (!_initialWindowDisplaySuppressed || IsDisposed)
+                return;
+
+            Opacity = 1;
+            ShowInTaskbar = true;
+            _initialWindowDisplaySuppressed = false;
+        }
+
         private void RememberNormalWindowBounds()
         {
-            if (WindowState != FormWindowState.Normal)
+            if (!Visible || _restoreLastWindowBoundsWhenShown || WindowState != FormWindowState.Normal)
                 return;
 
             Rectangle bounds = Bounds;
@@ -607,8 +636,6 @@ namespace TrayTemps
         {
             if (!_restoreLastWindowBoundsWhenShown)
                 return;
-
-            _restoreLastWindowBoundsWhenShown = false;
 
             if (_lastNormalWindowBounds.HasValue && IsWindowBoundsVisible(_lastNormalWindowBounds.Value))
                 Bounds = _lastNormalWindowBounds.Value;
@@ -786,16 +813,13 @@ namespace TrayTemps
             if (cacheKey == _lastCpuTempText)
                 return;
 
-            Icon oldIcon = icon.Icon;
             Icon newIcon = CreateCombinedTempIcon(
                 cpuText,
                 gpuText,
                 showDeviceIdentityMarkers ? cpuColorValue.BackColor : (Color?)null,
                 showDeviceIdentityMarkers ? gpuColorValue.BackColor : (Color?)null);
 
-            icon.Icon = newIcon;
-
-            oldIcon?.Dispose();
+            ReplaceTrayIconImage(icon, newIcon);
 
             _lastCpuTempText = cacheKey;
         }
@@ -860,25 +884,17 @@ namespace TrayTemps
                 throw;
             }
 
-            Icon oldCpuIcon = null;
-            Icon oldGpuIcon = null;
-
             if (newCpuIcon != null)
             {
-                oldCpuIcon = cpuTrayIcon.Icon;
-                cpuTrayIcon.Icon = newCpuIcon;
+                ReplaceTrayIconImage(cpuTrayIcon, newCpuIcon);
                 _lastCpuTempText = cpuCacheKey;
             }
 
             if (newGpuIcon != null)
             {
-                oldGpuIcon = gpuTrayIcon.Icon;
-                gpuTrayIcon.Icon = newGpuIcon;
+                ReplaceTrayIconImage(gpuTrayIcon, newGpuIcon);
                 _lastGpuTempText = gpuCacheKey;
             }
-
-            oldCpuIcon?.Dispose();
-            oldGpuIcon?.Dispose();
         }
 
         private TrayPathTextLayout CreateSingleTrayTextLayout(
@@ -939,10 +955,7 @@ namespace TrayTemps
                 if (deviceMarkerColor.HasValue)
                     DrawDeviceIdentityLine(g, new RectangleF(0, 0, size, size), deviceMarkerColor.Value, DeviceIdentityLineEdge.Bottom);
 
-                IntPtr hIcon = bmp.GetHicon();
-                Icon icon = (Icon)Icon.FromHandle(hIcon).Clone();
-                DestroyIcon(hIcon);
-                return icon;
+                return CreateOwnedIconFromBitmap(bmp);
             }
         }
 
@@ -1030,11 +1043,42 @@ namespace TrayTemps
                         gpuMarkerColor.Value,
                         useVerticalIdentityLines ? DeviceIdentityLineEdge.Left : DeviceIdentityLineEdge.Bottom);
 
-                IntPtr hIcon = bmp.GetHicon();
-                Icon icon = (Icon)Icon.FromHandle(hIcon).Clone();
-                DestroyIcon(hIcon);
-                return icon;
+                return CreateOwnedIconFromBitmap(bmp);
             }
+        }
+
+        private static Icon CreateOwnedIconFromBitmap(Bitmap bitmap)
+        {
+            IntPtr hIcon = IntPtr.Zero;
+
+            try
+            {
+                hIcon = bitmap.GetHicon();
+                return (Icon)Icon.FromHandle(hIcon).Clone();
+            }
+            finally
+            {
+                if (hIcon != IntPtr.Zero)
+                    DestroyIcon(hIcon);
+            }
+        }
+
+        private static void ReplaceTrayIconImage(NotifyIcon trayIcon, Icon newIcon)
+        {
+            Icon oldIcon = null;
+
+            try
+            {
+                oldIcon = trayIcon.Icon;
+                trayIcon.Icon = newIcon;
+            }
+            catch
+            {
+                newIcon?.Dispose();
+                throw;
+            }
+
+            oldIcon?.Dispose();
         }
 
         private Font CreateCombinedTrayFont(int iconPixelSize)
@@ -1463,7 +1507,7 @@ namespace TrayTemps
         {
             lightModeSwitch.Checked = false;
             tempsFahrenheit.Checked = false;
-            minimizeOnClose.Checked = false;
+            minimizeOnStart.Checked = false;
             enableCpuTray.Checked = false;
             enableGpuTray.Checked = false;
             singleIconTray.Checked = false;
@@ -1473,6 +1517,8 @@ namespace TrayTemps
             _desiredEnableGpuTray = false;
             _desiredSingleIconTray = false;
             _desiredColorTempsEnabled = false;
+            _startMinimizedWithAdminRights = true;
+            UpdateMinimizeOnStartLabel();
             ShowTemperatureColorCorners = true;
 
             SelectRefreshInterval(DefaultRefreshIntervalSeconds);
@@ -1540,10 +1586,11 @@ namespace TrayTemps
                     GpuIdentifier = _selectedGpuIdentifier,
                     StorageIdentifier = _selectedStorageIdentifier,
                     InstallFolder = InstallPath,
-                    MinimizeOnClose = minimizeOnClose.Checked
+                    StartMinimizedToTray = minimizeOnStart.Checked,
+                    StartMinimizedWithAdminRights = _startMinimizedWithAdminRights
                 };
 
-                Rectangle? windowBounds = this.WindowState == FormWindowState.Normal
+                Rectangle? windowBounds = Visible && WindowState == FormWindowState.Normal && IsWindowBoundsVisible(Bounds)
                     ? Bounds
                     : _lastNormalWindowBounds;
 
@@ -1646,7 +1693,9 @@ namespace TrayTemps
                 try
                 {
                     string json = File.ReadAllText(path);
-                    System.Text.Json.JsonSerializer.Deserialize<AppSettings>(json);
+                    AppSettings settings = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(json);
+                    if (settings == null)
+                        throw new InvalidDataException("Settings content was empty.");
                     return json;
                 }
                 catch (Exception ex)
@@ -1669,8 +1718,6 @@ namespace TrayTemps
                 else
                     File.Move(tempPath, SettingsFilePath);
 
-                if (File.Exists(backupPath))
-                    File.Delete(backupPath);
             }
             catch (PlatformNotSupportedException)
             {
@@ -1710,7 +1757,9 @@ namespace TrayTemps
         {
             lightModeSwitch.Checked = settings.LightMode;
             tempsFahrenheit.Checked = settings.TempsFahrenheit;
-            minimizeOnClose.Checked = settings.MinimizeOnClose;
+            minimizeOnStart.Checked = settings.StartMinimizedToTray;
+            _startMinimizedWithAdminRights = settings.StartMinimizedWithAdminRights;
+            UpdateMinimizeOnStartLabel();
             singleIconTray.Checked = settings.SingleIconTray;
             enableCpuTray.Checked = settings.CpuTrayIcon;
             enableGpuTray.Checked = settings.GpuTrayIcon;
@@ -2056,6 +2105,8 @@ namespace TrayTemps
             dropDown.ForeColor = theme.Text;
             dropDown.Font = contextMenuStrip.Font;
             dropDown.Renderer = contextMenuStrip.Renderer;
+            dropDown.ShowImageMargin = false;
+            dropDown.ShowCheckMargin = true;
         }
 
         private void ApplyTrayMenuTheme(ThemePalette theme, params ToolStripMenuItem[] menuItems)
@@ -2388,13 +2439,7 @@ namespace TrayTemps
 
         private void ExitBtn_Click(object sender, EventArgs e)
         {
-            if (minimizeOnClose.Checked)
-            {
-                HideToTray();
-                return;
-            }
-
-            ConfirmExitOrHideToTray();
+            ConfirmExit();
         }
 
         private void MinimizeBtn_Click(object sender, EventArgs e)
@@ -2550,6 +2595,7 @@ namespace TrayTemps
             trayCombinedMenu.Enabled = canCombine;
 
             trayFahrenheitMenu.Checked = tempsFahrenheit.Checked;
+            trayFahrenheitMenu.Enabled = tempsFahrenheit.Enabled;
             trayTemperatureColorsMenu.Checked = colortempsEnable.Checked;
             trayTemperatureColorsMenu.Enabled = colortempsEnable.Enabled;
             trayConfigureColorsMenu.Enabled = colortempsEnable.Checked && colortempsConfig.Enabled;
@@ -2594,7 +2640,6 @@ namespace TrayTemps
 
         private void ExitForm_Click(object sender, EventArgs e)
         {
-            _isExplicitExitRequested = true;
             this.Close();
         }
 
@@ -2630,24 +2675,25 @@ namespace TrayTemps
             UpdateTrayIcons();
         }
 
-        private void ConfirmExitOrHideToTray()
+        private void HideToTrayAfterStartup()
+        {
+            if (_isShutdownInitiated || _resourcesDisposed || IsDisposed)
+                return;
+
+            HideToTray();
+        }
+
+        private void ConfirmExit()
         {
             DialogResult result = MessageBox.Show(
                 this,
-                "Are you sure you want to exit TrayTemps?\nClick \"No\" to hide the app to tray.",
+                "Are you sure you want to exit TrayTemps?",
                 "Exit Confirmation",
-                MessageBoxButtons.YesNoCancel,
+                MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question);
 
-            if (result == DialogResult.No)
-            {
-                HideToTray();
-            }
-            else if (result == DialogResult.Yes)
-            {
-                _isExplicitExitRequested = true;
+            if (result == DialogResult.Yes)
                 Close();
-            }
         }
 
         #endregion
@@ -2677,11 +2723,9 @@ namespace TrayTemps
                             File.Delete(settingsPath);
                     }
 
-                    // 3. Restart the application
+                    // 3. Restart through the normal WinForms lifecycle so form-closing
+                    // cleanup still disposes hardware and tray resources.
                     Application.Restart();
-
-                    // 4. Force exit the current process to prevent any further logic execution
-                    Environment.Exit(0);
                 }
                 catch (Exception ex)
                 {
@@ -2718,6 +2762,55 @@ namespace TrayTemps
                 UpdateTrayIcons();
                 HandleTrayVisibilityCheckboxChanged(chk);
             }
+        }
+
+        private void MinimizeOnStart_CheckedChanged(object sender, EventArgs e)
+        {
+            if (!_settingsLoaded || _isInternalCheckChange)
+                return;
+
+            if (!minimizeOnStart.Checked)
+            {
+                UpdateMinimizeOnStartLabel();
+                SaveSettings();
+                return;
+            }
+
+            DialogResult result = MessageBox.Show(
+                this,
+                "Choose how TrayTemps should start when hidden to the tray.\n\n" +
+                "Yes: Start with administrator rights for complete low-level hardware access.\n\n" +
+                "No: Start without administrator rights. Some hardware information may be unavailable or incomplete.\n\n" +
+                "This choice applies the next time TrayTemps starts.",
+                "Start Minimized to Tray",
+                MessageBoxButtons.YesNoCancel,
+                MessageBoxIcon.Question);
+
+            if (result == DialogResult.Cancel)
+            {
+                _isInternalCheckChange = true;
+                minimizeOnStart.Checked = false;
+                _isInternalCheckChange = false;
+                UpdateMinimizeOnStartLabel();
+                return;
+            }
+
+            _startMinimizedWithAdminRights = result == DialogResult.Yes;
+            UpdateMinimizeOnStartLabel();
+            SaveSettings();
+        }
+
+        private void UpdateMinimizeOnStartLabel()
+        {
+            if (!minimizeOnStart.Checked)
+            {
+                minimizeOnStart.Text = "Start minimized to tray";
+                return;
+            }
+
+            minimizeOnStart.Text = _startMinimizedWithAdminRights
+                ? "Start minimized to tray (Elevated)"
+                : "Start minimized to tray (Normal)";
         }
 
         private bool HandleTemperatureUnitCheckboxChanged(CheckBox chk)
@@ -3293,54 +3386,40 @@ namespace TrayTemps
 
             _sensorElevationPromptShown = true;
 
-            double originalOpacity = Opacity;
-            bool opacityChanged = false;
-
-            if (originalOpacity > 0)
+            if (minimizeOnStart.Checked)
             {
-                Opacity = 0;
-                opacityChanged = true;
+                return !IsStartMinimizedWithAdminRights || !RestartElevatedAndClose();
             }
 
-            try
-            {
-                const string message =
-                    "Tray-Temps can read more complete hardware sensor data when run as administrator.\n\n" +
-                    "If you continue without administrator rights, some temperatures, storage health data, or hardware details may be missing, partial, or less reliable.\n\n" +
-                    "Windows Security / Microsoft Defender may block low-level hardware access. Only allow the app or add an exclusion if you trust this specific build/source.\n\n" +
-                    "Restart Tray-Temps as administrator now?";
+            const string message =
+                "Tray-Temps can read more complete hardware sensor data when run as administrator.\n\n" +
+                "If you continue without administrator rights, some temperatures, storage health data, or hardware details may be missing, partial, or less reliable.\n\n" +
+                "Windows Security / Microsoft Defender may block low-level hardware access. Only allow the app or add an exclusion if you trust this specific build/source.\n\n" +
+                "Restart Tray-Temps as administrator now?";
 
-                DialogResult result = MessageBox.Show(
+            DialogResult result = MessageBox.Show(
+                this,
+                message,
+                "Sensor Access",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning);
+
+            if (result != DialogResult.Yes)
+                return true;
+
+            if (!RestartElevatedAndClose())
+            {
+                MessageBox.Show(
                     this,
-                    message,
-                    "Sensor Access",
-                    MessageBoxButtons.YesNo,
-                    MessageBoxIcon.Warning);
+                    "Windows did not allow the elevated restart.",
+                    "Elevation Cancelled",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
 
-                if (result != DialogResult.Yes)
-                    return true;
-
-                if (!TryRestartElevated())
-                {
-                    MessageBox.Show(
-                        this,
-                        "Windows did not allow the elevated restart.",
-                        "Elevation Cancelled",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Information);
-
-                    return true;
-                }
-
-                ExecuteShutdownSequence();
-                Close();
-                return false;
+                return true;
             }
-            finally
-            {
-                if (opacityChanged && !_isShutdownInitiated && !IsDisposed)
-                    Opacity = originalOpacity;
-            }
+
+            return false;
         }
 
         private static bool IsUsableTemperatureSensor(ISensor sensor)
@@ -3784,6 +3863,9 @@ namespace TrayTemps
 
         private bool PromptForElevatedSensorRestart(string reason)
         {
+            if (minimizeOnStart.Checked)
+                return IsStartMinimizedWithAdminRights && RestartElevatedAndClose();
+
             string message =
                 "TrayTemps could not initialize full hardware sensors without administrator rights.\n\n" +
                 "Restart as administrator to enable low-level temperature sensors?\n\n" +
@@ -3799,7 +3881,7 @@ namespace TrayTemps
             if (result != DialogResult.Yes)
                 return false;
 
-            if (!TryRestartElevated())
+            if (!RestartElevatedAndClose())
             {
                 MessageBox.Show(
                     this,
@@ -3811,8 +3893,6 @@ namespace TrayTemps
                 return false;
             }
 
-            ExecuteShutdownSequence();
-            Close();
             return true;
         }
 
@@ -3845,6 +3925,16 @@ namespace TrayTemps
         private bool TryRestartElevated(string arguments = null)
         {
             return Program.RequestElevatedRestart(arguments);
+        }
+
+        private bool RestartElevatedAndClose()
+        {
+            if (!TryRestartElevated())
+                return false;
+
+            ExecuteShutdownSequence();
+            Close();
+            return true;
         }
 
         private void PopulateHardwareSelector(ComboBox selector, List<IHardware> hardwareList, int savedIndex, Label nameLabel, string hardwareType)
@@ -4017,11 +4107,9 @@ namespace TrayTemps
             {
                 trayIcon.Visible = false;
 
-                if (trayIcon.Icon != null)
-                {
-                    trayIcon.Icon.Dispose();
-                    trayIcon.Icon = null;
-                }
+                Icon icon = trayIcon.Icon;
+                trayIcon.Icon = null;
+                icon?.Dispose();
 
                 trayIcon.Dispose();
             }

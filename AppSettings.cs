@@ -3,7 +3,8 @@
     public bool Autostart { get; set; } = false;
     public bool LightMode { get; set; } = false;
     public bool TempsFahrenheit { get; set; } = false;
-    public bool MinimizeOnClose { get; set; } = false;
+    public bool StartMinimizedToTray { get; set; } = false;
+    public bool StartMinimizedWithAdminRights { get; set; } = true;
     public bool SingleIconTray { get; set; } = false;
     public bool CpuTrayIcon { get; set; } = false;
     public bool GpuTrayIcon { get; set; } = false;

@@ -102,7 +102,7 @@
             this.settingsTitle = new System.Windows.Forms.Label();
             this.genSettings = new System.Windows.Forms.Label();
             this.generalSettingsPanel = new System.Windows.Forms.TableLayoutPanel();
-            this.minimizeOnClose = new System.Windows.Forms.CheckBox();
+            this.minimizeOnStart = new System.Windows.Forms.CheckBox();
             this.clearSettings = new System.Windows.Forms.Button();
             this.refreshPanel = new System.Windows.Forms.TableLayoutPanel();
             this.refreshLabel = new System.Windows.Forms.Label();
@@ -1298,7 +1298,7 @@
             this.generalSettingsPanel.ColumnCount = 2;
             this.generalSettingsPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 51F));
             this.generalSettingsPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 49F));
-            this.generalSettingsPanel.Controls.Add(this.minimizeOnClose, 1, 0);
+            this.generalSettingsPanel.Controls.Add(this.minimizeOnStart, 1, 0);
             this.generalSettingsPanel.Controls.Add(this.clearSettings, 1, 2);
             this.generalSettingsPanel.Controls.Add(this.refreshPanel, 1, 1);
             this.generalSettingsPanel.Controls.Add(this.autostartInstall, 0, 0);
@@ -1315,19 +1315,20 @@
             this.generalSettingsPanel.Size = new System.Drawing.Size(625, 135);
             this.generalSettingsPanel.TabIndex = 7;
             // 
-            // minimizeOnClose
-            // 
-            this.minimizeOnClose.AutoSize = true;
-            this.minimizeOnClose.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
-            this.minimizeOnClose.Dock = System.Windows.Forms.DockStyle.Left;
-            this.minimizeOnClose.ForeColor = System.Drawing.Color.LightGray;
-            this.minimizeOnClose.Location = new System.Drawing.Point(321, 8);
-            this.minimizeOnClose.Name = "minimizeOnClose";
-            this.minimizeOnClose.Padding = new System.Windows.Forms.Padding(3, 5, 5, 5);
-            this.minimizeOnClose.Size = new System.Drawing.Size(156, 35);
-            this.minimizeOnClose.TabIndex = 25;
-            this.minimizeOnClose.Text = "Hide to tray on close";
-            this.minimizeOnClose.UseVisualStyleBackColor = true;
+            // minimizeOnStart
+            //
+            this.minimizeOnStart.AutoSize = true;
+            this.minimizeOnStart.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.minimizeOnStart.Dock = System.Windows.Forms.DockStyle.Left;
+            this.minimizeOnStart.ForeColor = System.Drawing.Color.LightGray;
+            this.minimizeOnStart.Location = new System.Drawing.Point(321, 8);
+            this.minimizeOnStart.Name = "minimizeOnStart";
+            this.minimizeOnStart.Padding = new System.Windows.Forms.Padding(3, 5, 5, 5);
+            this.minimizeOnStart.Size = new System.Drawing.Size(163, 35);
+            this.minimizeOnStart.TabIndex = 25;
+            this.minimizeOnStart.Text = "Start minimized to tray";
+            this.minimizeOnStart.UseVisualStyleBackColor = true;
+            this.minimizeOnStart.CheckedChanged += new System.EventHandler(this.MinimizeOnStart_CheckedChanged);
             // 
             // clearSettings
             // 
@@ -1970,7 +1971,7 @@
             this.openSettingsTray,
             this.trayMenuSeparatorBottom,
             this.SettingsTray});
-            this.contextMenuStrip.LayoutStyle = System.Windows.Forms.ToolStripLayoutStyle.HorizontalStackWithOverflow;
+            this.contextMenuStrip.LayoutStyle = System.Windows.Forms.ToolStripLayoutStyle.VerticalStackWithOverflow;
             this.contextMenuStrip.Name = "contextMenuStrip1";
             this.contextMenuStrip.RenderMode = System.Windows.Forms.ToolStripRenderMode.Professional;
             this.contextMenuStrip.ShowImageMargin = false;
@@ -2299,7 +2300,7 @@
         private System.Windows.Forms.Label refreshLabel;
         private System.Windows.Forms.ComboBox refreshValue;
         private System.Windows.Forms.CheckBox lightModeSwitch;
-        private System.Windows.Forms.CheckBox minimizeOnClose;
+        private System.Windows.Forms.CheckBox minimizeOnStart;
         private System.Windows.Forms.Button checkUpdates;
     }
 }
