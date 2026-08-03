@@ -37,7 +37,7 @@ namespace TrayTemps
         private const int DefaultIconSizePercent = 90;
         private const int StartupTaskQueryTimeoutMs = 2000;
         private const string GitHubTagsApiUrl = "https://api.github.com/repos/nmd-113/Tray-Temps/tags?per_page=100";
-        private const string GitHubTagPageUrl = "https://github.com/nmd-113/Tray-Temps/tree/";
+        private const string GitHubReleasePageUrl = "https://github.com/nmd-113/Tray-Temps/releases/tag/";
         private static readonly Size HardwareDialogMinimumSize = new Size(640, 440);
         private static readonly HttpClient UpdateCheckClient = CreateUpdateCheckClient();
 
@@ -2463,7 +2463,7 @@ namespace TrayTemps
                     MessageBoxIcon.Information);
 
                 if (result == DialogResult.Yes)
-                    OpenUrl(GitHubTagPageUrl + Uri.EscapeDataString(latestTag));
+                    OpenUrl(GitHubReleasePageUrl + Uri.EscapeDataString(latestTag));
             }
             catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException || ex is InvalidDataException || ex is System.Text.Json.JsonException)
             {
