@@ -11,7 +11,7 @@ It helps you keep an eye on your hardware without keeping a full monitoring app 
 - Shows CPU and GPU temperatures in the system tray
 - Supports separate CPU/GPU tray icons
 - Supports combined CPU + GPU tray mode
-- Optional temperature-based tray colors
+- Optional temperature-based tray colors with CPU/GPU identity lines to tray icons.
 - Custom static tray colors
 - Works with or without administrator rights
 - Uses fallback sensors when possible
