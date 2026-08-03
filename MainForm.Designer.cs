@@ -132,6 +132,7 @@
             this.divider3 = new System.Windows.Forms.Panel();
             this.traySettingsLabel = new System.Windows.Forms.Label();
             this.aboutPage = new System.Windows.Forms.TabPage();
+            this.checkUpdates = new System.Windows.Forms.Button();
             this.aboutTitle = new System.Windows.Forms.Label();
             this.divider1 = new System.Windows.Forms.Panel();
             this.appTitleAbout = new System.Windows.Forms.Label();
@@ -1825,6 +1826,7 @@
             // aboutPage
             // 
             this.aboutPage.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(25)))), ((int)(((byte)(25)))), ((int)(((byte)(25)))));
+            this.aboutPage.Controls.Add(this.checkUpdates);
             this.aboutPage.Controls.Add(this.aboutTitle);
             this.aboutPage.Controls.Add(this.divider1);
             this.aboutPage.Controls.Add(this.appTitleAbout);
@@ -1838,6 +1840,21 @@
             this.aboutPage.Size = new System.Drawing.Size(690, 554);
             this.aboutPage.TabIndex = 2;
             this.aboutPage.Text = "About";
+            // 
+            // checkUpdates
+            // 
+            this.checkUpdates.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.checkUpdates.BackColor = System.Drawing.Color.Gray;
+            this.checkUpdates.FlatAppearance.BorderSize = 0;
+            this.checkUpdates.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.checkUpdates.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.checkUpdates.Location = new System.Drawing.Point(182, 498);
+            this.checkUpdates.Name = "checkUpdates";
+            this.checkUpdates.Size = new System.Drawing.Size(135, 27);
+            this.checkUpdates.TabIndex = 8;
+            this.checkUpdates.Text = "Check updates ⏳";
+            this.checkUpdates.UseVisualStyleBackColor = false;
+            this.checkUpdates.Click += new System.EventHandler(this.CheckUpdates_Click);
             // 
             // aboutTitle
             // 
@@ -1891,9 +1908,10 @@
             this.appVersion.ForeColor = System.Drawing.Color.DimGray;
             this.appVersion.Location = new System.Drawing.Point(33, 499);
             this.appVersion.Name = "appVersion";
-            this.appVersion.Size = new System.Drawing.Size(310, 24);
+            this.appVersion.Size = new System.Drawing.Size(143, 24);
             this.appVersion.TabIndex = 5;
             this.appVersion.Text = "Version: 0.0.0.0";
+            this.appVersion.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // githubLink
             // 
@@ -1952,11 +1970,11 @@
             this.openSettingsTray,
             this.trayMenuSeparatorBottom,
             this.SettingsTray});
-            this.contextMenuStrip.LayoutStyle = System.Windows.Forms.ToolStripLayoutStyle.Table;
+            this.contextMenuStrip.LayoutStyle = System.Windows.Forms.ToolStripLayoutStyle.HorizontalStackWithOverflow;
             this.contextMenuStrip.Name = "contextMenuStrip1";
             this.contextMenuStrip.RenderMode = System.Windows.Forms.ToolStripRenderMode.Professional;
             this.contextMenuStrip.ShowImageMargin = false;
-            this.contextMenuStrip.Size = new System.Drawing.Size(149, 120);
+            this.contextMenuStrip.Size = new System.Drawing.Size(149, 136);
             this.contextMenuStrip.Opening += new System.ComponentModel.CancelEventHandler(this.ContextMenuStrip_Opening);
             // 
             // ShowForm
@@ -1977,6 +1995,7 @@
             // 
             // trayDisplayMenu
             // 
+            this.trayDisplayMenu.AutoSize = false;
             this.trayDisplayMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.trayCpuEnabledMenu,
             this.trayGpuEnabledMenu,
@@ -1986,27 +2005,30 @@
             this.trayTemperatureColorsMenu,
             this.trayConfigureColorsMenu});
             this.trayDisplayMenu.Name = "trayDisplayMenu";
-            this.trayDisplayMenu.Size = new System.Drawing.Size(148, 22);
+            this.trayDisplayMenu.Size = new System.Drawing.Size(219, 30);
             this.trayDisplayMenu.Text = "Display";
             // 
             // trayCpuEnabledMenu
             // 
+            this.trayCpuEnabledMenu.AutoSize = false;
             this.trayCpuEnabledMenu.Name = "trayCpuEnabledMenu";
-            this.trayCpuEnabledMenu.Size = new System.Drawing.Size(255, 22);
+            this.trayCpuEnabledMenu.Size = new System.Drawing.Size(255, 28);
             this.trayCpuEnabledMenu.Text = "Show CPU temperature";
             this.trayCpuEnabledMenu.Click += new System.EventHandler(this.TrayCpuEnabledMenu_Click);
             // 
             // trayGpuEnabledMenu
             // 
+            this.trayGpuEnabledMenu.AutoSize = false;
             this.trayGpuEnabledMenu.Name = "trayGpuEnabledMenu";
-            this.trayGpuEnabledMenu.Size = new System.Drawing.Size(255, 22);
+            this.trayGpuEnabledMenu.Size = new System.Drawing.Size(255, 28);
             this.trayGpuEnabledMenu.Text = "Show GPU temperature";
             this.trayGpuEnabledMenu.Click += new System.EventHandler(this.TrayGpuEnabledMenu_Click);
             // 
             // trayCombinedMenu
             // 
+            this.trayCombinedMenu.AutoSize = false;
             this.trayCombinedMenu.Name = "trayCombinedMenu";
-            this.trayCombinedMenu.Size = new System.Drawing.Size(255, 22);
+            this.trayCombinedMenu.Size = new System.Drawing.Size(255, 28);
             this.trayCombinedMenu.Text = "Combine CPU and GPU";
             this.trayCombinedMenu.Click += new System.EventHandler(this.TrayCombinedMenu_Click);
             // 
@@ -2017,29 +2039,33 @@
             // 
             // trayFahrenheitMenu
             // 
+            this.trayFahrenheitMenu.AutoSize = false;
             this.trayFahrenheitMenu.Name = "trayFahrenheitMenu";
-            this.trayFahrenheitMenu.Size = new System.Drawing.Size(255, 22);
+            this.trayFahrenheitMenu.Size = new System.Drawing.Size(255, 28);
             this.trayFahrenheitMenu.Text = "Use Fahrenheit";
             this.trayFahrenheitMenu.Click += new System.EventHandler(this.TrayFahrenheitMenu_Click);
             // 
             // trayTemperatureColorsMenu
             // 
+            this.trayTemperatureColorsMenu.AutoSize = false;
             this.trayTemperatureColorsMenu.Name = "trayTemperatureColorsMenu";
-            this.trayTemperatureColorsMenu.Size = new System.Drawing.Size(255, 22);
+            this.trayTemperatureColorsMenu.Size = new System.Drawing.Size(255, 28);
             this.trayTemperatureColorsMenu.Text = "Temperature-based colors";
             this.trayTemperatureColorsMenu.Click += new System.EventHandler(this.TrayTemperatureColorsMenu_Click);
             // 
             // trayConfigureColorsMenu
             // 
+            this.trayConfigureColorsMenu.AutoSize = false;
             this.trayConfigureColorsMenu.Name = "trayConfigureColorsMenu";
-            this.trayConfigureColorsMenu.Size = new System.Drawing.Size(255, 22);
+            this.trayConfigureColorsMenu.Size = new System.Drawing.Size(255, 28);
             this.trayConfigureColorsMenu.Text = "Configure temperature colors...";
             this.trayConfigureColorsMenu.Click += new System.EventHandler(this.TrayConfigureColorsMenu_Click);
             // 
             // openSettingsTray
             // 
+            this.openSettingsTray.AutoSize = false;
             this.openSettingsTray.Name = "openSettingsTray";
-            this.openSettingsTray.Size = new System.Drawing.Size(148, 22);
+            this.openSettingsTray.Size = new System.Drawing.Size(219, 30);
             this.openSettingsTray.Text = "Open Settings";
             this.openSettingsTray.Click += new System.EventHandler(this.OpenSettingsTray_Click);
             // 
@@ -2274,5 +2300,6 @@
         private System.Windows.Forms.ComboBox refreshValue;
         private System.Windows.Forms.CheckBox lightModeSwitch;
         private System.Windows.Forms.CheckBox minimizeOnClose;
+        private System.Windows.Forms.Button checkUpdates;
     }
 }

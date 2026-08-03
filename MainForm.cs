@@ -10,6 +10,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Management;
+using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Threading.Tasks;
@@ -35,7 +36,10 @@ namespace TrayTemps
         private const int MaximumIconSizePercent = 100;
         private const int DefaultIconSizePercent = 90;
         private const int StartupTaskQueryTimeoutMs = 2000;
+        private const string GitHubTagsApiUrl = "https://api.github.com/repos/nmd-113/Tray-Temps/tags?per_page=100";
+        private const string GitHubTagPageUrl = "https://github.com/nmd-113/Tray-Temps/tree/";
         private static readonly Size HardwareDialogMinimumSize = new Size(640, 440);
+        private static readonly HttpClient UpdateCheckClient = CreateUpdateCheckClient();
 
         private Computer _computer;
         private readonly Timer _tempTimer = new Timer();
@@ -2028,9 +2032,7 @@ namespace TrayTemps
             contextMenuStrip.BackColor = theme.SurfaceBack;
             contextMenuStrip.ForeColor = theme.Text;
             contextMenuStrip.Renderer = new ToolStripProfessionalRenderer(new TrayMenuColorTable(theme));
-            trayDisplayMenu.DropDown.BackColor = theme.SurfaceBack;
-            trayDisplayMenu.DropDown.ForeColor = theme.Text;
-            trayDisplayMenu.DropDown.Font = contextMenuStrip.Font;
+            ConfigureTrayDisplayDropDown(theme);
             ApplyTrayMenuTheme(theme, ShowForm, trayDisplayMenu, openSettingsTray);
             ApplyTrayMenuTheme(theme,
                 trayCpuEnabledMenu,
@@ -2042,6 +2044,18 @@ namespace TrayTemps
             SettingsTray.BackColor = theme.SurfaceBack;
             SettingsTray.ForeColor = theme.Danger;
             SettingsTray.Font = contextMenuStrip.Font;
+        }
+
+        private void ConfigureTrayDisplayDropDown(ThemePalette theme)
+        {
+            var dropDown = trayDisplayMenu.DropDown as ToolStripDropDownMenu;
+            if (dropDown == null)
+                return;
+
+            dropDown.BackColor = theme.SurfaceBack;
+            dropDown.ForeColor = theme.Text;
+            dropDown.Font = contextMenuStrip.Font;
+            dropDown.Renderer = contextMenuStrip.Renderer;
         }
 
         private void ApplyTrayMenuTheme(ThemePalette theme, params ToolStripMenuItem[] menuItems)
@@ -2407,6 +2421,116 @@ namespace TrayTemps
         {
             ShowWindow();
             SetTab(1);
+        }
+
+        private async void CheckUpdates_Click(object sender, EventArgs e)
+        {
+            if (!TryParseUpdateVersion(Application.ProductVersion, out Version currentVersion))
+            {
+                MessageBox.Show(this, "The installed app version could not be read.", "Check for Updates", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            string originalText = checkUpdates.Text;
+            checkUpdates.Enabled = false;
+            checkUpdates.Text = "Checking...";
+
+            try
+            {
+                string tagsJson = await UpdateCheckClient.GetStringAsync(GitHubTagsApiUrl);
+                if (IsDisposed || Disposing)
+                    return;
+
+                if (!TryGetLatestGitHubTag(tagsJson, out Version latestVersion, out string latestTag))
+                    throw new InvalidDataException("No version tags were found in the repository.");
+
+                if (latestVersion <= currentVersion)
+                {
+                    MessageBox.Show(
+                        this,
+                        $"TrayTemps is up to date.\n\nInstalled version: v{currentVersion}",
+                        "Check for Updates",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                    return;
+                }
+
+                DialogResult result = MessageBox.Show(
+                    this,
+                    $"A newer version is available.\n\nInstalled: v{currentVersion}\nLatest: {latestTag}\n\nOpen the update page?",
+                    "Update Available",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Information);
+
+                if (result == DialogResult.Yes)
+                    OpenUrl(GitHubTagPageUrl + Uri.EscapeDataString(latestTag));
+            }
+            catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException || ex is InvalidDataException || ex is System.Text.Json.JsonException)
+            {
+                MessageBox.Show(
+                    this,
+                    "Unable to check for updates. Check your internet connection and try again.\n\n" + ex.Message,
+                    "Check for Updates",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+            }
+            finally
+            {
+                if (!IsDisposed)
+                {
+                    checkUpdates.Text = originalText;
+                    checkUpdates.Enabled = true;
+                }
+            }
+        }
+
+        private static HttpClient CreateUpdateCheckClient()
+        {
+            var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+            client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", AppName + " update checker");
+            return client;
+        }
+
+        private static bool TryGetLatestGitHubTag(string tagsJson, out Version latestVersion, out string latestTag)
+        {
+            latestVersion = null;
+            latestTag = null;
+
+            using (var document = System.Text.Json.JsonDocument.Parse(tagsJson))
+            {
+                if (document.RootElement.ValueKind != System.Text.Json.JsonValueKind.Array)
+                    return false;
+
+                foreach (System.Text.Json.JsonElement tagElement in document.RootElement.EnumerateArray())
+                {
+                    if (!tagElement.TryGetProperty("name", out System.Text.Json.JsonElement nameElement) ||
+                        !TryParseUpdateVersion(nameElement.GetString(), out Version tagVersion))
+                    {
+                        continue;
+                    }
+
+                    if (latestVersion == null || tagVersion > latestVersion)
+                    {
+                        latestVersion = tagVersion;
+                        latestTag = nameElement.GetString();
+                    }
+                }
+            }
+
+            return latestVersion != null;
+        }
+
+        private static bool TryParseUpdateVersion(string value, out Version version)
+        {
+            version = null;
+            if (string.IsNullOrWhiteSpace(value))
+                return false;
+
+            string versionText = value.Trim();
+            if (versionText.StartsWith("v", StringComparison.OrdinalIgnoreCase))
+                versionText = versionText.Substring(1);
+
+            return Version.TryParse(versionText, out version);
         }
 
         private void ContextMenuStrip_Opening(object sender, System.ComponentModel.CancelEventArgs e)
