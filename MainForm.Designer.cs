@@ -152,8 +152,8 @@
             this.trayFahrenheitMenu = new System.Windows.Forms.ToolStripMenuItem();
             this.trayTemperatureColorsMenu = new System.Windows.Forms.ToolStripMenuItem();
             this.trayConfigureColorsMenu = new System.Windows.Forms.ToolStripMenuItem();
-            this.trayMenuSeparatorBottom = new System.Windows.Forms.ToolStripSeparator();
             this.openSettingsTray = new System.Windows.Forms.ToolStripMenuItem();
+            this.trayMenuSeparatorBottom = new System.Windows.Forms.ToolStripSeparator();
             this.SettingsTray = new System.Windows.Forms.ToolStripMenuItem();
             this.gpuTrayIcon = new System.Windows.Forms.NotifyIcon(this.components);
             this.NotifyIcon = new System.Windows.Forms.NotifyIcon(this.components);
@@ -342,11 +342,11 @@
             // 
             this.appTitle.AutoSize = true;
             this.appTitle.Dock = System.Windows.Forms.DockStyle.Top;
-            this.appTitle.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.appTitle.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.appTitle.ForeColor = System.Drawing.Color.WhiteSmoke;
             this.appTitle.Location = new System.Drawing.Point(3, 48);
             this.appTitle.Name = "appTitle";
-            this.appTitle.Size = new System.Drawing.Size(98, 20);
+            this.appTitle.Size = new System.Drawing.Size(98, 16);
             this.appTitle.TabIndex = 4;
             this.appTitle.Text = "TrayTemps";
             this.appTitle.TextAlign = System.Drawing.ContentAlignment.TopCenter;
@@ -1317,7 +1317,6 @@
             // minimizeOnClose
             // 
             this.minimizeOnClose.AutoSize = true;
-            this.minimizeOnClose.Checked = false;
             this.minimizeOnClose.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.minimizeOnClose.Dock = System.Windows.Forms.DockStyle.Left;
             this.minimizeOnClose.ForeColor = System.Drawing.Color.LightGray;
@@ -1428,7 +1427,6 @@
             "9.5",
             "9.75",
             "10"});
-            this.refreshValue.SelectedIndex = 1;
             this.refreshValue.Location = new System.Drawing.Point(145, 5);
             this.refreshValue.Margin = new System.Windows.Forms.Padding(2, 0, 0, 0);
             this.refreshValue.Name = "refreshValue";
@@ -1454,7 +1452,6 @@
             // tempsFahrenheit
             // 
             this.tempsFahrenheit.AutoSize = true;
-            this.tempsFahrenheit.Checked = false;
             this.tempsFahrenheit.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.tempsFahrenheit.Dock = System.Windows.Forms.DockStyle.Left;
             this.tempsFahrenheit.ForeColor = System.Drawing.Color.LightGray;
@@ -1529,7 +1526,6 @@
             // colortempsEnable
             // 
             this.colortempsEnable.AutoSize = true;
-            this.colortempsEnable.Checked = false;
             this.colortempsEnable.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.colortempsEnable.Dock = System.Windows.Forms.DockStyle.Left;
             this.colortempsEnable.ForeColor = System.Drawing.Color.LightGray;
@@ -1609,7 +1605,6 @@
             // singleIconTray
             // 
             this.singleIconTray.AutoSize = true;
-            this.singleIconTray.Checked = false;
             this.singleIconTray.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.singleIconTray.Dock = System.Windows.Forms.DockStyle.Left;
             this.singleIconTray.ForeColor = System.Drawing.Color.LightGray;
@@ -1625,7 +1620,6 @@
             // enableCpuTray
             // 
             this.enableCpuTray.AutoSize = true;
-            this.enableCpuTray.Checked = false;
             this.enableCpuTray.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.enableCpuTray.Dock = System.Windows.Forms.DockStyle.Left;
             this.enableCpuTray.ForeColor = System.Drawing.Color.LightGray;
@@ -1641,7 +1635,6 @@
             // enableGpuTray
             // 
             this.enableGpuTray.AutoSize = true;
-            this.enableGpuTray.Checked = false;
             this.enableGpuTray.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.enableGpuTray.Dock = System.Windows.Forms.DockStyle.Left;
             this.enableGpuTray.ForeColor = System.Drawing.Color.LightGray;
@@ -1802,7 +1795,6 @@
             "90",
             "95",
             "100"});
-            this.iconsizeValue.SelectedIndex = 12;
             this.iconsizeValue.Location = new System.Drawing.Point(108, 10);
             this.iconsizeValue.Margin = new System.Windows.Forms.Padding(3, 0, 0, 0);
             this.iconsizeValue.Name = "iconsizeValue";
@@ -1964,7 +1956,7 @@
             this.contextMenuStrip.Name = "contextMenuStrip1";
             this.contextMenuStrip.RenderMode = System.Windows.Forms.ToolStripRenderMode.Professional;
             this.contextMenuStrip.ShowImageMargin = false;
-            this.contextMenuStrip.Size = new System.Drawing.Size(220, 130);
+            this.contextMenuStrip.Size = new System.Drawing.Size(149, 120);
             this.contextMenuStrip.Opening += new System.ComponentModel.CancelEventHandler(this.ContextMenuStrip_Opening);
             // 
             // ShowForm
@@ -1977,9 +1969,14 @@
             this.ShowForm.Size = new System.Drawing.Size(219, 30);
             this.ShowForm.Text = "🖥️ Show Window";
             this.ShowForm.Click += new System.EventHandler(this.ShowForm_Click);
-            //
+            // 
+            // trayMenuSeparatorTop
+            // 
+            this.trayMenuSeparatorTop.Name = "trayMenuSeparatorTop";
+            this.trayMenuSeparatorTop.Size = new System.Drawing.Size(145, 6);
+            // 
             // trayDisplayMenu
-            //
+            // 
             this.trayDisplayMenu.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.trayCpuEnabledMenu,
             this.trayGpuEnabledMenu,
@@ -1988,59 +1985,68 @@
             this.trayFahrenheitMenu,
             this.trayTemperatureColorsMenu,
             this.trayConfigureColorsMenu});
-            ((System.Windows.Forms.ToolStripDropDownMenu)(this.trayDisplayMenu.DropDown)).ShowCheckMargin = true;
             this.trayDisplayMenu.Name = "trayDisplayMenu";
-            this.trayDisplayMenu.Size = new System.Drawing.Size(219, 22);
+            this.trayDisplayMenu.Size = new System.Drawing.Size(148, 22);
             this.trayDisplayMenu.Text = "Display";
-            //
+            // 
             // trayCpuEnabledMenu
-            //
+            // 
             this.trayCpuEnabledMenu.Name = "trayCpuEnabledMenu";
-            this.trayCpuEnabledMenu.Size = new System.Drawing.Size(230, 22);
+            this.trayCpuEnabledMenu.Size = new System.Drawing.Size(255, 22);
             this.trayCpuEnabledMenu.Text = "Show CPU temperature";
             this.trayCpuEnabledMenu.Click += new System.EventHandler(this.TrayCpuEnabledMenu_Click);
-            //
+            // 
             // trayGpuEnabledMenu
-            //
+            // 
             this.trayGpuEnabledMenu.Name = "trayGpuEnabledMenu";
-            this.trayGpuEnabledMenu.Size = new System.Drawing.Size(230, 22);
+            this.trayGpuEnabledMenu.Size = new System.Drawing.Size(255, 22);
             this.trayGpuEnabledMenu.Text = "Show GPU temperature";
             this.trayGpuEnabledMenu.Click += new System.EventHandler(this.TrayGpuEnabledMenu_Click);
-            //
+            // 
             // trayCombinedMenu
-            //
+            // 
             this.trayCombinedMenu.Name = "trayCombinedMenu";
-            this.trayCombinedMenu.Size = new System.Drawing.Size(230, 22);
+            this.trayCombinedMenu.Size = new System.Drawing.Size(255, 22);
             this.trayCombinedMenu.Text = "Combine CPU and GPU";
             this.trayCombinedMenu.Click += new System.EventHandler(this.TrayCombinedMenu_Click);
-            //
+            // 
+            // trayMenuSeparatorDisplay
+            // 
+            this.trayMenuSeparatorDisplay.Name = "trayMenuSeparatorDisplay";
+            this.trayMenuSeparatorDisplay.Size = new System.Drawing.Size(252, 6);
+            // 
             // trayFahrenheitMenu
-            //
+            // 
             this.trayFahrenheitMenu.Name = "trayFahrenheitMenu";
-            this.trayFahrenheitMenu.Size = new System.Drawing.Size(230, 22);
+            this.trayFahrenheitMenu.Size = new System.Drawing.Size(255, 22);
             this.trayFahrenheitMenu.Text = "Use Fahrenheit";
             this.trayFahrenheitMenu.Click += new System.EventHandler(this.TrayFahrenheitMenu_Click);
-            //
+            // 
             // trayTemperatureColorsMenu
-            //
+            // 
             this.trayTemperatureColorsMenu.Name = "trayTemperatureColorsMenu";
-            this.trayTemperatureColorsMenu.Size = new System.Drawing.Size(230, 22);
+            this.trayTemperatureColorsMenu.Size = new System.Drawing.Size(255, 22);
             this.trayTemperatureColorsMenu.Text = "Temperature-based colors";
             this.trayTemperatureColorsMenu.Click += new System.EventHandler(this.TrayTemperatureColorsMenu_Click);
-            //
+            // 
             // trayConfigureColorsMenu
-            //
+            // 
             this.trayConfigureColorsMenu.Name = "trayConfigureColorsMenu";
-            this.trayConfigureColorsMenu.Size = new System.Drawing.Size(230, 22);
+            this.trayConfigureColorsMenu.Size = new System.Drawing.Size(255, 22);
             this.trayConfigureColorsMenu.Text = "Configure temperature colors...";
             this.trayConfigureColorsMenu.Click += new System.EventHandler(this.TrayConfigureColorsMenu_Click);
-            //
+            // 
             // openSettingsTray
-            //
+            // 
             this.openSettingsTray.Name = "openSettingsTray";
-            this.openSettingsTray.Size = new System.Drawing.Size(219, 22);
+            this.openSettingsTray.Size = new System.Drawing.Size(148, 22);
             this.openSettingsTray.Text = "Open Settings";
             this.openSettingsTray.Click += new System.EventHandler(this.OpenSettingsTray_Click);
+            // 
+            // trayMenuSeparatorBottom
+            // 
+            this.trayMenuSeparatorBottom.Name = "trayMenuSeparatorBottom";
+            this.trayMenuSeparatorBottom.Size = new System.Drawing.Size(145, 6);
             // 
             // SettingsTray
             // 
