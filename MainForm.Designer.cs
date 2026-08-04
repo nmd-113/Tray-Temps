@@ -2069,7 +2069,7 @@
             this.ShowForm.ForeColor = System.Drawing.Color.White;
             this.ShowForm.ImageTransparentColor = System.Drawing.Color.FromArgb(((int)(((byte)(25)))), ((int)(((byte)(25)))), ((int)(((byte)(25)))));
             this.ShowForm.Name = "ShowForm";
-            this.ShowForm.Size = new System.Drawing.Size(219, 30);
+            this.ShowForm.Size = new System.Drawing.Size(145, 30);
             this.ShowForm.Text = "🖥️ Show Window";
             this.ShowForm.Click += new System.EventHandler(this.ShowForm_Click);
             // 
@@ -2090,7 +2090,7 @@
             this.trayTemperatureColorsMenu,
             this.trayConfigureColorsMenu});
             this.trayDisplayMenu.Name = "trayDisplayMenu";
-            this.trayDisplayMenu.Size = new System.Drawing.Size(219, 30);
+            this.trayDisplayMenu.Size = new System.Drawing.Size(145, 30);
             this.trayDisplayMenu.Text = "Display";
             // 
             // trayCpuEnabledMenu
@@ -2150,7 +2150,7 @@
             // 
             this.openSettingsTray.AutoSize = false;
             this.openSettingsTray.Name = "openSettingsTray";
-            this.openSettingsTray.Size = new System.Drawing.Size(219, 30);
+            this.openSettingsTray.Size = new System.Drawing.Size(145, 30);
             this.openSettingsTray.Text = "Open Settings";
             this.openSettingsTray.Click += new System.EventHandler(this.OpenSettingsTray_Click);
             // 
@@ -2165,7 +2165,7 @@
             this.SettingsTray.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.SettingsTray.ForeColor = System.Drawing.Color.Red;
             this.SettingsTray.Name = "SettingsTray";
-            this.SettingsTray.Size = new System.Drawing.Size(219, 30);
+            this.SettingsTray.Size = new System.Drawing.Size(145, 30);
             this.SettingsTray.Text = "❌ Exit";
             this.SettingsTray.Click += new System.EventHandler(this.ExitForm_Click);
             // 
