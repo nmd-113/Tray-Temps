@@ -29,6 +29,7 @@ namespace TrayTemps
         private const int IconSize = 16;
         private const int CsDropShadow = 0x00020000;
         private const int MainMenuShadowWidth = 10;
+        private const int ResizeGripLogicalPixels = 8;
         private const decimal MinimumRefreshIntervalSeconds = 0.25M;
         private const decimal DefaultRefreshIntervalSeconds = 0.50M;
         private const decimal MaximumRefreshIntervalSeconds = 10M;
@@ -36,6 +37,7 @@ namespace TrayTemps
         private const int MaximumIconSizePercent = 100;
         private const int DefaultIconSizePercent = 90;
         private const int StartupTaskQueryTimeoutMs = 2000;
+        private static readonly TimeSpan TemperatureAlertCooldown = TimeSpan.FromSeconds(5);
         private const string GitHubTagsApiUrl = "https://api.github.com/repos/nmd-113/Tray-Temps/tags?per_page=100";
         private const string GitHubReleasePageUrl = "https://github.com/nmd-113/Tray-Temps/releases/tag/";
         private static readonly Size HardwareDialogMinimumSize = new Size(640, 440);
@@ -47,10 +49,12 @@ namespace TrayTemps
         private List<IHardware> _cpuHardwares;
         private IHardware _selectedCpuHardware;
         private string _selectedCpuIdentifier;
+        private string _savedCpuTemperatureSensorIdentifier;
 
         private List<IHardware> _gpuHardwares;
         private IHardware _selectedGpuHardware;
         private string _selectedGpuIdentifier;
+        private string _savedGpuTemperatureSensorIdentifier;
 
         private List<IHardware> _storageHardwares;
         private List<string> _wmiStorageDisplayNames = new List<string>();
@@ -69,6 +73,7 @@ namespace TrayTemps
         public Color NormalColor;
         public Color WarningColor;
         public Color CriticalColor;
+        public bool TemperatureAlertsEnabled { get; set; }
 
         public FontFamily BunkenBold;
         public FontFamily BunkenRegular;
@@ -110,11 +115,15 @@ namespace TrayTemps
         private bool _resourcesDisposed = false;
         private bool _sensorElevationPromptShown = false;
         private bool _isInitializingHardwareSelectors = false;
+        private bool _isInitializingTemperatureSensorSelectors = false;
         private bool _temperatureTimerConfigured = false;
         private readonly bool _startHiddenFromCommandLine;
         private bool _initialWindowDisplaySuppressed = true;
         private int _cpuInvalidSensorCycles;
         private int _gpuInvalidSensorCycles;
+        private bool _cpuHotAlertRaised;
+        private bool _gpuHotAlertRaised;
+        private DateTime _nextTemperatureAlertUtc = DateTime.MinValue;
         private Rectangle? _savedHardwareDialogBounds;
         private Rectangle? _lastNormalWindowBounds;
         private bool _restoreLastWindowBoundsWhenShown;
@@ -144,6 +153,7 @@ namespace TrayTemps
 
         private const int WM_NCLBUTTONDOWN = 0xA1;
         private const int HTCAPTION = 0x2;
+        private const int HTBOTTOMRIGHT = 17;
 
         [DllImport("user32.dll")]
         private static extern bool ReleaseCapture();
@@ -153,6 +163,23 @@ namespace TrayTemps
 
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool DestroyIcon(IntPtr hIcon);
+
+        #endregion
+
+        #region [ Custom Controls ]
+
+        private sealed class ResizeGripPanel : Panel
+        {
+            public ResizeGripPanel()
+            {
+                SetStyle(
+                    ControlStyles.UserPaint |
+                    ControlStyles.AllPaintingInWmPaint |
+                    ControlStyles.OptimizedDoubleBuffer |
+                    ControlStyles.SupportsTransparentBackColor,
+                    true);
+            }
+        }
 
         #endregion
 
@@ -273,6 +300,8 @@ namespace TrayTemps
                 return;
             }
 
+            if (resizeGrip != null && !resizeGrip.IsDisposed)
+                UpdateResizeGripSize();
             RememberNormalWindowBounds();
         }
 
@@ -286,15 +315,15 @@ namespace TrayTemps
         {
             const int WM_NCHITTEST = 0x84;
             const int HTLEFT = 10, HTRIGHT = 11, HTTOP = 12, HTTOPLEFT = 13;
-            const int HTTOPRIGHT = 14, HTBOTTOM = 15, HTBOTTOMLEFT = 16, HTBOTTOMRIGHT = 17;
-            const int resizeAreaSize = 10;
+            const int HTTOPRIGHT = 14, HTBOTTOM = 15, HTBOTTOMLEFT = 16;
+            int resizeAreaSize = GetResizeGripSize();
 
             base.WndProc(ref m);
 
             if (m.Msg == WM_NCHITTEST)
             {
-                int x = (int)(m.LParam.ToInt64() & 0xFFFF);
-                int y = (int)((m.LParam.ToInt64() >> 16) & 0xFFFF);
+                int x = (short)(m.LParam.ToInt64() & 0xFFFF);
+                int y = (short)((m.LParam.ToInt64() >> 16) & 0xFFFF);
                 Point cursor = PointToClient(new Point(x, y));
 
                 bool left = cursor.X <= resizeAreaSize;
@@ -311,6 +340,65 @@ namespace TrayTemps
                 else if (top) m.Result = (IntPtr)HTTOP;
                 else if (bottom) m.Result = (IntPtr)HTBOTTOM;
             }
+        }
+
+        private int GetResizeGripSize()
+        {
+            int dpi = DeviceDpi > 0 ? DeviceDpi : 96;
+            return Math.Max(6, (int)Math.Round(ResizeGripLogicalPixels * dpi / 96d));
+        }
+
+        private void UpdateResizeGripSize()
+        {
+            if (resizeGrip == null || resizeGrip.IsDisposed)
+                return;
+
+            int size = GetResizeGripSize() * 2 + 4;
+            Size desiredSize = new Size(size, size);
+
+            if (resizeGrip.Size != desiredSize)
+                resizeGrip.Size = desiredSize;
+
+            resizeGrip.Location = new Point(
+                Math.Max(0, panelWrapper.ClientSize.Width - size),
+                Math.Max(0, panelWrapper.ClientSize.Height - size));
+        }
+
+        private void ResizeGrip_Paint(object sender, PaintEventArgs e)
+        {
+            if (!(sender is Control grip))
+                return;
+
+            int dpi = DeviceDpi > 0 ? DeviceDpi : 96;
+            int inset = Math.Max(3, (int)Math.Round(3d * dpi / 96d));
+            int spacing = Math.Max(3, (int)Math.Round(3d * dpi / 96d));
+            int length = Math.Max(5, (int)Math.Round(5d * dpi / 96d));
+            Color color = IsLightModeEnabled
+                ? Color.FromArgb(125, 75, 75, 75)
+                : Color.FromArgb(65, 170, 170, 170);
+
+            using (var pen = new Pen(color, Math.Max(1f, dpi / 96f)))
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    int offset = i * spacing;
+                    e.Graphics.DrawLine(
+                        pen,
+                        grip.Width - inset - length - offset,
+                        grip.Height - inset,
+                        grip.Width - inset,
+                        grip.Height - inset - length - offset);
+                }
+            }
+        }
+
+        private void ResizeGrip_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Left || WindowState == FormWindowState.Maximized)
+                return;
+
+            ReleaseCapture();
+            SendMessage(Handle, WM_NCLBUTTONDOWN, HTBOTTOMRIGHT, 0);
         }
 
         private void MainForm_MouseDown(object sender, MouseEventArgs e)
@@ -570,6 +658,7 @@ namespace TrayTemps
                 UpdateTemperatures(cpuTemp, gpuTemp);
                 UpdateTemperatureTrayCheckboxAvailability();
                 UpdateAllTrayIcons(cpuTemp, gpuTemp);
+                EvaluateTemperatureAlerts(cpuTemp, gpuTemp);
             }
             catch (Exception ex)
             {
@@ -702,6 +791,78 @@ namespace TrayTemps
                 SetTextIfChanged(gpuTempMin, "N/A");
                 SetTextIfChanged(gpuTempMax, "N/A");
             }
+        }
+
+        private void EvaluateTemperatureAlerts(float? cpuTemp, float? gpuTemp)
+        {
+            if (!TemperatureAlertsEnabled)
+            {
+                ResetTemperatureAlertState();
+                return;
+            }
+
+            UpdateHotTemperatureAlert(ref _cpuHotAlertRaised, "CPU", cpuTemp);
+            UpdateHotTemperatureAlert(ref _gpuHotAlertRaised, "GPU", gpuTemp);
+        }
+
+        private void UpdateHotTemperatureAlert(ref bool alertRaised, string deviceName, float? temperature)
+        {
+            if (!temperature.HasValue || temperature.Value <= WarmTempMax)
+            {
+                alertRaised = false;
+                return;
+            }
+
+            if (alertRaised)
+                return;
+
+            if (DateTime.UtcNow < _nextTemperatureAlertUtc)
+                return;
+
+            NotifyIcon alertIcon = GetVisibleTrayIconForAlert();
+            if (alertIcon == null)
+                return;
+
+            bool useFahrenheit = UsesFahrenheit;
+            string unit = TemperatureFormatHelper.GetUnit(useFahrenheit);
+            float displayTemperature = TemperatureFormatHelper.GetDisplayTemp(temperature.Value, useFahrenheit);
+            float displayThreshold = TemperatureFormatHelper.GetDisplayTemp(WarmTempMax, useFahrenheit);
+
+            try
+            {
+                alertIcon.ShowBalloonTip(
+                    5000,
+                    $"TrayTemps: {deviceName} temperature is Hot",
+                    $"{deviceName} is {displayTemperature:F0}{unit}. Hot threshold: {displayThreshold:F0}{unit}.",
+                    ToolTipIcon.Warning);
+                alertRaised = true;
+                _nextTemperatureAlertUtc = DateTime.UtcNow + TemperatureAlertCooldown;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("Temperature alert failed: " + ex);
+            }
+        }
+
+        private void ResetTemperatureAlertState()
+        {
+            _cpuHotAlertRaised = false;
+            _gpuHotAlertRaised = false;
+            _nextTemperatureAlertUtc = DateTime.MinValue;
+        }
+
+        private NotifyIcon GetVisibleTrayIconForAlert()
+        {
+            if (cpuTrayIcon?.Visible == true)
+                return cpuTrayIcon;
+
+            if (gpuTrayIcon?.Visible == true)
+                return gpuTrayIcon;
+
+            if (NotifyIcon?.Visible == true)
+                return NotifyIcon;
+
+            return null;
         }
 
         private static void SetTextIfChanged(Control control, string text)
@@ -1520,6 +1681,7 @@ namespace TrayTemps
             _startMinimizedWithAdminRights = true;
             UpdateMinimizeOnStartLabel();
             ShowTemperatureColorCorners = true;
+            TemperatureAlertsEnabled = false;
 
             SelectRefreshInterval(DefaultRefreshIntervalSeconds);
             SelectIconSize(DefaultIconSizePercent);
@@ -1567,6 +1729,7 @@ namespace TrayTemps
                     CpuTrayIcon = _desiredEnableCpuTray,
                     GpuTrayIcon = _desiredEnableGpuTray,
                     TempBasedIconColor = _desiredColorTempsEnabled,
+                    TemperatureAlertsEnabled = TemperatureAlertsEnabled,
                     ShowTemperatureColorCorners = ShowTemperatureColorCorners,
                     UpdateInterval = GetSelectedRefreshInterval(),
                     MinWarmTemp = WarmTempMin,
@@ -1584,6 +1747,8 @@ namespace TrayTemps
                     StorageIndex = storageIndexSelect.SelectedIndex,
                     CpuIdentifier = _selectedCpuIdentifier,
                     GpuIdentifier = _selectedGpuIdentifier,
+                    CpuTemperatureSensorIdentifier = GetSelectedTemperatureSensorIdentifier(cpuTempSensorSelect),
+                    GpuTemperatureSensorIdentifier = GetSelectedTemperatureSensorIdentifier(gpuTempSensorSelect),
                     StorageIdentifier = _selectedStorageIdentifier,
                     InstallFolder = InstallPath,
                     StartMinimizedToTray = minimizeOnStart.Checked,
@@ -1764,6 +1929,7 @@ namespace TrayTemps
             enableCpuTray.Checked = settings.CpuTrayIcon;
             enableGpuTray.Checked = settings.GpuTrayIcon;
             colortempsEnable.Checked = settings.TempBasedIconColor;
+            TemperatureAlertsEnabled = settings.TemperatureAlertsEnabled;
             ShowTemperatureColorCorners = settings.ShowTemperatureColorCorners;
 
             _desiredEnableCpuTray = enableCpuTray.Checked;
@@ -1798,6 +1964,8 @@ namespace TrayTemps
             _savedStorageIndex = Math.Max(0, settings.StorageIndex);
             _savedCpuIdentifier = settings.CpuIdentifier;
             _savedGpuIdentifier = settings.GpuIdentifier;
+            _savedCpuTemperatureSensorIdentifier = settings.CpuTemperatureSensorIdentifier;
+            _savedGpuTemperatureSensorIdentifier = settings.GpuTemperatureSensorIdentifier;
             _savedStorageIdentifier = settings.StorageIdentifier;
 
             InstallPath = settings.InstallFolder;
@@ -2068,7 +2236,7 @@ namespace TrayTemps
 
         private void ApplyThemeToInputsAndButtons(ThemePalette theme)
         {
-            ApplyComboBoxTheme(theme, IsLightModeEnabled, refreshValue, iconsizeValue, fontFamilyValue, cpuIndexSelect, gpuIndexSelect, storageIndexSelect);
+            ApplyComboBoxTheme(theme, IsLightModeEnabled, refreshValue, iconsizeValue, fontFamilyValue, cpuTempSensorSelect, gpuTempSensorSelect, cpuIndexSelect, gpuIndexSelect, storageIndexSelect);
             ApplyNavButtonTheme(theme, homeBtn, settingsBtn, aboutBtn);
             ApplyWindowButtonTheme(theme, minimizeBtn);
             ApplyWindowButtonTheme(theme, exitBtn);
@@ -2703,34 +2871,36 @@ namespace TrayTemps
         private void ClearSettings_Click(object sender, EventArgs e)
         {
             DialogResult result = MessageBox.Show(
-                "All settings will be reset to default values and the application will restart. Do you want to continue?",
+                "Reset in-app settings to their default values?",
                 "Reset Settings",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Warning);
 
-            if (result == DialogResult.Yes)
+            if (result != DialogResult.Yes)
+                return;
+
+            try
             {
+                bool settingsWereLoaded = _settingsLoaded;
+                _settingsLoaded = false;
+                _isInternalCheckChange = true;
+
                 try
                 {
-                    // 1. Set this flag to false so MainForm_FormClosing -> SaveSettings() 
-                    // does not overwrite our deletion with current memory values.
-                    _settingsLoaded = false;
-
-                    // 2. Delete the primary file and all recovery candidates.
-                    foreach (string settingsPath in new[] { SettingsFilePath, SettingsFilePath + ".tmp", SettingsFilePath + ".bak" })
-                    {
-                        if (File.Exists(settingsPath))
-                            File.Delete(settingsPath);
-                    }
-
-                    // 3. Restart through the normal WinForms lifecycle so form-closing
-                    // cleanup still disposes hardware and tray resources.
-                    Application.Restart();
+                    SetDefaultControlValues();
                 }
-                catch (Exception ex)
+                finally
                 {
-                    MessageBox.Show($"Error resetting settings: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    _isInternalCheckChange = false;
+                    _settingsLoaded = settingsWereLoaded;
                 }
+
+                ApplyPostLoadUiSync();
+                SaveSettings();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error resetting settings: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -2740,6 +2910,8 @@ namespace TrayTemps
             int h = ramDetails.Height;
             cpuIndexSelect.ItemHeight = h;
             gpuIndexSelect.ItemHeight = h;
+            cpuTempSensorSelect.ItemHeight = h;
+            gpuTempSensorSelect.ItemHeight = h;
             storageIndexSelect.ItemHeight = h;
             this.ResumeLayout(true);
         }
@@ -3154,12 +3326,19 @@ namespace TrayTemps
             if (!ApplySelectedCpuHardwareFromCurrentIndex(updateHardware: true))
                 return;
 
-            _cpuMinTemp = float.MaxValue;
-            _cpuMaxTemp = float.MinValue;
+            ResetCpuTemperatureDisplayState();
 
-            _lastCpuTempText = null;
-            UpdateTemperatureTrayCheckboxAvailability();
+            TempTimer_Tick(this, EventArgs.Empty);
+        }
 
+        private void CpuTempSensorSelect_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (_isInitializingHardwareSelectors || _isInitializingTemperatureSensorSelectors || _selectedCpuHardware == null)
+                return;
+
+            _cpuTempSensor = GetConfiguredTemperatureSensor(cpuTempSensorSelect, _selectedCpuHardware, isCpu: true);
+            _savedCpuTemperatureSensorIdentifier = GetSelectedTemperatureSensorIdentifier(cpuTempSensorSelect);
+            ResetCpuTemperatureDisplayState();
             TempTimer_Tick(this, EventArgs.Empty);
         }
 
@@ -3171,13 +3350,42 @@ namespace TrayTemps
             if (!ApplySelectedGpuHardwareFromCurrentIndex(updateHardware: true))
                 return;
 
-            _gpuMinTemp = float.MaxValue;
-            _gpuMaxTemp = float.MinValue;
-
-            _lastGpuTempText = null;
-            UpdateTemperatureTrayCheckboxAvailability();
+            ResetGpuTemperatureDisplayState();
 
             TempTimer_Tick(this, EventArgs.Empty);
+        }
+
+        private void GpuTempSensorSelect_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (_isInitializingHardwareSelectors || _isInitializingTemperatureSensorSelectors || _selectedGpuHardware == null)
+                return;
+
+            _gpuTempSensor = GetConfiguredTemperatureSensor(gpuTempSensorSelect, _selectedGpuHardware, isCpu: false);
+            _savedGpuTemperatureSensorIdentifier = GetSelectedTemperatureSensorIdentifier(gpuTempSensorSelect);
+            ResetGpuTemperatureDisplayState();
+            TempTimer_Tick(this, EventArgs.Empty);
+        }
+
+        private void ResetCpuTemperatureDisplayState()
+        {
+            _cpuInvalidSensorCycles = 0;
+            _cpuMinTemp = float.MaxValue;
+            _cpuMaxTemp = float.MinValue;
+            _lastCpuTempText = null;
+            _cpuHotAlertRaised = false;
+            _nextTemperatureAlertUtc = DateTime.MinValue;
+            UpdateTemperatureTrayCheckboxAvailability();
+        }
+
+        private void ResetGpuTemperatureDisplayState()
+        {
+            _gpuInvalidSensorCycles = 0;
+            _gpuMinTemp = float.MaxValue;
+            _gpuMaxTemp = float.MinValue;
+            _lastGpuTempText = null;
+            _gpuHotAlertRaised = false;
+            _nextTemperatureAlertUtc = DateTime.MinValue;
+            UpdateTemperatureTrayCheckboxAvailability();
         }
 
         private bool ApplySelectedCpuHardwareFromCurrentIndex(bool updateHardware)
@@ -3218,7 +3426,8 @@ namespace TrayTemps
             if (updateHardware)
                 UpdateHardwareRecursive(_selectedCpuHardware);
 
-            _cpuTempSensor = SelectPreferredCpuTemperatureSensor(_selectedCpuHardware);
+            PopulateTemperatureSensorSelector(cpuTempSensorSelect, _selectedCpuHardware, _savedCpuTemperatureSensorIdentifier);
+            _cpuTempSensor = GetConfiguredTemperatureSensor(cpuTempSensorSelect, _selectedCpuHardware, isCpu: true);
             _cpuInvalidSensorCycles = 0;
         }
 
@@ -3230,8 +3439,114 @@ namespace TrayTemps
             if (updateHardware)
                 UpdateHardwareRecursive(_selectedGpuHardware);
 
-            _gpuTempSensor = SelectPreferredGpuTemperatureSensor(_selectedGpuHardware);
+            PopulateTemperatureSensorSelector(gpuTempSensorSelect, _selectedGpuHardware, _savedGpuTemperatureSensorIdentifier);
+            _gpuTempSensor = GetConfiguredTemperatureSensor(gpuTempSensorSelect, _selectedGpuHardware, isCpu: false);
             _gpuInvalidSensorCycles = 0;
+        }
+
+        private void PopulateTemperatureSensorSelector(ComboBox selector, IHardware hardware, string savedSensorIdentifier)
+        {
+            _isInitializingTemperatureSensorSelectors = true;
+            selector.BeginUpdate();
+
+            try
+            {
+                selector.Items.Clear();
+                selector.Items.Add(new TemperatureSensorOption(null, "Auto"));
+
+                foreach (ISensor sensor in GetTemperatureSensorsForSelection(hardware))
+                    selector.Items.Add(new TemperatureSensorOption(sensor, sensor.Name));
+
+                int selectedIndex = FindTemperatureSensorIndex(selector, savedSensorIdentifier);
+                selector.SelectedIndex = selectedIndex >= 0 ? selectedIndex : 0;
+                selector.Enabled = selector.Items.Count > 1;
+            }
+            finally
+            {
+                selector.EndUpdate();
+                _isInitializingTemperatureSensorSelectors = false;
+            }
+        }
+
+        private static List<ISensor> GetTemperatureSensorsForSelection(IHardware hardware)
+        {
+            if (hardware == null)
+                return new List<ISensor>();
+
+            return hardware.Sensors
+                .Concat(EnumerateTemperatureSensorsRecursive(hardware.SubHardware))
+                .Where(sensor => sensor != null && sensor.SensorType == SensorType.Temperature)
+                .GroupBy(sensor => sensor.Identifier.ToString(), StringComparer.OrdinalIgnoreCase)
+                .Select(group => group.First())
+                .OrderBy(GetTemperatureSensorPriority)
+                .ThenBy(sensor => sensor.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        private static int GetTemperatureSensorPriority(ISensor sensor)
+        {
+            string name = sensor?.Name ?? string.Empty;
+
+            if (name.IndexOf("Package", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                name.IndexOf("Tctl", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                name.IndexOf("Tdie", StringComparison.OrdinalIgnoreCase) >= 0)
+                return 0;
+
+            if (name.IndexOf("Hot Spot", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                name.IndexOf("Hotspot", StringComparison.OrdinalIgnoreCase) >= 0)
+                return 1;
+
+            if (name.IndexOf("Core", StringComparison.OrdinalIgnoreCase) >= 0)
+                return 2;
+
+            return 3;
+        }
+
+        private static int FindTemperatureSensorIndex(ComboBox selector, string sensorIdentifier)
+        {
+            if (string.IsNullOrWhiteSpace(sensorIdentifier))
+                return 0;
+
+            for (int i = 1; i < selector.Items.Count; i++)
+            {
+                if (selector.Items[i] is TemperatureSensorOption option &&
+                    string.Equals(option.Identifier, sensorIdentifier, StringComparison.OrdinalIgnoreCase))
+                    return i;
+            }
+
+            return 0;
+        }
+
+        private static string GetSelectedTemperatureSensorIdentifier(ComboBox selector)
+        {
+            return (selector?.SelectedItem as TemperatureSensorOption)?.Identifier ?? string.Empty;
+        }
+
+        private static ISensor GetConfiguredTemperatureSensor(ComboBox selector, IHardware hardware, bool isCpu)
+        {
+            ISensor sensor = (selector?.SelectedItem as TemperatureSensorOption)?.Sensor;
+            if (sensor != null)
+                return sensor;
+
+            return isCpu
+                ? SelectPreferredCpuTemperatureSensor(hardware)
+                : SelectPreferredGpuTemperatureSensor(hardware);
+        }
+
+        private sealed class TemperatureSensorOption
+        {
+            public TemperatureSensorOption(ISensor sensor, string displayName)
+            {
+                Sensor = sensor;
+                Identifier = sensor?.Identifier.ToString() ?? string.Empty;
+                DisplayName = displayName;
+            }
+
+            public ISensor Sensor { get; }
+            public string Identifier { get; }
+            public string DisplayName { get; }
+
+            public override string ToString() => DisplayName;
         }
 
         private static ISensor SelectPreferredCpuTemperatureSensor(IHardware cpuHardware)
@@ -3317,7 +3632,7 @@ namespace TrayTemps
             }
             else if (++_cpuInvalidSensorCycles >= RescanAfterInvalidCycles && _selectedCpuHardware != null)
             {
-                _cpuTempSensor = SelectPreferredCpuTemperatureSensor(_selectedCpuHardware);
+                _cpuTempSensor = GetConfiguredTemperatureSensor(cpuTempSensorSelect, _selectedCpuHardware, isCpu: true);
                 _cpuInvalidSensorCycles = 0;
             }
 
@@ -3327,7 +3642,7 @@ namespace TrayTemps
             }
             else if (++_gpuInvalidSensorCycles >= RescanAfterInvalidCycles && _selectedGpuHardware != null)
             {
-                _gpuTempSensor = SelectPreferredGpuTemperatureSensor(_selectedGpuHardware);
+                _gpuTempSensor = GetConfiguredTemperatureSensor(gpuTempSensorSelect, _selectedGpuHardware, isCpu: false);
                 _gpuInvalidSensorCycles = 0;
             }
         }

@@ -9,6 +9,7 @@
     public bool CpuTrayIcon { get; set; } = false;
     public bool GpuTrayIcon { get; set; } = false;
     public bool TempBasedIconColor { get; set; } = false;
+    public bool TemperatureAlertsEnabled { get; set; } = false;
     public bool ShowTemperatureColorCorners { get; set; } = true;
     public decimal UpdateInterval { get; set; } = 0.50M;
     public int FontFamily { get; set; } = 0;
@@ -23,6 +24,8 @@
     // settings, but prefer these stable LibreHardwareMonitor identifiers.
     public string CpuIdentifier { get; set; } = "";
     public string GpuIdentifier { get; set; } = "";
+    public string CpuTemperatureSensorIdentifier { get; set; } = "";
+    public string GpuTemperatureSensorIdentifier { get; set; } = "";
     public string StorageIdentifier { get; set; } = "";
     public int MinWarmTemp { get; set; } = 60;
     public int MaxWarmTemp { get; set; } = 80;
