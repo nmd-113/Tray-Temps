@@ -10,16 +10,20 @@ namespace TrayTemps
     {
         private const string SingleInstanceMutexName = "TrayTemps_SingleInstance_Mutex";
         private const string ElevatedRestartArgument = "-elevated-restart";
-        private const int ElevatedRestartRetryCount = 50;
-        private const int ElevatedRestartRetryDelayMs = 100;
+        private const string DpiRestartArgument = "-dpi-restart";
+        private const string SilentArgument = "-silent";
+        private const int RestartRetryCount = 150;
+        private const int RestartRetryDelayMs = 100;
 
-        public static bool RequestElevatedRestart(string arguments = null)
+        public static bool RequestElevatedRestart(bool startHidden = false, bool forceVisible = false)
         {
             try
             {
-                string combinedArguments = string.IsNullOrWhiteSpace(arguments)
-                    ? ElevatedRestartArgument
-                    : arguments + " " + ElevatedRestartArgument;
+                string combinedArguments = forceVisible
+                    ? DpiRestartArgument + " " + ElevatedRestartArgument
+                    : startHidden
+                        ? SilentArgument + " " + ElevatedRestartArgument
+                        : ElevatedRestartArgument;
 
                 var startInfo = new ProcessStartInfo
                 {
@@ -39,22 +43,47 @@ namespace TrayTemps
             }
         }
 
+        public static bool RequestDpiRestart(bool startHidden)
+        {
+            try
+            {
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = Application.ExecutablePath,
+                    WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory,
+                    UseShellExecute = true,
+                    Arguments = startHidden
+                        ? DpiRestartArgument + " " + SilentArgument
+                        : DpiRestartArgument
+                };
+
+                return Process.Start(startInfo) != null;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("DPI restart failed: " + ex);
+                return false;
+            }
+        }
+
         [STAThread]
         static void Main(string[] args)
         {
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+
             bool isElevatedRestart = HasArgument(args, ElevatedRestartArgument);
+            bool isDpiRestart = HasArgument(args, DpiRestartArgument);
+            bool startHidden = HasArgument(args, SilentArgument);
             bool createdNew;
-            Mutex mutex = AcquireSingleInstanceMutex(isElevatedRestart, out createdNew);
+            Mutex mutex = AcquireSingleInstanceMutex(isElevatedRestart || isDpiRestart, out createdNew);
 
             if (!createdNew || mutex == null)
                 return;
 
             using (mutex)
             {
-                Application.EnableVisualStyles();
-                Application.SetCompatibleTextRenderingDefault(false);
-
-                var mainForm = new MainForm(HasArgument(args, "-silent"));
+                var mainForm = new MainForm(startHidden, isDpiRestart && !startHidden);
 
                 Application.Run(mainForm);
             }
@@ -62,7 +91,7 @@ namespace TrayTemps
 
         private static Mutex AcquireSingleInstanceMutex(bool waitForPreviousInstance, out bool createdNew)
         {
-            int attempts = waitForPreviousInstance ? ElevatedRestartRetryCount : 1;
+            int attempts = waitForPreviousInstance ? RestartRetryCount : 1;
 
             for (int i = 0; i < attempts; i++)
             {
@@ -74,7 +103,7 @@ namespace TrayTemps
                 mutex.Dispose();
 
                 if (waitForPreviousInstance && i < attempts - 1)
-                    Thread.Sleep(ElevatedRestartRetryDelayMs);
+                    Thread.Sleep(RestartRetryDelayMs);
             }
 
             createdNew = false;

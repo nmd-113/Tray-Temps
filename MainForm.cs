@@ -27,6 +27,7 @@ namespace TrayTemps
         private string InstallPath;
         private string SettingsFilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), AppName, "settings.json");
         private const int IconSize = 16;
+        private const int SmCxSmallIcon = 49;
         private const int CsDropShadow = 0x00020000;
         private const int MainMenuShadowWidth = 10;
         private const int ResizeGripLogicalPixels = 8;
@@ -58,14 +59,11 @@ namespace TrayTemps
 
         private List<IHardware> _storageHardwares;
         private List<string> _wmiStorageDisplayNames = new List<string>();
-        private string _selectedStorageIdentifier;
 
         private int _savedCpuIndex = 0;
         private int _savedGpuIndex = 0;
-        private int _savedStorageIndex = 0;
         private string _savedCpuIdentifier;
         private string _savedGpuIdentifier;
-        private string _savedStorageIdentifier;
 
         public int WarmTempMin;
         public int WarmTempMax;
@@ -118,6 +116,7 @@ namespace TrayTemps
         private bool _isInitializingTemperatureSensorSelectors = false;
         private bool _temperatureTimerConfigured = false;
         private readonly bool _startHiddenFromCommandLine;
+        private readonly bool _forceVisibleOnStartup;
         private bool _initialWindowDisplaySuppressed = true;
         private int _cpuInvalidSensorCycles;
         private int _gpuInvalidSensorCycles;
@@ -127,18 +126,29 @@ namespace TrayTemps
         private Rectangle? _savedHardwareDialogBounds;
         private Rectangle? _lastNormalWindowBounds;
         private bool _restoreLastWindowBoundsWhenShown;
+        private bool _explicitShowPending;
 
         private bool IsStartMinimizedWithAdminRights =>
             minimizeOnStart != null && minimizeOnStart.Checked && _startMinimizedWithAdminRights;
 
         private bool ShouldStartHidden =>
-            _startHiddenFromCommandLine || (minimizeOnStart != null && minimizeOnStart.Checked);
+            !_forceVisibleOnStartup &&
+            (_startHiddenFromCommandLine || (minimizeOnStart != null && minimizeOnStart.Checked));
+
+        private bool ShouldDpiRestartHidden =>
+            !_explicitShowPending &&
+            (!Visible || WindowState == FormWindowState.Minimized || _restoreLastWindowBoundsWhenShown);
 
         private readonly object _hardwareUpdateLock = new object();
         private readonly List<HardwareDetailsDialog> _openHardwareDialogs = new List<HardwareDetailsDialog>();
 
         private string _trayFontFamily;
+        private int _lastTrayIconPixelSize;
         private float _dpiScale = 1f;
+        private bool _dpiMonitoringReady;
+        private bool _dpiRestartPending;
+        private bool _windowMoveResizeActive;
+        private DpiRestartRequest? _deferredDpiRestart;
         private Color _darkWindowBackColor = Color.FromArgb(21, 21, 21);
         private Color _darkPanelBackColor = Color.FromArgb(25, 25, 25);
 
@@ -152,6 +162,7 @@ namespace TrayTemps
         #region [ Native Methods ]
 
         private const int WM_NCLBUTTONDOWN = 0xA1;
+        private const int WM_DPICHANGED = 0x02E0;
         private const int HTCAPTION = 0x2;
         private const int HTBOTTOMRIGHT = 17;
 
@@ -161,8 +172,45 @@ namespace TrayTemps
         [DllImport("user32.dll")]
         private static extern int SendMessage(IntPtr hWnd, int Msg, int wParam, int lParam);
 
+        [DllImport("user32.dll")]
+        private static extern int GetSystemMetrics(int nIndex);
+
+        [DllImport("user32.dll")]
+        private static extern uint GetDpiForSystem();
+
+        [DllImport("user32.dll")]
+        private static extern int GetSystemMetricsForDpi(int nIndex, uint dpi);
+
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool DestroyIcon(IntPtr hIcon);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct NativeRect
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+
+            public Rectangle ToRectangle()
+            {
+                return Rectangle.FromLTRB(Left, Top, Right, Bottom);
+            }
+        }
+
+        private struct DpiRestartRequest
+        {
+            public DpiRestartRequest(int newDpi, Rectangle? normalBounds, Rectangle? suggestedBounds)
+            {
+                NewDpi = newDpi;
+                NormalBounds = normalBounds;
+                SuggestedBounds = suggestedBounds;
+            }
+
+            public int NewDpi;
+            public Rectangle? NormalBounds;
+            public Rectangle? SuggestedBounds;
+        }
 
         #endregion
 
@@ -181,13 +229,33 @@ namespace TrayTemps
             }
         }
 
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+
+            if (!_dpiMonitoringReady)
+                RefreshCurrentDpiScale();
+
+            WindowCornerHelper.ApplyRoundedCorners(Handle);
+        }
+
+        private void RefreshCurrentDpiScale()
+        {
+            using (Graphics graphics = Graphics.FromHwnd(Handle))
+            {
+                if (graphics.DpiX > 0)
+                    _dpiScale = graphics.DpiX / 96f;
+            }
+        }
+
         #endregion
 
         #region [ Constructor / Form Lifecycle ]
 
-        public MainForm(bool startHiddenFromCommandLine = false)
+        public MainForm(bool startHiddenFromCommandLine = false, bool forceVisibleOnStartup = false)
         {
             _startHiddenFromCommandLine = startHiddenFromCommandLine;
+            _forceVisibleOnStartup = forceVisibleOnStartup;
             LoadFonts();
             InitializeComponent();
 
@@ -240,13 +308,10 @@ namespace TrayTemps
             {
                 appVersion.Text = $"Version: {Application.ProductVersion}";
 
-                using (var g = CreateGraphics())
-                {
-                    _dpiScale = g.DpiX / 96f;
-                }
-
                 SetDefaultControlValues();
                 LoadSettings();
+                RefreshCurrentDpiScale();
+                _dpiMonitoringReady = true;
                 RememberNormalWindowBounds();
                 CacheDisplaySettings();
 
@@ -311,17 +376,131 @@ namespace TrayTemps
             RememberNormalWindowBounds();
         }
 
+        private void QueueDpiRestart(DpiRestartRequest request)
+        {
+            if (_dpiRestartPending || IsDisposed || _isShutdownInitiated || _resourcesDisposed)
+                return;
+
+            _dpiRestartPending = true;
+
+            BeginInvoke((MethodInvoker)delegate
+            {
+                if (IsDisposed || _isShutdownInitiated || _resourcesDisposed)
+                {
+                    return;
+                }
+
+                bool startHidden = ShouldDpiRestartHidden;
+
+                if (!startHidden && request.SuggestedBounds.HasValue &&
+                    request.SuggestedBounds.Value.Width > 0 && request.SuggestedBounds.Value.Height > 0)
+                {
+                    _lastNormalWindowBounds = request.SuggestedBounds.Value;
+                }
+                else if (request.NormalBounds.HasValue)
+                {
+                    float scaleFactor = request.NewDpi / (_dpiScale * 96f);
+                    _lastNormalWindowBounds = ScaleWindowBounds(request.NormalBounds.Value, scaleFactor);
+                }
+
+                if (!Program.RequestDpiRestart(startHidden))
+                {
+                    _dpiRestartPending = false;
+                    _dpiScale = request.NewDpi / 96f;
+
+                    if (_explicitShowPending)
+                    {
+                        _explicitShowPending = false;
+                        ShowWindow();
+                    }
+                    else if (!startHidden)
+                    {
+                        RestoreInitialWindowDisplay();
+                    }
+
+                    return;
+                }
+
+                Hide();
+                Close();
+            });
+        }
+
+        private static Rectangle ScaleWindowBounds(Rectangle bounds, float scaleFactor)
+        {
+            return new Rectangle(
+                bounds.Location,
+                new Size(
+                    Math.Max(1, (int)Math.Round(bounds.Width * scaleFactor)),
+                    Math.Max(1, (int)Math.Round(bounds.Height * scaleFactor))));
+        }
+
         protected override void WndProc(ref Message m)
         {
             const int WM_NCHITTEST = 0x84;
+            const int WM_ENTERSIZEMOVE = 0x0231;
+            const int WM_EXITSIZEMOVE = 0x0232;
             const int HTLEFT = 10, HTRIGHT = 11, HTTOP = 12, HTTOPLEFT = 13;
             const int HTTOPRIGHT = 14, HTBOTTOM = 15, HTBOTTOMLEFT = 16;
-            int resizeAreaSize = GetResizeGripSize();
+
+            if (m.Msg == WM_ENTERSIZEMOVE)
+            {
+                _windowMoveResizeActive = true;
+                _deferredDpiRestart = null;
+            }
+
+            int newDpi = m.Msg == WM_DPICHANGED
+                ? unchecked((int)((long)m.WParam & 0xFFFF))
+                : 0;
+            bool dpiActuallyChanged = _dpiMonitoringReady &&
+                                      newDpi > 0 &&
+                                      Math.Abs(newDpi - (_dpiScale * 96f)) >= 1f;
+            bool restartHidden = ShouldDpiRestartHidden;
+            Rectangle? normalBounds = WindowState == FormWindowState.Normal && Visible
+                ? Bounds
+                : _lastNormalWindowBounds;
+            Rectangle? suggestedBounds = dpiActuallyChanged && !restartHidden && m.LParam != IntPtr.Zero
+                ? Marshal.PtrToStructure<NativeRect>(m.LParam).ToRectangle()
+                : (Rectangle?)null;
+            DpiRestartRequest? dpiRestart = dpiActuallyChanged
+                ? new DpiRestartRequest(newDpi, normalBounds, suggestedBounds)
+                : (DpiRestartRequest?)null;
 
             base.WndProc(ref m);
 
+            if (m.Msg == WM_DPICHANGED)
+            {
+                if (_windowMoveResizeActive)
+                    _deferredDpiRestart = dpiRestart;
+                else if (dpiRestart.HasValue)
+                    QueueDpiRestart(dpiRestart.Value);
+            }
+
+            if (m.Msg == WM_EXITSIZEMOVE)
+            {
+                _windowMoveResizeActive = false;
+
+                if (_deferredDpiRestart.HasValue)
+                {
+                    DpiRestartRequest request = _deferredDpiRestart.Value;
+
+                    if (Visible && WindowState == FormWindowState.Normal)
+                    {
+                        request = new DpiRestartRequest(
+                            request.NewDpi,
+                            request.NormalBounds,
+                            Bounds);
+                    }
+
+                    QueueDpiRestart(request);
+                }
+
+                _deferredDpiRestart = null;
+            }
+
             if (m.Msg == WM_NCHITTEST)
             {
+                int resizeAreaSize = GetResizeGripSize();
                 int x = (short)(m.LParam.ToInt64() & 0xFFFF);
                 int y = (short)((m.LParam.ToInt64() >> 16) & 0xFFFF);
                 Point cursor = PointToClient(new Point(x, y));
@@ -344,8 +523,7 @@ namespace TrayTemps
 
         private int GetResizeGripSize()
         {
-            int dpi = DeviceDpi > 0 ? DeviceDpi : 96;
-            return Math.Max(6, (int)Math.Round(ResizeGripLogicalPixels * dpi / 96d));
+            return Math.Max(6, (int)Math.Round(ResizeGripLogicalPixels * _dpiScale));
         }
 
         private void UpdateResizeGripSize()
@@ -369,15 +547,15 @@ namespace TrayTemps
             if (!(sender is Control grip))
                 return;
 
-            int dpi = DeviceDpi > 0 ? DeviceDpi : 96;
-            int inset = Math.Max(3, (int)Math.Round(3d * dpi / 96d));
-            int spacing = Math.Max(3, (int)Math.Round(3d * dpi / 96d));
-            int length = Math.Max(5, (int)Math.Round(5d * dpi / 96d));
+            float dpiScale = _dpiScale;
+            int inset = Math.Max(3, (int)Math.Round(3f * dpiScale));
+            int spacing = Math.Max(3, (int)Math.Round(3f * dpiScale));
+            int length = Math.Max(5, (int)Math.Round(5f * dpiScale));
             Color color = IsLightModeEnabled
                 ? Color.FromArgb(125, 75, 75, 75)
                 : Color.FromArgb(65, 170, 170, 170);
 
-            using (var pen = new Pen(color, Math.Max(1f, dpi / 96f)))
+            using (var pen = new Pen(color, Math.Max(1f, dpiScale)))
             {
                 for (int i = 0; i < 3; i++)
                 {
@@ -512,8 +690,10 @@ namespace TrayTemps
                         {
                             PopulateHardwareSelector(cpuIndexSelect, _cpuHardwares, GetSavedHardwareIndex(_cpuHardwares, _savedCpuIdentifier, _savedCpuIndex), cpuModel, "CPU");
                             PopulateHardwareSelector(gpuIndexSelect, _gpuHardwares, GetSavedHardwareIndex(_gpuHardwares, _savedGpuIdentifier, _savedGpuIndex), gpuModel, "GPU");
+                            cpuConfigButton.Enabled = _cpuHardwares != null && _cpuHardwares.Count > 0;
+                            gpuConfigButton.Enabled = _gpuHardwares != null && _gpuHardwares.Count > 0;
                             _wmiStorageDisplayNames = wmiStorageDisplayNames;
-                            PopulateStorageSelector(GetSavedStorageIndex());
+                            UpdateStorageDetailsText();
                         }
                         finally
                         {
@@ -522,7 +702,6 @@ namespace TrayTemps
 
                         ApplySelectedCpuHardwareFromCurrentIndex(updateHardware: false);
                         ApplySelectedGpuHardwareFromCurrentIndex(updateHardware: false);
-                        ApplySelectedStorageHardwareFromCurrentIndex();
                         UpdateTemperatureTrayCheckboxAvailability();
 
                         string cpuText = cpuModel.Text;
@@ -689,16 +868,41 @@ namespace TrayTemps
 
         private void ShowWindow()
         {
-            RestoreInitialWindowDisplay();
-            WindowState = FormWindowState.Normal;
-            // Keep bounds tracking suspended until the form is visible again.
-            // Windows can report a temporary position while displays resume.
-            RestoreLastWindowBoundsWhenShown();
-            Show();
-            _restoreLastWindowBoundsWhenShown = false;
-            BringToFront();
-            Activate();
-            UpdateTrayIcons();
+            _explicitShowPending = true;
+            bool restorationStarted = false;
+
+            try
+            {
+                if (_dpiRestartPending)
+                    return;
+
+                restorationStarted = true;
+                WindowState = FormWindowState.Normal;
+                // Keep bounds tracking suspended until the form is visible again.
+                // Windows can report a temporary position while displays resume.
+                RestoreLastWindowBoundsWhenShown();
+                Show();
+
+                if (_dpiRestartPending)
+                    return;
+
+                RestoreInitialWindowDisplay();
+
+                if (_dpiRestartPending)
+                    return;
+
+                BringToFront();
+                Activate();
+                UpdateTrayIcons();
+            }
+            finally
+            {
+                if (restorationStarted)
+                    _restoreLastWindowBoundsWhenShown = false;
+
+                if (!_dpiRestartPending)
+                    _explicitShowPending = false;
+            }
         }
 
         private void RestoreInitialWindowDisplay()
@@ -706,8 +910,12 @@ namespace TrayTemps
             if (!_initialWindowDisplaySuppressed || IsDisposed)
                 return;
 
-            Opacity = 1;
             ShowInTaskbar = true;
+
+            if (_dpiRestartPending)
+                return;
+
+            Opacity = 1;
             _initialWindowDisplaySuppressed = false;
         }
 
@@ -879,6 +1087,8 @@ namespace TrayTemps
 
         private void UpdateAllTrayIcons(float? cpuTemp, float? gpuTemp)
         {
+            RefreshTrayIconRenderSize();
+
             bool useFahrenheit = tempsFahrenheit.Checked;
             string unit = TemperatureFormatHelper.GetUnit(useFahrenheit);
             string cpuHover = cpuTemp.HasValue ? $"{TemperatureFormatHelper.GetDisplayTemp(cpuTemp.Value, useFahrenheit):F0}{unit}" : "N/A";
@@ -1122,6 +1332,22 @@ namespace TrayTemps
 
         private int GetTrayIconPixelSize()
         {
+            try
+            {
+                uint systemDpi = GetDpiForSystem();
+                int dpiAwareSize = GetSystemMetricsForDpi(SmCxSmallIcon, systemDpi);
+                if (dpiAwareSize > 0)
+                    return dpiAwareSize;
+            }
+            catch (EntryPointNotFoundException)
+            {
+                // Windows versions before these DPI APIs use the fallback below.
+            }
+
+            int systemSmallIconSize = GetSystemMetrics(SmCxSmallIcon);
+            if (systemSmallIconSize > 0)
+                return systemSmallIconSize;
+
             return Math.Max(IconSize, (int)Math.Round(IconSize * _dpiScale));
         }
 
@@ -1647,6 +1873,7 @@ namespace TrayTemps
                 _trayFontFamily = EmbeddedFonts.Bold.Name;
 
             int iconPixelSize = GetTrayIconPixelSize();
+            _lastTrayIconPixelSize = iconPixelSize;
             float calculatedFontSize = iconPixelSize;
 
             _trayFont?.Dispose();
@@ -1658,6 +1885,16 @@ namespace TrayTemps
 
             _gpuBrush?.Dispose();
             _gpuBrush = new SolidBrush(gpuColorValue.BackColor);
+        }
+
+        private void RefreshTrayIconRenderSize()
+        {
+            int iconPixelSize = GetTrayIconPixelSize();
+            if (_lastTrayIconPixelSize == iconPixelSize)
+                return;
+
+            CacheDisplaySettings();
+            ResetTrayCache();
         }
 
         #endregion
@@ -1744,12 +1981,10 @@ namespace TrayTemps
                     IconSize = GetSelectedIconSize(),
                     CpuIndex = cpuIndexSelect.SelectedIndex,
                     GpuIndex = gpuIndexSelect.SelectedIndex,
-                    StorageIndex = storageIndexSelect.SelectedIndex,
                     CpuIdentifier = _selectedCpuIdentifier,
                     GpuIdentifier = _selectedGpuIdentifier,
                     CpuTemperatureSensorIdentifier = GetSelectedTemperatureSensorIdentifier(cpuTempSensorSelect),
                     GpuTemperatureSensorIdentifier = GetSelectedTemperatureSensorIdentifier(gpuTempSensorSelect),
-                    StorageIdentifier = _selectedStorageIdentifier,
                     InstallFolder = InstallPath,
                     StartMinimizedToTray = minimizeOnStart.Checked,
                     StartMinimizedWithAdminRights = _startMinimizedWithAdminRights
@@ -1961,12 +2196,10 @@ namespace TrayTemps
         {
             _savedCpuIndex = Math.Max(0, settings.CpuIndex);
             _savedGpuIndex = Math.Max(0, settings.GpuIndex);
-            _savedStorageIndex = Math.Max(0, settings.StorageIndex);
             _savedCpuIdentifier = settings.CpuIdentifier;
             _savedGpuIdentifier = settings.GpuIdentifier;
             _savedCpuTemperatureSensorIdentifier = settings.CpuTemperatureSensorIdentifier;
             _savedGpuTemperatureSensorIdentifier = settings.GpuTemperatureSensorIdentifier;
-            _savedStorageIdentifier = settings.StorageIdentifier;
 
             InstallPath = settings.InstallFolder;
         }
@@ -2236,8 +2469,9 @@ namespace TrayTemps
 
         private void ApplyThemeToInputsAndButtons(ThemePalette theme)
         {
-            ApplyComboBoxTheme(theme, IsLightModeEnabled, refreshValue, iconsizeValue, fontFamilyValue, cpuTempSensorSelect, gpuTempSensorSelect, cpuIndexSelect, gpuIndexSelect, storageIndexSelect);
+            ApplyComboBoxTheme(theme, IsLightModeEnabled, refreshValue, iconsizeValue, fontFamilyValue);
             ApplyNavButtonTheme(theme, homeBtn, settingsBtn, aboutBtn);
+            ApplyComponentButtonTheme(theme, cpuConfigButton, gpuConfigButton);
             ApplyWindowButtonTheme(theme, minimizeBtn);
             ApplyWindowButtonTheme(theme, exitBtn);
             ApplyAccentButtonTheme(theme, colortempsConfig);
@@ -2374,18 +2608,6 @@ namespace TrayTemps
             }
         }
 
-        private static void ApplyInputTheme(ThemePalette theme, params Control[] controls)
-        {
-            foreach (Control control in controls)
-            {
-                if (control == null)
-                    continue;
-
-                control.BackColor = theme.InputBack;
-                control.ForeColor = theme.Text;
-            }
-        }
-
         private static void ApplyComboBoxTheme(ThemePalette theme, bool lightTheme, params ComboBox[] comboBoxes)
         {
             Color backColor = lightTheme
@@ -2412,6 +2634,21 @@ namespace TrayTemps
                 button.BackColor = theme.NavBack;
                 button.ForeColor = theme.Text;
                 button.FlatAppearance.BorderColor = theme.NavBack;
+                button.FlatAppearance.MouseDownBackColor = theme.NavSelected;
+                button.FlatAppearance.MouseOverBackColor = theme.NavSelected;
+            }
+        }
+
+        private static void ApplyComponentButtonTheme(ThemePalette theme, params Button[] buttons)
+        {
+            foreach (Button button in buttons)
+            {
+                if (button == null)
+                    continue;
+
+                button.BackColor = theme.SurfaceBack;
+                button.ForeColor = theme.MutedText;
+                button.FlatAppearance.BorderColor = theme.SurfaceBack;
                 button.FlatAppearance.MouseDownBackColor = theme.NavSelected;
                 button.FlatAppearance.MouseOverBackColor = theme.NavSelected;
             }
@@ -2845,7 +3082,8 @@ namespace TrayTemps
 
         private void HideToTrayAfterStartup()
         {
-            if (_isShutdownInitiated || _resourcesDisposed || IsDisposed)
+            if (_isShutdownInitiated || _resourcesDisposed || IsDisposed ||
+                _explicitShowPending || !_initialWindowDisplaySuppressed)
                 return;
 
             HideToTray();
@@ -2902,18 +3140,6 @@ namespace TrayTemps
             {
                 MessageBox.Show($"Error resetting settings: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-        }
-
-        private void ComboResize(object sender, EventArgs e)
-        {
-            this.SuspendLayout();
-            int h = ramDetails.Height;
-            cpuIndexSelect.ItemHeight = h;
-            gpuIndexSelect.ItemHeight = h;
-            cpuTempSensorSelect.ItemHeight = h;
-            gpuTempSensorSelect.ItemHeight = h;
-            storageIndexSelect.ItemHeight = h;
-            this.ResumeLayout(true);
         }
 
         private void Setting_CheckedChanged(object sender, EventArgs e)
@@ -3366,6 +3592,98 @@ namespace TrayTemps
             TempTimer_Tick(this, EventArgs.Empty);
         }
 
+        private void CpuConfigButton_Click(object sender, EventArgs e)
+        {
+            using (var config = new HardwareSelectionConfig(this, isCpu: true))
+                config.ShowDialog(this);
+        }
+
+        private void GpuConfigButton_Click(object sender, EventArgs e)
+        {
+            using (var config = new HardwareSelectionConfig(this, isCpu: false))
+                config.ShowDialog(this);
+        }
+
+        internal List<string> GetHardwareSelectionNames(bool isCpu)
+        {
+            List<IHardware> hardwares = isCpu ? _cpuHardwares : _gpuHardwares;
+
+            if (hardwares == null)
+                return new List<string>();
+
+            return hardwares
+                .Select((hardware, index) => string.IsNullOrWhiteSpace(hardware?.Name)
+                    ? $"{(isCpu ? "CPU" : "GPU")} {index}"
+                    : $"{index}: {hardware.Name}")
+                .ToList();
+        }
+
+        internal int GetSelectedHardwareIndex(bool isCpu)
+        {
+            return isCpu ? cpuIndexSelect.SelectedIndex : gpuIndexSelect.SelectedIndex;
+        }
+
+        internal List<TemperatureSensorOption> GetTemperatureSensorOptions(bool isCpu, int hardwareIndex)
+        {
+            List<IHardware> hardwares = isCpu ? _cpuHardwares : _gpuHardwares;
+            var options = new List<TemperatureSensorOption> { new TemperatureSensorOption(null, "Auto") };
+
+            if (hardwares == null || hardwareIndex < 0 || hardwareIndex >= hardwares.Count)
+                return options;
+
+            options.AddRange(GetTemperatureSensorsForSelection(hardwares[hardwareIndex])
+                .Select(sensor => new TemperatureSensorOption(sensor, sensor.Name)));
+            return options;
+        }
+
+        internal string GetSelectedTemperatureSensorIdentifier(bool isCpu)
+        {
+            return GetSelectedTemperatureSensorIdentifier(isCpu ? cpuTempSensorSelect : gpuTempSensorSelect);
+        }
+
+        internal void ApplyHardwareSelection(bool isCpu, int hardwareIndex, string sensorIdentifier)
+        {
+            List<IHardware> hardwares = isCpu ? _cpuHardwares : _gpuHardwares;
+
+            if (hardwares == null || hardwareIndex < 0 || hardwareIndex >= hardwares.Count)
+                return;
+
+            _isInitializingHardwareSelectors = true;
+
+            try
+            {
+                if (isCpu)
+                {
+                    _savedCpuTemperatureSensorIdentifier = sensorIdentifier ?? string.Empty;
+                    cpuIndexSelect.SelectedIndex = hardwareIndex;
+
+                    if (!ApplySelectedCpuHardwareFromCurrentIndex(updateHardware: true))
+                        return;
+
+                    ResetCpuTemperatureDisplayState();
+                }
+                else
+                {
+                    _savedGpuTemperatureSensorIdentifier = sensorIdentifier ?? string.Empty;
+                    gpuIndexSelect.SelectedIndex = hardwareIndex;
+
+                    if (!ApplySelectedGpuHardwareFromCurrentIndex(updateHardware: true))
+                        return;
+
+                    ResetGpuTemperatureDisplayState();
+                }
+            }
+            finally
+            {
+                _isInitializingHardwareSelectors = false;
+            }
+
+            if (_settingsLoaded)
+                SaveSettings();
+
+            TempTimer_Tick(this, EventArgs.Empty);
+        }
+
         private void ResetCpuTemperatureDisplayState()
         {
             _cpuInvalidSensorCycles = 0;
@@ -3533,7 +3851,7 @@ namespace TrayTemps
                 : SelectPreferredGpuTemperatureSensor(hardware);
         }
 
-        private sealed class TemperatureSensorOption
+        internal sealed class TemperatureSensorOption
         {
             public TemperatureSensorOption(ISensor sensor, string displayName)
             {
@@ -3663,19 +3981,6 @@ namespace TrayTemps
             return fallbackIndex >= 0 && fallbackIndex < hardwares.Count ? fallbackIndex : 0;
         }
 
-        private int GetSavedStorageIndex()
-        {
-            if (_storageHardwares != null && _storageHardwares.Count > 0 && !string.IsNullOrWhiteSpace(_savedStorageIdentifier))
-            {
-                int identifierIndex = _storageHardwares.FindIndex(h =>
-                    h != null && string.Equals(h.Identifier.ToString(), _savedStorageIdentifier, StringComparison.OrdinalIgnoreCase));
-                if (identifierIndex >= 0)
-                    return identifierIndex;
-            }
-
-            return _savedStorageIndex;
-        }
-
         private static IEnumerable<ISensor> EnumerateTemperatureSensorsRecursive(IEnumerable<IHardware> hardwares)
         {
             foreach (IHardware hardware in hardwares)
@@ -3779,75 +4084,19 @@ namespace TrayTemps
                     .FirstOrDefault();
         }
 
-        private void StorageIndexSelect_SelectedIndexChanged(object sender, EventArgs e)
+        private void UpdateStorageDetailsText()
         {
-            if (_isInitializingHardwareSelectors)
-                return;
+            List<string> storageNames = _storageHardwares?
+                .Where(hardware => !string.IsNullOrWhiteSpace(hardware?.Name))
+                .Select(hardware => hardware.Name)
+                .ToList();
 
-            ApplySelectedStorageHardwareFromCurrentIndex();
-        }
+            if (storageNames == null || storageNames.Count == 0)
+                storageNames = _wmiStorageDisplayNames?.Where(name => !string.IsNullOrWhiteSpace(name)).ToList();
 
-        private void ApplySelectedStorageHardwareFromCurrentIndex()
-        {
-            if (_storageHardwares != null &&
-                _storageHardwares.Count > 0 &&
-                storageIndexSelect.SelectedIndex >= 0 &&
-                storageIndexSelect.SelectedIndex < _storageHardwares.Count)
-            {
-                var selectedDrive = _storageHardwares[storageIndexSelect.SelectedIndex];
-
-                _selectedStorageIdentifier = selectedDrive.Identifier.ToString();
-                storageDetails.Text = selectedDrive.Name;
-                return;
-            }
-
-            if (_wmiStorageDisplayNames != null &&
-                _wmiStorageDisplayNames.Count > 0 &&
-                storageIndexSelect.SelectedIndex >= 0 &&
-                storageIndexSelect.SelectedIndex < _wmiStorageDisplayNames.Count)
-            {
-                _selectedStorageIdentifier = null;
-                storageDetails.Text = _wmiStorageDisplayNames[storageIndexSelect.SelectedIndex];
-                return;
-            }
-
-            _selectedStorageIdentifier = null;
-        }
-
-        private void PopulateStorageSelector(int savedIndex)
-        {
-            storageIndexSelect.Items.Clear();
-
-            if (_storageHardwares != null && _storageHardwares.Any())
-            {
-                for (int i = 0; i < _storageHardwares.Count; i++)
-                    storageIndexSelect.Items.Add(i);
-
-                if (savedIndex >= 0 && savedIndex < _storageHardwares.Count)
-                    storageIndexSelect.SelectedIndex = savedIndex;
-                else
-                    storageIndexSelect.SelectedIndex = 0;
-
-                storageIndexSelect.Enabled = _storageHardwares.Count > 1;
-                return;
-            }
-
-            if (_wmiStorageDisplayNames != null && _wmiStorageDisplayNames.Count > 0)
-            {
-                for (int i = 0; i < _wmiStorageDisplayNames.Count; i++)
-                    storageIndexSelect.Items.Add(i);
-
-                if (savedIndex >= 0 && savedIndex < _wmiStorageDisplayNames.Count)
-                    storageIndexSelect.SelectedIndex = savedIndex;
-                else
-                    storageIndexSelect.SelectedIndex = 0;
-
-                storageIndexSelect.Enabled = true;
-                return;
-            }
-
-            storageDetails.Text = "No Disk found";
-            storageIndexSelect.Enabled = false;
+            storageDetails.Text = storageNames == null || storageNames.Count == 0
+                ? "No Disk found"
+                : string.Join(" | ", storageNames.Select((name, index) => $"{index + 1}.{name}"));
         }
 
         private static List<string> LoadWmiStorageDisplayNames()
@@ -4237,14 +4486,16 @@ namespace TrayTemps
             PromptForElevatedSensorRestart(string.Join("; ", reasons));
         }
 
-        private bool TryRestartElevated(string arguments = null)
+        private bool TryRestartElevated(bool preserveStartupVisibility = false)
         {
-            return Program.RequestElevatedRestart(arguments);
+            return Program.RequestElevatedRestart(
+                preserveStartupVisibility && _startHiddenFromCommandLine,
+                preserveStartupVisibility && _forceVisibleOnStartup);
         }
 
         private bool RestartElevatedAndClose()
         {
-            if (!TryRestartElevated())
+            if (!TryRestartElevated(preserveStartupVisibility: true))
                 return false;
 
             ExecuteShutdownSequence();

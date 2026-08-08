@@ -19,14 +19,12 @@
     public int IconSize { get; set; } = 90;
     public int CpuIndex { get; set; } = 0;
     public int GpuIndex { get; set; } = 0;
-    public int StorageIndex { get; set; } = 0;
     // Hardware order can change between launches. Keep the index for legacy
     // settings, but prefer these stable LibreHardwareMonitor identifiers.
     public string CpuIdentifier { get; set; } = "";
     public string GpuIdentifier { get; set; } = "";
     public string CpuTemperatureSensorIdentifier { get; set; } = "";
     public string GpuTemperatureSensorIdentifier { get; set; } = "";
-    public string StorageIdentifier { get; set; } = "";
     public int MinWarmTemp { get; set; } = 60;
     public int MaxWarmTemp { get; set; } = 80;
     public string InstallFolder { get; set; } = "";

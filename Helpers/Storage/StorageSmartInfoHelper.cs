@@ -67,7 +67,19 @@ namespace TrayTemps
             if (TryBuildSmartLifeInfo(instanceName, attributes, 0xCA, "SMART CA Percentage Lifetime Used", true, true, out info))
                 return info;
 
+            // B1 is vendor-specific. Samsung SATA SSDs commonly expose its normalized
+            // value as the remaining wear life, but it must not be interpreted for other vendors.
+            if (IsSamsungStorageInstance(instanceName) &&
+                TryBuildSmartLifeInfo(instanceName, attributes, 0xB1, "Samsung SMART B1 Wear Leveling Count", false, false, out info))
+                return info;
+
             return null;
+        }
+
+        private static bool IsSamsungStorageInstance(string instanceName)
+        {
+            return !string.IsNullOrWhiteSpace(instanceName) &&
+                   instanceName.IndexOf("SAMSUNG", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private static bool TryBuildSmartLifeInfo(

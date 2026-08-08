@@ -145,7 +145,14 @@
     <Compile Include="Dialogs\ColorTempsConfig.Designer.cs">
       <DependentUpon>ColorTempsConfig.cs</DependentUpon>
     </Compile>
+    <Compile Include="Dialogs\HardwareSelectionConfig.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Dialogs\HardwareSelectionConfig.Designer.cs">
+      <DependentUpon>HardwareSelectionConfig.cs</DependentUpon>
+    </Compile>
     <Compile Include="Helpers\UI\EmbeddedFonts.cs" />
+    <Compile Include="Helpers\UI\WindowCornerHelper.cs" />
     <Compile Include="Dialogs\HardwareDetailsDialog.cs">
       <SubType>Form</SubType>
     </Compile>

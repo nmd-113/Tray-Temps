@@ -19,12 +19,6 @@ public partial class HardwareDetailsDialog : Form
     private Color _disabledText = Color.FromArgb(100, 100, 100);
     private const int CsDropShadow = 0x00020000;
 
-    // DWM API for Rounded Corners (Windows 11)
-    [DllImport("dwmapi.dll")]
-    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
-    private const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
-    private const int DWMWCP_ROUND = 2;
-
     // API for Drag & Drop
     [DllImport("user32.dll")]
     private static extern bool ReleaseCapture();
@@ -114,9 +108,7 @@ public partial class HardwareDetailsDialog : Form
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
-        // Apply rounded corners on Windows 11
-        int preference = DWMWCP_ROUND;
-        DwmSetWindowAttribute(Handle, DWMWA_WINDOW_CORNER_PREFERENCE, ref preference, sizeof(int));
+        TrayTemps.WindowCornerHelper.ApplyRoundedCorners(Handle);
     }
 
     private void HardwareDetailsDialog_Shown(object sender, EventArgs e)
@@ -417,7 +409,7 @@ public partial class HardwareDetailsDialog : Form
         const int WM_NCHITTEST = 0x84;
         const int HTLEFT = 10, HTRIGHT = 11, HTTOP = 12, HTTOPLEFT = 13;
         const int HTTOPRIGHT = 14, HTBOTTOM = 15, HTBOTTOMLEFT = 16, HTBOTTOMRIGHT = 17;
-        const int resizeAreaSize = 8;
+        int resizeAreaSize = Math.Max(6, (int)Math.Round(8d * DeviceDpi / 96d));
 
         base.WndProc(ref m);
 

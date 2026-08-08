@@ -24,6 +24,12 @@ namespace TrayTemps
             _mainForm.ThemeChanged += MainForm_ThemeChanged;
         }
 
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            WindowCornerHelper.ApplyRoundedCorners(Handle);
+        }
+
         protected override CreateParams CreateParams
         {
             get
