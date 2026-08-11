@@ -17,14 +17,19 @@ It helps you monitor your hardware without keeping a full monitoring app open.
 - Configurable CPU and GPU temperature alerts
 - CPU and GPU sensor selection
 - Works with or without administrator rights
-- Uses fallback sensors when possible
-- Automatically disables tray options when a usable sensor is missing
+- Optional PawnIO support for improved low-level sensor access
+- Uses Windows/WMI fallbacks when possible
+- Loads detailed hardware information in the background for faster startup
+- Automatically disables sensor-dependent options when a usable sensor is unavailable
 - Shows hardware details for CPU, GPU, RAM, motherboard, BIOS, and storage
+- Shows live hardware sensors when supported
 - Shows storage health and SMART details when supported
 - Optional Windows startup support
 - Supports starting minimized to the system tray
+- Supports minimized startup with normal or elevated rights
 - Light and dark theme support
 - Built-in update checking through GitHub
+- Distributed as a single portable executable
 
 ---
 
@@ -32,15 +37,15 @@ It helps you monitor your hardware without keeping a full monitoring app open.
 
 ### Main Window
 
-![TrayTemps Main Window](https://naetech.ro/wp-content/uploads/2024/traytemps/traytemps-dark.png?v2.0.3)
+![Main Window](https://www.naetech.ro/wp-content/uploads/2024/traytemps/traytemps-dark.png)
 
 ### Settings Window
 
-![TrayTemps Settings Window](https://naetech.ro/wp-content/uploads/2024/traytemps/traytemps-light.png?v2.0.3)
+![Settings Window](https://www.naetech.ro/wp-content/uploads/2024/traytemps/traytemps-light.png)
 
 ### CPU & GPU in Tray
 
-![TrayTemps CPU GPU Tray](https://naetech.ro/wp-content/uploads/2024/traytemps/traytemps-trayicons.jpg)
+![CPU & GPU in Tray](https://www.naetech.ro/wp-content/uploads/2024/traytemps/traytemps-trayicons.png)
 
 ---
 
@@ -57,25 +62,44 @@ It helps you monitor your hardware without keeping a full monitoring app open.
 2. Download the latest `TrayTemps.exe`.
 3. Run the app.
 
-No installation is required.
+No TrayTemps installation is required.
 
 ---
 
 ## Hardware Sensor Access
 
-TrayTemps uses [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) and PawnIO for low-level hardware sensor access.
+TrayTemps uses [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) for hardware monitoring and supports [PawnIO](https://github.com/namazso/PawnIO) for low-level hardware access.
 
-If a compatible PawnIO installation is unavailable, TrayTemps can continue with the sensors and Windows/WMI fallback information that remain accessible.
+The official PawnIO installer is embedded inside TrayTemps. If PawnIO is not available, TrayTemps can ask whether you want to install it.
 
-TrayTemps can optionally restart with administrator rights for fuller hardware access. The start-minimized setting can remember whether hidden startup should use administrator rights.
+PawnIO is optional. If installation is declined or unavailable, TrayTemps continues using the sensors and Windows/WMI hardware information that remain accessible.
+
+TrayTemps can also optionally restart with administrator rights for fuller hardware access.
+
+---
+
+## Startup Behavior
+
+TrayTemps supports automatic Windows startup and can start minimized directly to the system tray.
+
+When minimized startup is enabled, TrayTemps can remember whether startup should use:
+
+- Normal user rights
+- Administrator rights
+
+Administrator elevation is optional and TrayTemps can continue with reduced hardware access if elevation is declined.
 
 ---
 
 ## Antivirus Notice
 
-TrayTemps uses [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) to read hardware sensors.
+TrayTemps uses [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) and optional PawnIO low-level hardware access.
 
-TrayTemps does not add antivirus exclusions or bypass Windows security features. Verify that downloads come from the official project release.
+TrayTemps does not add antivirus exclusions, disable security features, or bypass Windows protections.
+
+PawnIO installation is performed only after user confirmation and uses the embedded official installer.
+
+Always verify that TrayTemps downloads come from the official project release.
 
 ---
 
@@ -88,7 +112,7 @@ After launching, TrayTemps runs in the system tray.
 - Use the settings page to enable or disable CPU/GPU tray icons
 - Enable combined tray mode to show CPU and GPU temperatures in one icon
 - Configure temperature alerts, thresholds, sensors, and cooldowns
-- Click hardware labels in the main window to open detailed information
+- Click hardware labels in the main window to open detailed hardware and sensor information
 - Use the About page to check for updates
 
 ---
@@ -115,29 +139,53 @@ Alerts can be configured separately for each device:
 - Configure the temperature threshold
 - Configure the alert cooldown
 
-Available sensors may differ depending on the hardware and access permissions.
+Available sensors may differ depending on the hardware, drivers, PawnIO availability, and access permissions.
 
 ---
 
 ## Missing Sensors
 
-Some systems may not expose all temperature sensors.
+Some systems may not expose all hardware sensors.
 
-When a usable CPU or GPU temperature sensor is missing:
+When a usable CPU or GPU temperature sensor is unavailable:
 
 - The temperature may show `N/A`
-- The related tray option is disabled
-- TrayTemps does not fake GPU temperature using CPU temperature
+- Sensor-dependent options may be disabled
+- Hardware information may still be available through Windows/WMI
+- TrayTemps does not substitute unrelated sensor values
 
-Install PawnIO when prompted to enable supported low-level sensors. TrayTemps continues with available fallbacks if PawnIO is declined or unavailable.
+Installing PawnIO when prompted may provide access to additional supported sensors.
+
+---
+
+## Hardware Detection
+
+TrayTemps separates hardware detection from sensor availability.
+
+If LibreHardwareMonitor does not expose a component or detailed sensor information, TrayTemps can use Windows/WMI fallback information where reliable.
+
+This helps keep CPU, GPU, RAM, storage, motherboard, and other detected hardware visible even when low-level sensors are unavailable.
+
+Detailed hardware discovery is performed in the background where possible so CPU/GPU tray temperatures can appear quickly after startup.
 
 ---
 
 ## Storage Detection
 
-If live storage sensors are unavailable, TrayTemps can still show disks detected by Windows.
+TrayTemps supports SATA and NVMe storage detection and shows Windows/WMI fallback devices when live LibreHardwareMonitor storage access is unavailable.
 
-Storage health and SMART details are shown only when supported by the hardware, controller, drivers, and available sensors.
+Storage information may include:
+
+- Model and interface
+- Capacity
+- Firmware and serial information
+- SMART health
+- Remaining life
+- Temperature
+- Power-on hours
+- Other supported health sensors
+
+Available information depends on the drive, controller, drivers, permissions, and sensor support.
 
 ---
 
@@ -146,6 +194,20 @@ Storage health and SMART details are shown only when supported by the hardware, 
 Settings can be reset from within the app without restarting it.
 
 Resetting restores the default application settings.
+
+---
+
+## Uninstall / Cleanup
+
+TrayTemps is portable, but it can create user settings and an optional Windows startup task.
+
+The built-in cleanup flow can remove:
+
+- TrayTemps settings and user data
+- The Windows startup task
+- Both, when performing a full cleanup
+
+Only TrayTemps-owned files and configuration are removed.
 
 ---
 
@@ -161,28 +223,3 @@ Resetting restores the default application settings.
 
 ```powershell
 dotnet build Tray-Temps.sln -p:Configuration=Debug -p:Platform=x64
-````
-
-The compiled application will be placed in the corresponding build output directory.
-
----
-
-## Issues and Feedback
-
-To report a problem or suggest an improvement, open an issue on the repository's [Issues page](https://github.com/nmd-113/Tray-Temps/issues).
-
-For sensor-related issues, include:
-
-* Windows version
-* CPU and GPU models
-* Whether PawnIO is installed and its version
-* The displayed sensor or hardware report
-* The expected and actual behavior
-
----
-
-## Disclaimer
-
-TrayTemps displays information reported by the operating system, hardware, drivers, and LibreHardwareMonitor.
-
-Sensor readings may differ between systems and should not be treated as a replacement for manufacturer-provided diagnostic tools.
