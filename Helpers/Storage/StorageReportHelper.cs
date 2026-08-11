@@ -10,16 +10,90 @@ namespace TrayTemps
 {
     internal static class StorageReportHelper
     {
-        internal static void AppendStorageStaticDiskFields(StringBuilder sb, ManagementObject disk)
+        internal static void AppendStorageStaticDiskFields(StringBuilder sb, ManagementObject disk, List<ManagementObject> physicalDisks)
         {
             sb.AppendLine(HardwareReportFormatHelper.Label("Model", disk["Model"]));
-            sb.AppendLine(HardwareReportFormatHelper.Label("Interface", disk["InterfaceType"]));
+            sb.AppendLine(HardwareReportFormatHelper.Label("Interface", GetStorageInterfaceText(disk, physicalDisks)));
             sb.AppendLine(HardwareReportFormatHelper.Label("Media Type", disk["MediaType"]));
             sb.AppendLine(HardwareReportFormatHelper.Label("Size", HardwareReportFormatHelper.SizeHuman(disk["Size"])));
             sb.AppendLine(HardwareReportFormatHelper.Label("Serial", disk["SerialNumber"]));
             sb.AppendLine(HardwareReportFormatHelper.Label("Firmware", disk["FirmwareRevision"]));
             sb.AppendLine(HardwareReportFormatHelper.Label("Partitions", disk["Partitions"]));
             sb.AppendLine(HardwareReportFormatHelper.Label("PNP ID", disk["PNPDeviceID"]));
+        }
+
+        private static string GetStorageInterfaceText(ManagementObject disk, List<ManagementObject> physicalDisks)
+        {
+            ManagementObject physicalDisk = FindPhysicalDisk(disk, physicalDisks);
+            uint busType = physicalDisk == null
+                ? 0
+                : HardwareReportFormatHelper.ToUInt(physicalDisk["BusType"]);
+
+            // MSFT_PhysicalDisk exposes the actual bus even when Win32_DiskDrive
+            // reports the storage-port compatibility value "SCSI".
+            if (busType == 17)
+                return "NVMe";
+
+            if (busType == 11)
+                return "SATA";
+
+            string interfaceType = HardwareReportFormatHelper.Safe(disk["InterfaceType"]);
+            string pnpDeviceId = HardwareReportFormatHelper.Safe(disk["PNPDeviceID"]);
+
+            if ((physicalDisk == null || busType <= 1) &&
+                interfaceType.Equals("SCSI", StringComparison.OrdinalIgnoreCase) &&
+                pnpDeviceId.StartsWith(@"SCSI\DISK&VEN_NVME", StringComparison.OrdinalIgnoreCase))
+            {
+                return "NVMe";
+            }
+
+            return interfaceType;
+        }
+
+        private static ManagementObject FindPhysicalDisk(ManagementObject disk, List<ManagementObject> physicalDisks)
+        {
+            if (disk == null || physicalDisks == null || physicalDisks.Count == 0)
+                return null;
+
+            string serial = NormalizeMatchValue(disk["SerialNumber"]);
+            string index = NormalizeMatchValue(disk["Index"]);
+
+            ManagementObject match = FindUniqueMatch(physicalDisks, physicalDisk =>
+                !string.IsNullOrEmpty(serial) &&
+                string.Equals(serial, NormalizeMatchValue(physicalDisk["SerialNumber"]), StringComparison.OrdinalIgnoreCase));
+
+            if (match != null)
+                return match;
+
+            return FindUniqueMatch(physicalDisks, physicalDisk =>
+                !string.IsNullOrEmpty(index) &&
+                string.Equals(index, NormalizeMatchValue(physicalDisk["DeviceId"]), StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static ManagementObject FindUniqueMatch(IEnumerable<ManagementObject> objects, Func<ManagementObject, bool> predicate)
+        {
+            ManagementObject match = null;
+
+            foreach (ManagementObject obj in objects)
+            {
+                if (!predicate(obj))
+                    continue;
+
+                if (match != null)
+                    return null;
+
+                match = obj;
+            }
+
+            return match;
+        }
+
+        private static string NormalizeMatchValue(object value)
+        {
+            if (value == null || string.IsNullOrWhiteSpace(value.ToString()))
+                return string.Empty;
+
+            return HardwareReportFormatHelper.NormalizeStorageText(value.ToString());
         }
 
         internal static void AppendUnmatchedSmartLifeInfosSection(StringBuilder sb, List<SmartLifeInfo> unmatchedSmartLifeInfos)
@@ -83,7 +157,7 @@ namespace TrayTemps
             if (drive == null)
                 return;
 
-            var sensors = drive.Sensors
+            var sensors = HardwareReportFormatHelper.DistinctSensors(drive.Sensors)
                 .Where(s => s.Value.HasValue)
                 .ToList();
 
@@ -101,15 +175,13 @@ namespace TrayTemps
             var healthSensors = sensors
                 .Where(HardwareReportFormatHelper.IsStorageHealthSensor)
                 .OrderBy(HardwareReportFormatHelper.GetStorageHealthSortOrder)
-                .ThenBy(s => s.Name)
+                .ThenBy(s => s.Name, HardwareReportFormatHelper.NaturalTextComparer)
                 .ToList();
 
-            bool hidePercentageUsedSensor = smartLifeInfo != null && smartLifeInfo.UsedPercent.HasValue;
-
-            if (hidePercentageUsedSensor)
+            if (!string.IsNullOrWhiteSpace(remainingLife))
             {
                 healthSensors = healthSensors
-                    .Where(s => HardwareReportFormatHelper.Safe(s.Name).IndexOf("percentage used", StringComparison.OrdinalIgnoreCase) < 0)
+                    .Where(s => !HardwareReportFormatHelper.IsCanonicalStorageLifeSensor(s))
                     .ToList();
             }
 
@@ -134,15 +206,19 @@ namespace TrayTemps
             sb.AppendLine(HardwareReportFormatHelper.Label("Life Source", smartLifeInfo.Source));
         }
 
-        internal static string GetStorageDetails(
+        internal static HardwareDiscoveryResult GetStorageInfo(
             IEnumerable<IHardware> storageHardwares,
             Action<IHardware> updateHardwareRecursive,
             Func<string, List<ManagementObject>> wmiQuery)
         {
             var sb = new StringBuilder();
+            var displayNames = new List<string>();
             sb.Append(HardwareReportFormatHelper.Section("STORAGE"));
 
             var disks = wmiQuery("SELECT * FROM Win32_DiskDrive");
+            var physicalDisks = WmiQueryHelper.WmiQuery(
+                @"root\Microsoft\Windows\Storage",
+                "SELECT DeviceId, SerialNumber, BusType FROM MSFT_PhysicalDisk");
             var smartLifeInfos = StorageSmartInfoHelper.GetSmartLifeInfos(WmiQueryHelper.WmiQuery);
             var unmatchedSmartLifeInfos = new List<SmartLifeInfo>(smartLifeInfos);
             var unmatchedStorageHardwares = storageHardwares == null
@@ -159,15 +235,17 @@ namespace TrayTemps
                     AppendUnmatchedStorageHardwaresSection(sb, unmatchedStorageHardwares, disks, smartLifeInfos, unmatchedSmartLifeInfos, updateHardwareRecursive);
                     AppendUnmatchedSmartLifeInfosSection(sb, unmatchedSmartLifeInfos);
 
-                    return sb.ToString();
+                    return new HardwareDiscoveryResult("Unknown Storage", sb.ToString(), displayNames, 0);
                 }
 
                 foreach (var disk in disks)
                 {
                     string diskDisplayName = HardwareReportFormatHelper.GetDiskDisplayTitle(disk["Model"], disk["SerialNumber"]);
+                    if (!string.IsNullOrWhiteSpace(diskDisplayName))
+                        displayNames.Add(diskDisplayName);
 
                     sb.Append(HardwareReportFormatHelper.Group(diskDisplayName));
-                    AppendStorageStaticDiskFields(sb, disk);
+                    AppendStorageStaticDiskFields(sb, disk, physicalDisks);
 
                     IHardware matchedDrive = FindStorageHardwareForDisk(disk, unmatchedStorageHardwares);
                     SmartLifeInfo smartLifeInfo = StorageSmartInfoHelper.FindSmartLifeInfoForDisk(disk, smartLifeInfos);
@@ -179,11 +257,15 @@ namespace TrayTemps
                 AppendUnmatchedStorageHardwaresSection(sb, unmatchedStorageHardwares, disks, smartLifeInfos, unmatchedSmartLifeInfos, updateHardwareRecursive);
                 AppendUnmatchedSmartLifeInfosSection(sb, unmatchedSmartLifeInfos);
 
-                return sb.ToString();
+                string summary = displayNames.Count == 1
+                    ? displayNames[0]
+                    : displayNames.Count > 1 ? "Storage" : "Unknown Storage";
+                return new HardwareDiscoveryResult(summary, sb.ToString(), displayNames, disks.Count);
             }
             finally
             {
                 WmiQueryHelper.DisposeAll(disks);
+                WmiQueryHelper.DisposeAll(physicalDisks);
             }
         }
 
@@ -241,7 +323,8 @@ namespace TrayTemps
             {
                 string driveIdentifier = HardwareReportFormatHelper.Safe(drive.Identifier);
 
-                sb.AppendLine(HardwareReportFormatHelper.Label("Drive", string.IsNullOrWhiteSpace(HardwareReportFormatHelper.Safe(drive.Name)) ? driveIdentifier : drive.Name));
+                string driveName = HardwareReportFormatHelper.Safe(drive.Name);
+                sb.AppendLine(HardwareReportFormatHelper.Label("Drive", driveName == "N/A" ? driveIdentifier : driveName));
                 sb.AppendLine(HardwareReportFormatHelper.Label("Identifier", driveIdentifier));
 
                 try

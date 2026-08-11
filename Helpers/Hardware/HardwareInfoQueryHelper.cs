@@ -4,85 +4,18 @@ using System.Diagnostics;
 using System.Linq;
 using System.Management;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace TrayTemps
 {
     internal static class HardwareInfoQueryHelper
     {
-        internal static Task<string> GetMotherboardNameAsync()
-        {
-            return Task.Run(() =>
-            {
-                try
-                {
-                    using (var searcher = new ManagementObjectSearcher("select Manufacturer, Product from Win32_BaseBoard"))
-                    using (var collection = searcher.Get())
-                    {
-                        foreach (ManagementObject obj in collection.Cast<ManagementObject>())
-                        {
-                            using (obj)
-                            {
-                                string manufacturer = obj["Manufacturer"]?.ToString().Trim() ?? "";
-                                string product = obj["Product"]?.ToString().Trim() ?? "";
-                                string fullName = $"{manufacturer} {product}".Trim();
-                                return string.IsNullOrEmpty(fullName) ? "Unknown Motherboard" : fullName;
-                            }
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine("GetMotherboardNameAsync failed: " + ex);
-                }
-                return "Unknown Motherboard";
-            });
-        }
-
-        internal static Task<string> GetRamInfoAsync()
-        {
-            return Task.Run(() =>
-            {
-                try
-                {
-                    using (var searcher = new ManagementObjectSearcher("select Capacity, SMBIOSMemoryType, ConfiguredClockSpeed from Win32_PhysicalMemory"))
-                    using (var collection = searcher.Get())
-                    {
-                        var individualCapacities = new List<long>();
-                        uint memoryType = 0;
-                        uint speed = 0;
-
-                        foreach (ManagementObject stick in collection.Cast<ManagementObject>())
-                        {
-                            using (stick)
-                            {
-                                individualCapacities.Add(Convert.ToInt64(stick["Capacity"]));
-                                if (memoryType == 0) memoryType = Convert.ToUInt32(stick["SMBIOSMemoryType"]);
-                                if (speed == 0) speed = Convert.ToUInt32(stick["ConfiguredClockSpeed"]);
-                            }
-                        }
-
-                        if (individualCapacities.Count == 0) return "Unknown RAM";
-
-                        long totalCapacityGB = individualCapacities.Sum() / (1024 * 1024 * 1024);
-                        string configString = HardwareReportFormatHelper.FormatRamConfiguration(individualCapacities);
-                        string typeString = HardwareReportFormatHelper.GetMemoryTypeString(memoryType);
-
-                        return $"{totalCapacityGB}GB {configString} {typeString} {speed}MHz";
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine("GetRamInfoAsync failed: " + ex);
-                    return "Unknown RAM";
-                }
-            });
-        }
-
-        internal static string GetRamDetails(Func<string, List<ManagementObject>> wmiQuery)
+        internal static HardwareDiscoveryResult GetRamInfo(Func<string, List<ManagementObject>> wmiQuery)
         {
             var sb = new StringBuilder();
             var modules = new StringBuilder();
+            var individualCapacities = new List<long>();
+            uint memoryType = 0;
+            uint speed = 0;
 
             sb.Append(HardwareReportFormatHelper.Section("RAM"));
 
@@ -93,7 +26,7 @@ namespace TrayTemps
                 {
                     sb.AppendLine();
                     sb.AppendLine("  No RAM information found.");
-                    return sb.ToString();
+                    return new HardwareDiscoveryResult("Unknown RAM", sb.ToString(), new List<string>(), 0);
                 }
 
                 long totalBytes = 0;
@@ -106,7 +39,11 @@ namespace TrayTemps
                     try
                     {
                         if (capacityObj != null)
-                            totalBytes += Convert.ToInt64(capacityObj);
+                        {
+                            long capacity = Convert.ToInt64(capacityObj);
+                            totalBytes += capacity;
+                            individualCapacities.Add(capacity);
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -115,12 +52,23 @@ namespace TrayTemps
 
                     modules.Append(HardwareReportFormatHelper.Group($"Module #{index++}"));
                     AppendRamModuleFields(modules, mem, capacityObj);
+
+                    if (memoryType == 0)
+                        memoryType = HardwareReportFormatHelper.ToUInt(mem["SMBIOSMemoryType"]);
+                    if (speed == 0)
+                        speed = HardwareReportFormatHelper.ToUInt(mem["ConfiguredClockSpeed"]);
                 }
 
                 sb.AppendLine(HardwareReportFormatHelper.Label("Total", HardwareReportFormatHelper.SizeHuman(totalBytes)));
                 sb.Append(modules);
 
-                return sb.ToString();
+                long totalCapacityGb = totalBytes / (1024L * 1024L * 1024L);
+                string configuration = HardwareReportFormatHelper.FormatRamConfiguration(individualCapacities);
+                string type = HardwareReportFormatHelper.GetMemoryTypeString(memoryType);
+                string speedText = speed == 0 ? string.Empty : " " + speed + "MHz";
+                string summary = $"{totalCapacityGb}GB {configuration} {type}{speedText}".Trim();
+
+                return new HardwareDiscoveryResult(summary, sb.ToString(), new List<string>(), ram.Count);
             }
             finally
             {
@@ -130,20 +78,51 @@ namespace TrayTemps
 
         private static void AppendRamModuleFields(StringBuilder sb, ManagementObject mem, object capacityObj)
         {
-            sb.AppendLine(HardwareReportFormatHelper.Label("Manufacturer", mem["Manufacturer"]));
-            sb.AppendLine(HardwareReportFormatHelper.Label("Capacity", HardwareReportFormatHelper.SizeHuman(capacityObj)));
+            object speed = mem["Speed"];
+            object configuredSpeed = mem["ConfiguredClockSpeed"];
+
+            sb.AppendLine(HardwareReportFormatHelper.Label("Manufacturer", HardwareReportFormatHelper.NormalizeUnknownValue(mem["Manufacturer"])));
+            sb.AppendLine(HardwareReportFormatHelper.Label("Capacity", capacityObj == null ? "Unknown" : HardwareReportFormatHelper.SizeHuman(capacityObj)));
             sb.AppendLine(HardwareReportFormatHelper.Label("Type", HardwareReportFormatHelper.GetMemoryTypeString(HardwareReportFormatHelper.ToUInt(mem["SMBIOSMemoryType"]))));
-            sb.AppendLine(HardwareReportFormatHelper.Label("Speed", HardwareReportFormatHelper.Unit(mem["Speed"], "MHz")));
-            sb.AppendLine(HardwareReportFormatHelper.Label("Configured Speed", HardwareReportFormatHelper.Unit(mem["ConfiguredClockSpeed"], "MHz")));
-            sb.AppendLine(HardwareReportFormatHelper.Label("Part Number", mem["PartNumber"]));
-            sb.AppendLine(HardwareReportFormatHelper.Label("Serial", mem["SerialNumber"]));
-            sb.AppendLine(HardwareReportFormatHelper.Label("Bank", mem["BankLabel"]));
-            sb.AppendLine(HardwareReportFormatHelper.Label("Slot", mem["DeviceLocator"]));
+            sb.AppendLine(HardwareReportFormatHelper.Label("Speed", FormatRamSpeed(speed)));
+
+            if (!AreEquivalentRamSpeeds(speed, configuredSpeed))
+                sb.AppendLine(HardwareReportFormatHelper.Label("Configured Speed", FormatRamSpeed(configuredSpeed)));
+
+            sb.AppendLine(HardwareReportFormatHelper.Label("Part Number", HardwareReportFormatHelper.NormalizeUnknownValue(mem["PartNumber"])));
+            sb.AppendLine(HardwareReportFormatHelper.Label("Serial", NormalizeRamSerialNumber(mem["SerialNumber"])));
+            sb.AppendLine(HardwareReportFormatHelper.Label("Bank", HardwareReportFormatHelper.NormalizeUnknownValue(mem["BankLabel"])));
+            sb.AppendLine(HardwareReportFormatHelper.Label("Slot", HardwareReportFormatHelper.NormalizeUnknownValue(mem["DeviceLocator"])));
         }
 
-        internal static string GetMotherboardDetails(Func<string, List<ManagementObject>> wmiQuery)
+        private static string FormatRamSpeed(object value)
+        {
+            string text = HardwareReportFormatHelper.NormalizeUnknownValue(value);
+            return text == "Unknown" ? text : text + " MHz";
+        }
+
+        private static bool AreEquivalentRamSpeeds(object speed, object configuredSpeed)
+        {
+            string speedText = HardwareReportFormatHelper.NormalizeUnknownValue(speed);
+            string configuredText = HardwareReportFormatHelper.NormalizeUnknownValue(configuredSpeed);
+            return string.Equals(speedText, configuredText, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string NormalizeRamSerialNumber(object value)
+        {
+            string serial = HardwareReportFormatHelper.NormalizeUnknownValue(value);
+            bool isAllZeroes = serial.Length > 0 && serial.All(character => character == '0');
+            bool isAllFs = serial.Length > 0 && serial.All(character => character == 'F' || character == 'f');
+
+            return isAllZeroes || isAllFs
+                ? "Unknown"
+                : serial;
+        }
+
+        internal static HardwareDiscoveryResult GetMotherboardInfo(Func<string, List<ManagementObject>> wmiQuery)
         {
             var sb = new StringBuilder();
+            var displayNames = new List<string>();
 
             sb.Append(HardwareReportFormatHelper.Section("MOTHERBOARD"));
 
@@ -160,6 +139,14 @@ namespace TrayTemps
                     int index = 1;
                     foreach (var board in boards)
                     {
+                        string manufacturer = HardwareReportFormatHelper.NormalizeUnknownValue(board["Manufacturer"]);
+                        string product = HardwareReportFormatHelper.NormalizeUnknownValue(board["Product"]);
+                        string displayName = string.Join(" ", new[] { manufacturer, product }
+                            .Where(value => !value.Equals("Unknown", StringComparison.OrdinalIgnoreCase)));
+
+                        if (!string.IsNullOrWhiteSpace(displayName))
+                            displayNames.Add(displayName);
+
                         sb.Append(HardwareReportFormatHelper.Group($"Motherboard #{index++}"));
                         AppendMotherboardStaticFields(sb, board);
                     }
@@ -190,23 +177,24 @@ namespace TrayTemps
             }
             finally { WmiQueryHelper.DisposeAll(biosList); }
 
-            return sb.ToString();
+            string summary = displayNames.Count > 0 ? displayNames[0] : "Unknown Motherboard";
+            return new HardwareDiscoveryResult(summary, sb.ToString(), displayNames, boards.Count);
         }
 
         private static void AppendMotherboardStaticFields(StringBuilder sb, ManagementObject board)
         {
-            sb.AppendLine(HardwareReportFormatHelper.Label("Manufacturer", board["Manufacturer"]));
-            sb.AppendLine(HardwareReportFormatHelper.Label("Product", board["Product"]));
-            sb.AppendLine(HardwareReportFormatHelper.Label("Version", board["Version"]));
-            sb.AppendLine(HardwareReportFormatHelper.Label("Serial", board["SerialNumber"]));
+            sb.AppendLine(HardwareReportFormatHelper.Label("Manufacturer", HardwareReportFormatHelper.NormalizeUnknownValue(board["Manufacturer"])));
+            sb.AppendLine(HardwareReportFormatHelper.Label("Product", HardwareReportFormatHelper.NormalizeUnknownValue(board["Product"])));
+            sb.AppendLine(HardwareReportFormatHelper.Label("Version", HardwareReportFormatHelper.NormalizeUnknownValue(board["Version"])));
+            sb.AppendLine(HardwareReportFormatHelper.Label("Serial", HardwareReportFormatHelper.NormalizeUnknownValue(board["SerialNumber"])));
         }
 
         private static void AppendBiosFields(StringBuilder sb, ManagementObject bios)
         {
-            sb.AppendLine(HardwareReportFormatHelper.Label("Vendor", bios["Manufacturer"]));
-            sb.AppendLine(HardwareReportFormatHelper.Label("Version", bios["SMBIOSBIOSVersion"]));
-            sb.AppendLine(HardwareReportFormatHelper.Label("Release Date", HardwareReportFormatHelper.FormatWmiDate(HardwareReportFormatHelper.Safe(bios["ReleaseDate"]))));
-            sb.AppendLine(HardwareReportFormatHelper.Label("Serial", bios["SerialNumber"]));
+            sb.AppendLine(HardwareReportFormatHelper.Label("Vendor", HardwareReportFormatHelper.NormalizeUnknownValue(bios["Manufacturer"])));
+            sb.AppendLine(HardwareReportFormatHelper.Label("Version", HardwareReportFormatHelper.NormalizeUnknownValue(bios["SMBIOSBIOSVersion"])));
+            sb.AppendLine(HardwareReportFormatHelper.Label("Release Date", HardwareReportFormatHelper.FormatWmiDate(HardwareReportFormatHelper.NormalizeUnknownValue(bios["ReleaseDate"]))));
+            sb.AppendLine(HardwareReportFormatHelper.Label("Serial", HardwareReportFormatHelper.NormalizeUnknownValue(bios["SerialNumber"])));
         }
     }
 }

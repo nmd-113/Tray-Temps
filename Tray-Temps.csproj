@@ -9,6 +9,7 @@
     <RootNamespace>TrayTemps</RootNamespace>
     <AssemblyName>TrayTemps</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <LangVersion>7.3</LangVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
     <IsWebBootstrapper>false</IsWebBootstrapper>
@@ -31,7 +32,6 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Prefer32Bit>false</Prefer32Bit>
     <UseWinFormsOutOfProcDesigner>False</UseWinFormsOutOfProcDesigner>
   </PropertyGroup>
@@ -43,7 +43,6 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Prefer32Bit>false</Prefer32Bit>
     <DebugSymbols>true</DebugSymbols>
     <UseWinFormsOutOfProcDesigner>False</UseWinFormsOutOfProcDesigner>
@@ -70,7 +69,7 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="LibreHardwareMonitorLib">
-      <HintPath>$(NuGetPackageRoot)librehardwaremonitorlib\0.9.4\lib\net472\LibreHardwareMonitorLib.dll</HintPath>
+      <HintPath>$(PkgLibreHardwareMonitorLib)\runtimes\win-x64\lib\net472\LibreHardwareMonitorLib.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.Bcl.AsyncInterfaces">
@@ -108,17 +107,11 @@
       <HintPath>$(NuGetPackageRoot)system.runtime.compilerservices.unsafe\6.1.2\lib\net462\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="System.ServiceProcess" />
     <Reference Include="System.Text.Encodings.Web">
       <HintPath>$(NuGetPackageRoot)system.text.encodings.web\10.0.8\lib\net462\System.Text.Encodings.Web.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="System.Windows.Forms.DataVisualization" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Deployment" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Management" />
     <Reference Include="System.Memory">
@@ -135,7 +128,6 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="System.Windows.Forms" />
-    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AppSettings.cs" />
@@ -170,12 +162,15 @@
     </Compile>
     <Compile Include="Helpers\UI\MainFormShadowHelper.cs" />
     <Compile Include="Helpers\Storage\StorageReportHelper.cs" />
+    <Compile Include="Helpers\Storage\StorageLiveSensorFallbackHelper.cs" />
     <Compile Include="Helpers\Storage\StorageSmartInfoHelper.cs" />
     <Compile Include="Helpers\Infrastructure\WmiQueryHelper.cs" />
+    <Compile Include="Helpers\Infrastructure\PawnIoSetupHelper.cs" />
     <Compile Include="MainForm.Designer.cs">
       <DependentUpon>MainForm.cs</DependentUpon>
     </Compile>
     <Compile Include="Helpers\Hardware\HardwareDialogTextHelper.cs" />
+    <Compile Include="Helpers\Hardware\HardwareDiscoveryResult.cs" />
     <Compile Include="Helpers\Hardware\HardwareReportFormatHelper.cs" />
     <Compile Include="Helpers\Tray\TrayIconCacheKeyHelper.cs" />
     <Compile Include="Helpers\Formatting\ValueHelper.cs" />
@@ -184,7 +179,6 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="ServiceManager.cs" />
     <Compile Include="Helpers\Tray\TrayTextHelper.cs" />
     <Compile Include="Helpers\Formatting\TemperatureFormatHelper.cs" />
     <Compile Include="Program.cs" />
@@ -218,6 +212,9 @@
     <None Include="Resources\amd.png" />
     <EmbeddedResource Include="Resources\bunken_bold.ttf" />
     <EmbeddedResource Include="Resources\bunken_book.ttf" />
+    <EmbeddedResource Include="Resources\PawnIO_setup.exe">
+      <LogicalName>TrayTemps.Resources.PawnIO_setup.exe</LogicalName>
+    </EmbeddedResource>
     <None Include="Resources\intel.png" />
     <None Include="Resources\nvidia.png" />
     <None Include="Resources\gpu.png" />
@@ -243,7 +240,8 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="LibreHardwareMonitorLib">
-      <Version>0.9.4</Version>
+      <Version>0.9.6</Version>
+      <GeneratePathProperty>true</GeneratePathProperty>
     </PackageReference>
     <PackageReference Include="System.Management">
       <Version>10.0.8</Version>

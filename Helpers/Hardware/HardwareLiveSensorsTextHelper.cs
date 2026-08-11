@@ -21,71 +21,42 @@ namespace TrayTemps
                 return sb.ToString();
             }
 
-            AppendLiveHardwareSensors(sb, hardware, "");
+            AppendLiveHardwareSensors(sb, hardware, "", includeUnavailableSensors: false);
 
             return sb.ToString();
         }
 
-        internal static string BuildAllStorageSensorsText(IEnumerable<IHardware> storageHardwares, Action<IHardware> updateHardwareRecursive)
+        internal static string BuildAllStorageSensorsText(
+            IEnumerable<IHardware> storageHardwares,
+            Action<IHardware> updateHardwareRecursive,
+            IEnumerable<StorageLiveFallbackDevice> fallbackDevices)
         {
             var sb = new StringBuilder();
+            List<IHardware> drives = storageHardwares?
+                .Where(hardware => hardware != null)
+                .ToList() ?? new List<IHardware>();
+            List<StorageLiveFallbackDevice> fallbackList = fallbackDevices?
+                .Where(device => device != null)
+                .ToList() ?? new List<StorageLiveFallbackDevice>();
 
             AppendLiveSensorsHeader(sb, "LIVE STORAGE SENSORS");
 
-            if (storageHardwares == null || !storageHardwares.Any())
+            if (drives.Count == 0 && fallbackList.Count == 0)
             {
                 sb.AppendLine("No storage sensors available.");
                 return sb.ToString();
             }
 
-            bool appendedAnyDrive = AppendAllStorageLiveSensors(sb, storageHardwares, updateHardwareRecursive);
+            bool appendedAnyDrive = AppendAllStorageLiveSensors(
+                sb,
+                drives,
+                updateHardwareRecursive,
+                fallbackList);
 
             if (!appendedAnyDrive)
                 sb.AppendLine("No storage sensors available.");
 
             return sb.ToString();
-        }
-
-        internal static void AppendSensorSummary(StringBuilder sb, IHardware hardware)
-        {
-            if (hardware == null)
-                return;
-
-            sb.Append(HardwareReportFormatHelper.Section("SENSORS"));
-
-            try
-            {
-                hardware.Update();
-
-                var sensors = hardware.Sensors
-                    .Where(s =>
-                        s.SensorType == SensorType.Temperature ||
-                        s.SensorType == SensorType.Load ||
-                        s.SensorType == SensorType.Clock ||
-                        s.SensorType == SensorType.Power ||
-                        s.SensorType == SensorType.Voltage ||
-                        s.SensorType == SensorType.Fan)
-                    .OrderBy(s => s.SensorType.ToString())
-                    .ThenBy(s => s.Name)
-                    .ToList();
-
-                if (sensors.Count == 0)
-                {
-                    sb.AppendLine("  No sensors available.");
-                    sb.AppendLine();
-                    return;
-                }
-
-                foreach (var sensor in sensors)
-                    sb.AppendLine(HardwareReportFormatHelper.Label($"{sensor.SensorType} / {sensor.Name}", HardwareReportFormatHelper.FormatSensorValue(sensor)));
-
-                sb.AppendLine();
-            }
-            catch
-            {
-                sb.AppendLine("  Could not read sensors.");
-                sb.AppendLine();
-            }
         }
 
         private static void AppendLiveSensorsHeader(StringBuilder sb, string title)
@@ -96,15 +67,17 @@ namespace TrayTemps
             sb.AppendLine();
         }
 
-        private static bool AppendAllStorageLiveSensors(StringBuilder sb, IEnumerable<IHardware> storageHardwares, Action<IHardware> updateHardwareRecursive)
+        private static bool AppendAllStorageLiveSensors(
+            StringBuilder sb,
+            IEnumerable<IHardware> storageHardwares,
+            Action<IHardware> updateHardwareRecursive,
+            List<StorageLiveFallbackDevice> fallbackDevices)
         {
             bool appendedAnyDrive = false;
+            var matchedFallbackDevices = new HashSet<StorageLiveFallbackDevice>();
 
             foreach (var drive in storageHardwares)
             {
-                if (drive == null)
-                    continue;
-
                 try
                 {
                     updateHardwareRecursive?.Invoke(drive);
@@ -114,55 +87,219 @@ namespace TrayTemps
                     Debug.WriteLine("UpdateHardwareRecursive(drive) failed: " + ex);
                 }
 
-                AppendLiveHardwareSensors(sb, drive, "");
+                // LHM 0.9.6 can expose storage sensors before their first value is
+                // available. Keep those sensors visible as N/A instead of leaving
+                // an otherwise valid drive section empty.
+                StorageLiveFallbackDevice fallbackDevice = FindFallbackDevice(
+                    drive,
+                    fallbackDevices,
+                    matchedFallbackDevices);
+
+                if (fallbackDevice != null)
+                    matchedFallbackDevices.Add(fallbackDevice);
+
+                AppendLiveHardwareSensors(
+                    sb,
+                    drive,
+                    "",
+                    includeUnavailableSensors: true,
+                    fallbackDevice?.Sensors);
+                appendedAnyDrive = true;
+            }
+
+            foreach (StorageLiveFallbackDevice fallbackDevice in fallbackDevices)
+            {
+                if (matchedFallbackDevices.Contains(fallbackDevice))
+                    continue;
+
+                AppendFallbackDeviceSensors(sb, fallbackDevice);
                 appendedAnyDrive = true;
             }
 
             return appendedAnyDrive;
         }
 
-        private static void AppendLiveHardwareSensors(StringBuilder sb, IHardware hardware, string indent)
+        private static StorageLiveFallbackDevice FindFallbackDevice(
+            IHardware drive,
+            IEnumerable<StorageLiveFallbackDevice> fallbackDevices,
+            HashSet<StorageLiveFallbackDevice> alreadyMatched)
+        {
+            if (TryGetStorageIndex(drive, out int storageIndex))
+            {
+                StorageLiveFallbackDevice indexMatch = fallbackDevices.FirstOrDefault(device =>
+                    !alreadyMatched.Contains(device) && device.Index == storageIndex);
+
+                if (indexMatch != null)
+                    return indexMatch;
+            }
+
+            string driveName = HardwareReportFormatHelper.NormalizeStorageText(
+                HardwareReportFormatHelper.Safe(drive?.Name));
+
+            if (string.IsNullOrEmpty(driveName))
+                return null;
+
+            return fallbackDevices.FirstOrDefault(device =>
+            {
+                if (alreadyMatched.Contains(device))
+                    return false;
+
+                string fallbackName = HardwareReportFormatHelper.NormalizeStorageText(device.Name);
+                return !string.IsNullOrEmpty(fallbackName) &&
+                    (string.Equals(driveName, fallbackName, StringComparison.OrdinalIgnoreCase) ||
+                     driveName.Contains(fallbackName) ||
+                     fallbackName.Contains(driveName));
+            });
+        }
+
+        private static bool TryGetStorageIndex(IHardware drive, out int index)
+        {
+            index = -1;
+
+            string identifier = drive?.Identifier.ToString();
+            if (string.IsNullOrWhiteSpace(identifier))
+                return false;
+
+            int separatorIndex = identifier.LastIndexOf('/');
+            string indexText = separatorIndex < 0
+                ? identifier
+                : identifier.Substring(separatorIndex + 1);
+
+            return int.TryParse(indexText, out index);
+        }
+
+        private static void AppendLiveHardwareSensors(
+            StringBuilder sb,
+            IHardware hardware,
+            string indent,
+            bool includeUnavailableSensors,
+            IEnumerable<StorageLiveFallbackSensor> fallbackSensors = null)
         {
             if (hardware == null)
                 return;
 
-            sb.AppendLine($"{indent}{hardware.Name}");
-            sb.AppendLine($"{indent}{new string('-', Math.Min(64, HardwareReportFormatHelper.Safe(hardware.Name).Length + 8))}");
+            string hardwareName = HardwareReportFormatHelper.Safe(hardware.Name);
+            sb.AppendLine($"{indent}{hardwareName}");
+            sb.AppendLine($"{indent}{new string('-', Math.Min(64, hardwareName.Length + 8))}");
 
-            var sensors = hardware.Sensors
-                .Where(s => s.Value.HasValue)
+            var sensors = HardwareReportFormatHelper.DistinctSensors(hardware.Sensors)
+                .Where(s => includeUnavailableSensors || s.Value.HasValue)
                 .OrderBy(s => s.SensorType.ToString())
-                .ThenBy(s => s.Name)
+                .ThenBy(s => s.Name, HardwareReportFormatHelper.NaturalTextComparer)
                 .ToList();
+            List<StorageLiveFallbackSensor> fallbackList = fallbackSensors?
+                .Where(sensor => sensor != null)
+                .OrderBy(sensor => sensor.SensorType.ToString())
+                .ThenBy(sensor => sensor.Name, HardwareReportFormatHelper.NaturalTextComparer)
+                .ToList() ?? new List<StorageLiveFallbackSensor>();
+            var usedFallbackKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            if (sensors.Count == 0)
+            if (sensors.Count == 0 && fallbackList.Count == 0)
             {
-                sb.AppendLine($"{indent}No live sensors available.");
+                if (!HasSensorsInSubHardware(hardware, includeUnavailableSensors))
+                    sb.AppendLine($"{indent}No live sensors available.");
             }
             else
             {
                 foreach (var sensor in sensors)
                 {
+                    string sensorKey = GetStorageSensorMergeKey(sensor.Name);
+                    StorageLiveFallbackSensor fallbackSensor = fallbackList.FirstOrDefault(candidate =>
+                        string.Equals(
+                            GetStorageSensorMergeKey(candidate.Name),
+                            sensorKey,
+                            StringComparison.OrdinalIgnoreCase));
+                    string formattedValue = sensor.Value.HasValue || fallbackSensor == null
+                        ? HardwareReportFormatHelper.FormatSensorValue(sensor)
+                        : fallbackSensor.FormattedValue;
+
+                    if (fallbackSensor != null)
+                        usedFallbackKeys.Add(sensorKey);
+
                     sb.AppendLine(
-                        $"{indent}{sensor.SensorType,-13} {HardwareReportFormatHelper.Safe(sensor.Name),-36} {HardwareReportFormatHelper.FormatSensorValue(sensor)}");
+                        $"{indent}{sensor.SensorType,-13} {HardwareReportFormatHelper.Safe(sensor.Name),-36} {formattedValue}");
+                }
+
+                foreach (StorageLiveFallbackSensor fallbackSensor in fallbackList)
+                {
+                    string fallbackKey = GetStorageSensorMergeKey(fallbackSensor.Name);
+
+                    if (!usedFallbackKeys.Add(fallbackKey))
+                        continue;
+
+                    AppendFallbackSensor(sb, fallbackSensor, indent);
                 }
             }
 
             sb.AppendLine();
 
             foreach (var subHardware in hardware.SubHardware)
-            {
-                try
-                {
-                    subHardware.Update();
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine("subHardware.Update failed: " + ex);
-                }
+                AppendLiveHardwareSensors(sb, subHardware, indent + "  ", includeUnavailableSensors);
+        }
 
-                AppendLiveHardwareSensors(sb, subHardware, indent + "  ");
+        private static void AppendFallbackDeviceSensors(
+            StringBuilder sb,
+            StorageLiveFallbackDevice device)
+        {
+            string deviceName = HardwareReportFormatHelper.Safe(device.Name);
+            sb.AppendLine(deviceName);
+            sb.AppendLine(new string('-', Math.Min(64, deviceName.Length + 8)));
+
+            if (device.Sensors.Count == 0)
+            {
+                sb.AppendLine("No live sensors available.");
             }
+            else
+            {
+                foreach (StorageLiveFallbackSensor sensor in device.Sensors
+                    .OrderBy(item => item.SensorType.ToString())
+                    .ThenBy(item => item.Name, HardwareReportFormatHelper.NaturalTextComparer))
+                {
+                    AppendFallbackSensor(sb, sensor, "");
+                }
+            }
+
+            sb.AppendLine();
+        }
+
+        private static void AppendFallbackSensor(
+            StringBuilder sb,
+            StorageLiveFallbackSensor sensor,
+            string indent)
+        {
+            sb.AppendLine(
+                $"{indent}{sensor.SensorType,-13} {HardwareReportFormatHelper.Safe(sensor.Name),-36} {sensor.FormattedValue}");
+        }
+
+        private static string GetStorageSensorMergeKey(string sensorName)
+        {
+            string normalized = HardwareReportFormatHelper.NormalizeStorageText(
+                HardwareReportFormatHelper.Safe(sensorName));
+
+            if (normalized == "LIFE" ||
+                (normalized.Contains("LIFE") &&
+                 (normalized.Contains("REMAINING") || normalized.Contains("LEFT"))) ||
+                normalized.Contains("PERCENTAGEUSED"))
+            {
+                return "LIFE";
+            }
+
+            return normalized;
+        }
+
+        private static bool HasSensorsInSubHardware(IHardware hardware, bool includeUnavailableSensors)
+        {
+            foreach (IHardware subHardware in hardware.SubHardware)
+            {
+                if (subHardware.Sensors.Any(sensor =>
+                        sensor != null && (includeUnavailableSensors || sensor.Value.HasValue)) ||
+                    HasSensorsInSubHardware(subHardware, includeUnavailableSensors))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

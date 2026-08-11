@@ -10,6 +10,9 @@ namespace TrayTemps
 {
     internal static class HardwareReportFormatHelper
     {
+        internal static IComparer<string> NaturalTextComparer { get; } =
+            Comparer<string>.Create(CompareNaturalText);
+
         internal static string Section(string title)
         {
             title = Safe(title).ToUpperInvariant();
@@ -30,15 +33,13 @@ namespace TrayTemps
 
         internal static string Label(string key, object value)
         {
-            string k = string.IsNullOrWhiteSpace(key) ? "Info" : key.Trim();
+            string k = SanitizeSingleLineText(key);
+            if (string.IsNullOrWhiteSpace(k))
+                k = "Info";
+
             string v = Safe(value);
 
-            if (k.Length <= 20)
-                return $"  {k,-20} : {v}";
-
-            return
-                $"  {k}\r\n" +
-                $"  {new string(' ', 20)} : {v}";
+            return $"  {k,-20} : {v}";
         }
 
         internal static string Safe(object value)
@@ -46,12 +47,64 @@ namespace TrayTemps
             if (value == null)
                 return "N/A";
 
-            string text = value.ToString();
+            string text = SanitizeSingleLineText(value.ToString());
 
             if (string.IsNullOrWhiteSpace(text))
                 return "N/A";
 
-            return text.Trim();
+            return text;
+        }
+
+        internal static string SanitizeSingleLineText(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+                return string.Empty;
+
+            var cleaned = new StringBuilder(text.Length);
+            bool previousWasSpace = false;
+
+            foreach (char character in text)
+            {
+                if (character == '\0')
+                    break;
+
+                if (char.IsControl(character))
+                {
+                    if (char.IsWhiteSpace(character) && !previousWasSpace)
+                    {
+                        cleaned.Append(' ');
+                        previousWasSpace = true;
+                    }
+
+                    continue;
+                }
+
+                cleaned.Append(character);
+                previousWasSpace = char.IsWhiteSpace(character);
+            }
+
+            return cleaned.ToString().Trim();
+        }
+
+        internal static string NormalizeUnknownValue(object value)
+        {
+            if (value == null)
+                return "Unknown";
+
+            string text = SanitizeSingleLineText(value.ToString());
+
+            if (string.IsNullOrWhiteSpace(text) ||
+                text.Equals("N/A", StringComparison.OrdinalIgnoreCase) ||
+                text.Equals("NONE", StringComparison.OrdinalIgnoreCase) ||
+                text.Equals("Undefined", StringComparison.OrdinalIgnoreCase) ||
+                text.Equals("Not Specified", StringComparison.OrdinalIgnoreCase) ||
+                text.Equals("To Be Filled By O.E.M.", StringComparison.OrdinalIgnoreCase) ||
+                text.Equals("Default string", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Unknown";
+            }
+
+            return text;
         }
 
         internal static string Unit(object value, string unit)
@@ -104,7 +157,7 @@ namespace TrayTemps
             }
             catch
             {
-                return value;
+                return Safe(value);
             }
         }
 
@@ -129,12 +182,12 @@ namespace TrayTemps
                 return string.Empty;
 
             if (value is string s)
-                return s;
+                return SanitizeSingleLineText(s);
 
             if (value is string[] array)
-                return string.Join(", ", array);
+                return string.Join(", ", array.Select(SanitizeSingleLineText));
 
-            return value.ToString();
+            return SanitizeSingleLineText(value.ToString());
         }
 
         internal static string GetCpuArchitectureString(object value)
@@ -180,7 +233,7 @@ namespace TrayTemps
                     return "DDR5";
 
                 default:
-                    return type == 0 ? "N/A" : $"Unknown ({type})";
+                    return type == 0 ? "Unknown" : $"Unknown ({type})";
             }
         }
 
@@ -240,6 +293,42 @@ namespace TrayTemps
             };
 
             return healthTerms.Any(term => name.IndexOf(term, StringComparison.OrdinalIgnoreCase) >= 0);
+        }
+
+        internal static bool IsCanonicalStorageLifeSensor(ISensor sensor)
+        {
+            if (sensor == null)
+                return false;
+
+            string name = Safe(sensor.Name);
+
+            return name.Equals("Life", StringComparison.OrdinalIgnoreCase) ||
+                   name.IndexOf("percentage used", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   (name.IndexOf("life", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                    (name.IndexOf("remaining", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                     name.IndexOf("left", StringComparison.OrdinalIgnoreCase) >= 0));
+        }
+
+        internal static IEnumerable<ISensor> DistinctSensors(IEnumerable<ISensor> sensors)
+        {
+            if (sensors == null)
+                yield break;
+
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (ISensor sensor in sensors)
+            {
+                if (sensor == null)
+                    continue;
+
+                string identifier = sensor.Identifier.ToString();
+                string key = string.IsNullOrWhiteSpace(identifier)
+                    ? $"{sensor.SensorType}|{sensor.Index}|{Safe(sensor.Name)}"
+                    : identifier;
+
+                if (seen.Add(key))
+                    yield return sensor;
+            }
         }
 
         internal static int GetStorageHealthSortOrder(ISensor sensor)
@@ -313,7 +402,7 @@ namespace TrayTemps
         }
 
         // LibreHardwareMonitor throughput sensors are reported in bytes per second.
-        private static string FormatBytesPerSecond(float bytesPerSecond)
+        internal static string FormatBytesPerSecond(double bytesPerSecond)
         {
             double value = bytesPerSecond;
             string[] suffixes = { "B/s", "KB/s", "MB/s", "GB/s", "TB/s" };
@@ -386,6 +475,14 @@ namespace TrayTemps
             {
                 string name = Safe(sensor.Name);
 
+                if (name.Equals("Life", StringComparison.OrdinalIgnoreCase))
+                    return FormatSensorValue(sensor);
+            }
+
+            foreach (var sensor in sensors)
+            {
+                string name = Safe(sensor.Name);
+
                 if (name.IndexOf("percentage used", StringComparison.OrdinalIgnoreCase) >= 0 &&
                     sensor.Value.HasValue)
                 {
@@ -395,6 +492,74 @@ namespace TrayTemps
             }
 
             return null;
+        }
+
+        private static int CompareNaturalText(string left, string right)
+        {
+            left = left ?? string.Empty;
+            right = right ?? string.Empty;
+
+            int leftIndex = 0;
+            int rightIndex = 0;
+
+            while (leftIndex < left.Length && rightIndex < right.Length)
+            {
+                bool leftIsDigit = char.IsDigit(left[leftIndex]);
+                bool rightIsDigit = char.IsDigit(right[rightIndex]);
+
+                if (leftIsDigit && rightIsDigit)
+                {
+                    int leftRunStart = leftIndex;
+                    int rightRunStart = rightIndex;
+
+                    while (leftIndex < left.Length && char.IsDigit(left[leftIndex]))
+                        leftIndex++;
+                    while (rightIndex < right.Length && char.IsDigit(right[rightIndex]))
+                        rightIndex++;
+
+                    int leftSignificantStart = leftRunStart;
+                    int rightSignificantStart = rightRunStart;
+
+                    while (leftSignificantStart < leftIndex - 1 && left[leftSignificantStart] == '0')
+                        leftSignificantStart++;
+                    while (rightSignificantStart < rightIndex - 1 && right[rightSignificantStart] == '0')
+                        rightSignificantStart++;
+
+                    int leftDigitCount = leftIndex - leftSignificantStart;
+                    int rightDigitCount = rightIndex - rightSignificantStart;
+
+                    if (leftDigitCount != rightDigitCount)
+                        return leftDigitCount.CompareTo(rightDigitCount);
+
+                    for (int i = 0; i < leftDigitCount; i++)
+                    {
+                        int comparison = left[leftSignificantStart + i].CompareTo(right[rightSignificantStart + i]);
+                        if (comparison != 0)
+                            return comparison;
+                    }
+
+                    int leftRunLength = leftIndex - leftRunStart;
+                    int rightRunLength = rightIndex - rightRunStart;
+                    if (leftRunLength != rightRunLength)
+                        return leftRunLength.CompareTo(rightRunLength);
+
+                    continue;
+                }
+
+                char leftCharacter = char.ToUpperInvariant(left[leftIndex]);
+                char rightCharacter = char.ToUpperInvariant(right[rightIndex]);
+
+                if (leftCharacter != rightCharacter)
+                    return leftCharacter.CompareTo(rightCharacter);
+
+                leftIndex++;
+                rightIndex++;
+            }
+
+            if (leftIndex != left.Length || rightIndex != right.Length)
+                return (left.Length - leftIndex).CompareTo(right.Length - rightIndex);
+
+            return string.Compare(left, right, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

@@ -7,9 +7,9 @@ using System.Windows.Forms;
 
 public partial class HardwareDetailsDialog : Form
 {
-    private readonly Func<Task<string>> _liveTextFactory;
+    private Func<Task<string>> _liveTextFactory;
     private readonly Func<bool> _shouldStopLiveUpdates;
-    private readonly bool _hasSensors;
+    private bool _hasSensors;
     private bool _showingSensors;
     private bool _liveUpdateBusy;
 
@@ -304,6 +304,47 @@ public partial class HardwareDetailsDialog : Form
     public void SetLightTheme(bool light)
     {
         ApplyTheme(light);
+    }
+
+    public void SetDetailsText(string detailsText)
+    {
+        if (IsDisposed)
+            return;
+
+        if (InvokeRequired)
+        {
+            BeginInvoke((Action<string>)SetDetailsText, detailsText);
+            return;
+        }
+
+        _detailsBox.Text = string.IsNullOrWhiteSpace(detailsText)
+            ? "No information available."
+            : detailsText;
+        ClearSelection(_detailsBox);
+    }
+
+    public void SetLiveTextFactory(Func<Task<string>> liveTextFactory)
+    {
+        if (liveTextFactory == null || IsDisposed)
+            return;
+
+        if (InvokeRequired)
+        {
+            BeginInvoke((Action<Func<Task<string>>>)SetLiveTextFactory, liveTextFactory);
+            return;
+        }
+
+        _liveTextFactory = liveTextFactory;
+        _hasSensors = true;
+        _liveBox.Text = "Loading sensors...";
+        _sensorsMenuBtn.Enabled = true;
+        _sensorsMenuBtn.ForeColor = _menuText;
+
+        if (Visible && !_liveTimer.Enabled)
+        {
+            _liveTimer.Start();
+            _ = RunInitialLiveSensorUpdateAsync();
+        }
     }
 
     private async Task UpdateLiveSensorsAsync()

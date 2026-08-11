@@ -61,13 +61,13 @@ No installation is required.
 
 ---
 
-## Administrator Access
+## Hardware Sensor Access
 
-TrayTemps can read more complete hardware sensor data when running as administrator.
+TrayTemps uses [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) and PawnIO for low-level hardware sensor access.
 
-You can still use the app without administrator rights, but some temperatures, storage health data, or hardware details may be missing or less reliable.
+If a compatible PawnIO installation is unavailable, TrayTemps can continue with the sensors and Windows/WMI fallback information that remain accessible.
 
-The app will still try to show any available fallback data.
+TrayTemps can optionally restart with administrator rights for fuller hardware access. The start-minimized setting can remember whether hidden startup should use administrator rights.
 
 ---
 
@@ -75,9 +75,7 @@ The app will still try to show any available fallback data.
 
 TrayTemps uses [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) to read hardware sensors.
 
-Some antivirus tools may block or flag this type of low-level hardware access.
-
-Only allow the app or add an exclusion if you trust the downloaded file or built it yourself from this repository.
+TrayTemps does not add antivirus exclusions or bypass Windows security features. Verify that downloads come from the official project release.
 
 ---
 
@@ -131,7 +129,7 @@ When a usable CPU or GPU temperature sensor is missing:
 - The related tray option is disabled
 - TrayTemps does not fake GPU temperature using CPU temperature
 
-Running the app as administrator may improve sensor availability.
+Install PawnIO when prompted to enable supported low-level sensors. TrayTemps continues with available fallbacks if PawnIO is declined or unavailable.
 
 ---
 
@@ -177,7 +175,7 @@ For sensor-related issues, include:
 
 * Windows version
 * CPU and GPU models
-* Whether the app was running as administrator
+* Whether PawnIO is installed and its version
 * The displayed sensor or hardware report
 * The expected and actual behavior
 

@@ -8,12 +8,13 @@ namespace TrayTemps
 {
     internal static class HardwareDialogCoordinator
     {
-        internal static async Task ShowHardwareDialogFromClickAsync(
+        internal static async Task<HardwareDetailsDialog> ShowHardwareDialogFromClickAsync(
             Form owner,
             string clickHandlerName,
             string componentName,
             string categoryName,
-            Func<string> contentFactory,
+            string initialContent,
+            Func<Task<string>> contentFactory,
             object hardwareUpdateLock,
             Action<IHardware> updateHardwareRecursive,
             Action<HardwareDetailsDialog> registerHardwareDialog,
@@ -25,10 +26,11 @@ namespace TrayTemps
         {
             try
             {
-                await ShowHardwareDialogAsync(
+                return await ShowHardwareDialogAsync(
                     owner,
                     componentName,
                     categoryName,
+                    initialContent,
                     contentFactory,
                     hardwareUpdateLock,
                     updateHardwareRecursive,
@@ -42,14 +44,16 @@ namespace TrayTemps
             catch (Exception ex)
             {
                 Debug.WriteLine(clickHandlerName + " failed: " + ex);
+                return null;
             }
         }
 
-        internal static async Task ShowHardwareDialogAsync(
+        internal static Task<HardwareDetailsDialog> ShowHardwareDialogAsync(
             Form owner,
             string componentName,
             string categoryName,
-            Func<string> contentFactory,
+            string initialContent,
+            Func<Task<string>> contentFactory,
             object hardwareUpdateLock,
             Action<IHardware> updateHardwareRecursive,
             Action<HardwareDetailsDialog> registerHardwareDialog,
@@ -59,27 +63,22 @@ namespace TrayTemps
             IHardware liveHardware = null,
             Func<Task<string>> liveTextFactory = null)
         {
-            SetLoadingCursor(owner, true);
-
             try
             {
                 string finalComponentName = HardwareDialogTextHelper.GetFinalComponentName(componentName, categoryName, liveHardware);
-                string content = await Task.Run(contentFactory);
-
-                if (owner.IsDisposed || !owner.IsHandleCreated)
-                    return;
-
                 Func<Task<string>> liveFactory = BuildLiveTextFactory(liveTextFactory, liveHardware, hardwareUpdateLock, updateHardwareRecursive);
 
                 var dlg = new HardwareDetailsDialog(
                     finalComponentName,
                     categoryName,
-                    content,
+                    initialContent,
                     liveFactory,
                     isShutdownInitiated,
                     isLightModeEnabled);
 
                 ShowHardwareDialogInstance(owner, dlg, registerHardwareDialog, unregisterHardwareDialog);
+                _ = UpdateDialogDetailsAsync(dlg, contentFactory);
+                return Task.FromResult(dlg);
             }
             catch (Exception ex)
             {
@@ -89,10 +88,27 @@ namespace TrayTemps
                     "Hardware Details Error",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
+                return Task.FromResult<HardwareDetailsDialog>(null);
             }
-            finally
+        }
+
+        private static async Task UpdateDialogDetailsAsync(
+            HardwareDetailsDialog dialog,
+            Func<Task<string>> contentFactory)
+        {
+            try
             {
-                SetLoadingCursor(owner, false);
+                string content = await contentFactory().ConfigureAwait(true);
+
+                if (!dialog.IsDisposed && dialog.IsHandleCreated)
+                    dialog.SetDetailsText(content);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("Loading hardware dialog details failed: " + ex);
+
+                if (!dialog.IsDisposed && dialog.IsHandleCreated)
+                    dialog.SetDetailsText("Detailed hardware information is unavailable.");
             }
         }
 
@@ -139,23 +155,5 @@ namespace TrayTemps
             }
         }
 
-        private static void SetLoadingCursor(Control owner, bool loading)
-        {
-            owner.UseWaitCursor = loading;
-            Cursor.Current = loading ? Cursors.WaitCursor : Cursors.Default;
-
-            SetLoadingCursorRecursive(owner, loading);
-        }
-
-        private static void SetLoadingCursorRecursive(Control parent, bool loading)
-        {
-            foreach (Control control in parent.Controls)
-            {
-                control.UseWaitCursor = loading;
-
-                if (control.HasChildren)
-                    SetLoadingCursorRecursive(control, loading);
-            }
-        }
     }
 }

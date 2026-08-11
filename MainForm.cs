@@ -9,7 +9,6 @@ using System.Drawing.Text;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Management;
 using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
@@ -51,14 +50,29 @@ namespace TrayTemps
         private IHardware _selectedCpuHardware;
         private string _selectedCpuIdentifier;
         private string _savedCpuTemperatureSensorIdentifier;
+        private List<string> _wmiCpuDisplayNames = new List<string>();
 
         private List<IHardware> _gpuHardwares;
+        private List<string> _wmiGpuDisplayNames = new List<string>();
         private IHardware _selectedGpuHardware;
         private string _selectedGpuIdentifier;
         private string _savedGpuTemperatureSensorIdentifier;
 
         private List<IHardware> _storageHardwares;
         private List<string> _wmiStorageDisplayNames = new List<string>();
+        private int _wmiRamModuleCount;
+        private int _wmiMotherboardCount;
+        private readonly object _backgroundDiscoveryLock = new object();
+        private readonly TaskCompletionSource<bool> _backgroundExpansionReady =
+            new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        private Task _componentSensorDiscoveryTask;
+        private Task _backgroundHardwareDiscoveryTask;
+        private Task<IHardware> _memoryHardwareTask;
+        private Task<HardwareDiscoveryResult> _cpuInfoTask;
+        private Task<HardwareDiscoveryResult> _gpuInfoTask;
+        private Task<HardwareDiscoveryResult> _ramInfoTask;
+        private Task<HardwareDiscoveryResult> _storageInfoTask;
+        private Task<HardwareDiscoveryResult> _motherboardInfoTask;
 
         private int _savedCpuIndex = 0;
         private int _savedGpuIndex = 0;
@@ -117,6 +131,8 @@ namespace TrayTemps
         private bool _temperatureTimerConfigured = false;
         private readonly bool _startHiddenFromCommandLine;
         private readonly bool _forceVisibleOnStartup;
+        private readonly bool _requireStartupElevationConsent;
+        private bool _deferPawnIoPrompt;
         private bool _initialWindowDisplaySuppressed = true;
         private int _cpuInvalidSensorCycles;
         private int _gpuInvalidSensorCycles;
@@ -252,10 +268,18 @@ namespace TrayTemps
 
         #region [ Constructor / Form Lifecycle ]
 
-        public MainForm(bool startHiddenFromCommandLine = false, bool forceVisibleOnStartup = false)
+        public MainForm(
+            bool startHiddenFromCommandLine = false,
+            bool forceVisibleOnStartup = false,
+            bool suppressStartupElevationPrompt = false,
+            bool requireStartupElevationConsent = false,
+            bool deferPawnIoPrompt = false)
         {
             _startHiddenFromCommandLine = startHiddenFromCommandLine;
             _forceVisibleOnStartup = forceVisibleOnStartup;
+            _requireStartupElevationConsent = requireStartupElevationConsent;
+            _deferPawnIoPrompt = deferPawnIoPrompt;
+            _sensorElevationPromptShown = suppressStartupElevationPrompt;
             LoadFonts();
             InitializeComponent();
 
@@ -330,10 +354,11 @@ namespace TrayTemps
 
                 SelectedTabChanged(this, EventArgs.Empty);
 
-                await InitializeHardwareAsync();
+                await InitializeHardwareMonitorAsync();
 
                 SetupTimer();
-                TempTimer_Tick(this, EventArgs.Empty);
+                _backgroundExpansionReady.TrySetResult(true);
+                StartBackgroundHardwareDiscovery();
             }
             catch (Exception ex)
             {
@@ -592,20 +617,6 @@ namespace TrayTemps
 
         #region [ Startup / Hardware Initialization ]
 
-        private async Task InitializeHardwareAsync()
-        {
-            string motherboard = await HardwareInfoQueryHelper.GetMotherboardNameAsync();
-            string ram = await HardwareInfoQueryHelper.GetRamInfoAsync();
-
-            if (IsDisposed || !IsHandleCreated)
-                return;
-
-            motherboardDetails.Text = motherboard;
-            ramDetails.Text = ram;
-
-            await InitializeHardwareMonitorAsync();
-        }
-
         private Task InitializeHardwareMonitorAsync()
         {
             return Task.Run(() =>
@@ -614,67 +625,61 @@ namespace TrayTemps
 
                 try
                 {
-                    List<IHardware> cpuHardwares;
-                    List<IHardware> gpuHardwares;
-                    List<IHardware> storageHardwares;
-                    List<string> wmiStorageDisplayNames;
+                    var cpuHardwares = new List<IHardware>();
+                    var gpuHardwares = new List<IHardware>();
 
                     lock (_hardwareUpdateLock)
                     {
                         if (_isShutdownInitiated || _resourcesDisposed)
                             return;
 
-                        newComputer = new Computer
+                        try
                         {
-                            IsCpuEnabled = true,
-                            IsGpuEnabled = true,
-                            IsStorageEnabled = true,
-                            IsMotherboardEnabled = true,
-                            IsMemoryEnabled = true,
-                            IsControllerEnabled = true
-                        };
+                            newComputer = new Computer
+                            {
+                                IsCpuEnabled = true,
+                                IsGpuEnabled = true
+                            };
 
-                        newComputer.Open();
+                            newComputer.Open();
 
-                        foreach (var hardware in newComputer.Hardware)
+                            cpuHardwares = newComputer.Hardware
+                                .Where(h => h.HardwareType == HardwareType.Cpu)
+                                .ToList();
+
+                            gpuHardwares = newComputer.Hardware
+                                .Where(h =>
+                                    h.HardwareType == HardwareType.GpuAmd ||
+                                    h.HardwareType == HardwareType.GpuNvidia ||
+                                    h.HardwareType == HardwareType.GpuIntel)
+                                .ToList();
+
+                            UpdateInitialSensorHardware(cpuHardwares, _savedCpuIdentifier, _savedCpuIndex);
+                            UpdateInitialSensorHardware(gpuHardwares, _savedGpuIdentifier, _savedGpuIndex);
+
+                            _computer = newComputer;
+                            newComputer = null;
+                        }
+                        catch (Exception ex)
                         {
+                            Debug.WriteLine("LibreHardwareMonitor initialization failed; continuing with WMI fallbacks: " + ex);
+
                             try
                             {
-                                hardware.Update();
+                                newComputer?.Close();
                             }
-                            catch (Exception ex)
+                            catch (Exception closeException)
                             {
-                                Debug.WriteLine("Hardware update failed during initialization: " + ex);
+                                Debug.WriteLine("Failed to close partially initialized hardware monitor: " + closeException);
                             }
+
+                            newComputer = null;
                         }
 
-                        cpuHardwares = newComputer.Hardware
-                            .Where(h => h.HardwareType == HardwareType.Cpu)
-                            .ToList();
-
-                        gpuHardwares = newComputer.Hardware
-                            .Where(h =>
-                                h.HardwareType == HardwareType.GpuAmd ||
-                                h.HardwareType == HardwareType.GpuNvidia ||
-                                h.HardwareType == HardwareType.GpuIntel)
-                            .ToList();
-
-                        storageHardwares = newComputer.Hardware
-                            .Where(h => h.HardwareType == HardwareType.Storage)
-                            .ToList();
-
-                        _computer = newComputer;
                         _cpuHardwares = cpuHardwares;
                         _gpuHardwares = gpuHardwares;
-                        _storageHardwares = storageHardwares;
-
-                        newComputer = null;
+                        _storageHardwares = new List<IHardware>();
                     }
-
-                    if (storageHardwares == null || storageHardwares.Count == 0)
-                        wmiStorageDisplayNames = LoadWmiStorageDisplayNames();
-                    else
-                        wmiStorageDisplayNames = new List<string>();
 
                     if (!IsHandleCreated || IsDisposed || _isShutdownInitiated || _resourcesDisposed)
                         return;
@@ -692,8 +697,12 @@ namespace TrayTemps
                             PopulateHardwareSelector(gpuIndexSelect, _gpuHardwares, GetSavedHardwareIndex(_gpuHardwares, _savedGpuIdentifier, _savedGpuIndex), gpuModel, "GPU");
                             cpuConfigButton.Enabled = _cpuHardwares != null && _cpuHardwares.Count > 0;
                             gpuConfigButton.Enabled = _gpuHardwares != null && _gpuHardwares.Count > 0;
-                            _wmiStorageDisplayNames = wmiStorageDisplayNames;
-                            UpdateStorageDetailsText();
+
+                            if (_cpuHardwares.Count == 0 && _wmiCpuDisplayNames.Count > 0)
+                                ApplyWmiCpuFallbackDisplay();
+
+                            if (_gpuHardwares.Count == 0 && _wmiGpuDisplayNames.Count > 0)
+                                ApplyWmiGpuFallbackDisplay();
                         }
                         finally
                         {
@@ -702,27 +711,17 @@ namespace TrayTemps
 
                         ApplySelectedCpuHardwareFromCurrentIndex(updateHardware: false);
                         ApplySelectedGpuHardwareFromCurrentIndex(updateHardware: false);
+                        float? cpuTemp = IsUsableTemperatureSensor(_cpuTempSensor) ? _cpuTempSensor.Value : null;
+                        float? gpuTemp = IsUsableTemperatureSensor(_gpuTempSensor) ? _gpuTempSensor.Value : null;
+
+                        UpdateTemperatures(cpuTemp, gpuTemp);
                         UpdateTemperatureTrayCheckboxAvailability();
+                        UpdateAllTrayIcons(cpuTemp, gpuTemp);
+                        EvaluateTemperatureAlerts(cpuTemp, gpuTemp);
 
-                        string cpuText = cpuModel.Text;
-                        string gpuText = gpuModel.Text;
+                        UpdateHardwareBrandImages();
 
-                        if (gpuText.IndexOf("nvidia", StringComparison.OrdinalIgnoreCase) >= 0)
-                            gpuBrandPic.Image = Properties.Resources.nvidia;
-                        else if (gpuText.IndexOf("amd", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                 gpuText.IndexOf("radeon", StringComparison.OrdinalIgnoreCase) >= 0)
-                            gpuBrandPic.Image = Properties.Resources.amd;
-                        else if (gpuText.IndexOf("intel", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                 gpuText.IndexOf("arc", StringComparison.OrdinalIgnoreCase) >= 0)
-                            gpuBrandPic.Image = Properties.Resources.intel;
-
-                        if (cpuText.IndexOf("intel", StringComparison.OrdinalIgnoreCase) >= 0)
-                            cpuBrandPic.Image = Properties.Resources.intel;
-                        else if (cpuText.IndexOf("amd", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                 cpuText.IndexOf("ryzen", StringComparison.OrdinalIgnoreCase) >= 0)
-                            cpuBrandPic.Image = Properties.Resources.amd;
-
-                        PromptForElevationIfCriticalSensorsAreMissing();
+                        PromptForElevationIfCriticalSensorsAreMissing(storageDiscoveryCompleted: false);
                     });
                 }
                 catch (Exception ex)
@@ -762,6 +761,309 @@ namespace TrayTemps
             });
         }
 
+        private void StartBackgroundHardwareDiscovery()
+        {
+            lock (_backgroundDiscoveryLock)
+            {
+                if (_backgroundHardwareDiscoveryTask != null || _isShutdownInitiated || _resourcesDisposed)
+                    return;
+
+                _componentSensorDiscoveryTask = DiscoverNonEssentialComponentSensorsAsync();
+                _cpuInfoTask = StartHardwareInfoTask("CPU", () => HardwareCpuInfoQueryHelper.GetCpuInfo(WmiQueryHelper.WmiQuery));
+                _gpuInfoTask = StartHardwareInfoTask("GPU", () => HardwareGpuInfoQueryHelper.GetGpuInfo(WmiQueryHelper.WmiQuery));
+                _ramInfoTask = StartHardwareInfoTask("RAM", () => HardwareInfoQueryHelper.GetRamInfo(WmiQueryHelper.WmiQuery));
+                _motherboardInfoTask = StartHardwareInfoTask("motherboard/BIOS", () => HardwareInfoQueryHelper.GetMotherboardInfo(WmiQueryHelper.WmiQuery));
+                _storageInfoTask = LoadStorageInfoAsync(_componentSensorDiscoveryTask);
+                _memoryHardwareTask = DiscoverMemoryHardwareAsync(_componentSensorDiscoveryTask);
+                _backgroundHardwareDiscoveryTask = CompleteBackgroundHardwareDiscoveryAsync(
+                    _componentSensorDiscoveryTask,
+                    _cpuInfoTask,
+                    _gpuInfoTask,
+                    _ramInfoTask,
+                    _storageInfoTask,
+                    _motherboardInfoTask);
+            }
+        }
+
+        private static Task<HardwareDiscoveryResult> StartHardwareInfoTask(
+            string category,
+            Func<HardwareDiscoveryResult> factory)
+        {
+            return Task.Run(() =>
+            {
+                try
+                {
+                    return factory();
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine("Background " + category + " discovery failed: " + ex);
+                    return new HardwareDiscoveryResult(
+                        "Unknown " + category,
+                        "Detailed " + category + " information is unavailable.",
+                        new List<string>(),
+                        0);
+                }
+            });
+        }
+
+        private async Task DiscoverNonEssentialComponentSensorsAsync()
+        {
+            if (!await _backgroundExpansionReady.Task.ConfigureAwait(false))
+                return;
+
+            await Task.Run(() =>
+            {
+                lock (_hardwareUpdateLock)
+                {
+                    Computer computer = _computer;
+                    if (computer == null || _isShutdownInitiated || _resourcesDisposed)
+                        return;
+
+                    try
+                    {
+                        if (!computer.IsStorageEnabled)
+                            computer.IsStorageEnabled = true;
+                        if (!computer.IsMotherboardEnabled)
+                            computer.IsMotherboardEnabled = true;
+
+                        _storageHardwares = GetStorageHardwares(computer);
+
+                        foreach (IHardware storageHardware in _storageHardwares)
+                        {
+                            try
+                            {
+                                UpdateHardwareRecursive(storageHardware);
+                            }
+                            catch (Exception ex)
+                            {
+                                Debug.WriteLine("Initial background storage sensor update failed: " + ex);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine("Background LibreHardwareMonitor component discovery failed: " + ex);
+                        _storageHardwares = new List<IHardware>();
+                    }
+                }
+            }).ConfigureAwait(false);
+        }
+
+        private async Task<HardwareDiscoveryResult> LoadStorageInfoAsync(Task componentDiscoveryTask)
+        {
+            await componentDiscoveryTask.ConfigureAwait(false);
+
+            return await StartHardwareInfoTask(
+                "storage",
+                () => StorageReportHelper.GetStorageInfo(
+                    _storageHardwares,
+                    NoOpHardwareUpdate,
+                    WmiQueryHelper.WmiQuery)).ConfigureAwait(false);
+        }
+
+        private static void NoOpHardwareUpdate(IHardware hardware)
+        {
+        }
+
+        private async Task<IHardware> DiscoverMemoryHardwareAsync(Task componentDiscoveryTask)
+        {
+            await componentDiscoveryTask.ConfigureAwait(false);
+
+            return await Task.Run(() =>
+            {
+                lock (_hardwareUpdateLock)
+                {
+                    Computer computer = _computer;
+                    if (computer == null || _isShutdownInitiated || _resourcesDisposed)
+                        return null;
+
+                    try
+                    {
+                        if (!computer.IsMemoryEnabled)
+                            computer.IsMemoryEnabled = true;
+
+                        if (_isShutdownInitiated || _resourcesDisposed)
+                            return null;
+
+                        return computer.Hardware.FirstOrDefault(hardware => hardware.HardwareType == HardwareType.Memory);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine("Background LibreHardwareMonitor memory discovery failed: " + ex);
+                        return null;
+                    }
+                }
+            }).ConfigureAwait(false);
+        }
+
+        private async Task CompleteBackgroundHardwareDiscoveryAsync(
+            Task componentDiscoveryTask,
+            Task<HardwareDiscoveryResult> cpuInfoTask,
+            Task<HardwareDiscoveryResult> gpuInfoTask,
+            Task<HardwareDiscoveryResult> ramInfoTask,
+            Task<HardwareDiscoveryResult> storageInfoTask,
+            Task<HardwareDiscoveryResult> motherboardInfoTask)
+        {
+            Task applyComponentsTask = ApplyBackgroundResultAsync(componentDiscoveryTask, () =>
+            {
+                UpdateStorageDetailsText();
+                PromptForElevationIfCriticalSensorsAreMissing(storageDiscoveryCompleted: true);
+            });
+
+            Task applyCpuTask = ApplyBackgroundResultAsync(cpuInfoTask, info =>
+            {
+                _wmiCpuDisplayNames = info.DisplayNames;
+                if ((_cpuHardwares == null || _cpuHardwares.Count == 0) && _wmiCpuDisplayNames.Count > 0)
+                    ApplyWmiCpuFallbackDisplay();
+                UpdateHardwareBrandImages();
+            });
+
+            Task applyGpuTask = ApplyBackgroundResultAsync(gpuInfoTask, info =>
+            {
+                _wmiGpuDisplayNames = info.DisplayNames;
+                if ((_gpuHardwares == null || _gpuHardwares.Count == 0) && _wmiGpuDisplayNames.Count > 0)
+                    ApplyWmiGpuFallbackDisplay();
+                UpdateHardwareBrandImages();
+            });
+
+            Task applyRamTask = ApplyBackgroundResultAsync(ramInfoTask, info =>
+            {
+                _wmiRamModuleCount = info.Count;
+                ramDetails.Text = info.Summary;
+            });
+
+            Task applyStorageTask = ApplyBackgroundResultAsync(storageInfoTask, info =>
+            {
+                _wmiStorageDisplayNames = MergeStorageDisplayNames(
+                    info.DisplayNames,
+                    GetLhmStorageDisplayNames());
+                UpdateStorageDetailsText();
+            });
+
+            Task applyMotherboardTask = ApplyBackgroundResultAsync(motherboardInfoTask, info =>
+            {
+                _wmiMotherboardCount = info.Count;
+                motherboardDetails.Text = info.Summary;
+            });
+
+            await Task.WhenAll(
+                applyComponentsTask,
+                applyCpuTask,
+                applyGpuTask,
+                applyRamTask,
+                applyStorageTask,
+                applyMotherboardTask).ConfigureAwait(false);
+        }
+
+        private async Task ApplyBackgroundResultAsync(Task task, Action applyResult)
+        {
+            await task.ConfigureAwait(false);
+            QueueBackgroundUiUpdate(applyResult);
+        }
+
+        private async Task ApplyBackgroundResultAsync<T>(Task<T> task, Action<T> applyResult)
+        {
+            T result = await task.ConfigureAwait(false);
+            QueueBackgroundUiUpdate(() => applyResult(result));
+        }
+
+        private void QueueBackgroundUiUpdate(Action update)
+        {
+            if (_isShutdownInitiated || _resourcesDisposed || IsDisposed || !IsHandleCreated)
+                return;
+
+            try
+            {
+                BeginInvoke((MethodInvoker)delegate
+                {
+                    if (_isShutdownInitiated || _resourcesDisposed || IsDisposed)
+                        return;
+
+                    try
+                    {
+                        update();
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine("Applying background hardware discovery failed: " + ex);
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("Applying background hardware discovery failed: " + ex);
+            }
+        }
+
+        private Task<HardwareDiscoveryResult> GetCpuInfoTask()
+        {
+            StartBackgroundHardwareDiscovery();
+            lock (_backgroundDiscoveryLock) { return _cpuInfoTask; }
+        }
+
+        private Task<HardwareDiscoveryResult> GetGpuInfoTask()
+        {
+            StartBackgroundHardwareDiscovery();
+            lock (_backgroundDiscoveryLock) { return _gpuInfoTask; }
+        }
+
+        private Task<HardwareDiscoveryResult> GetRamInfoTask()
+        {
+            StartBackgroundHardwareDiscovery();
+            lock (_backgroundDiscoveryLock) { return _ramInfoTask; }
+        }
+
+        private Task<HardwareDiscoveryResult> GetStorageInfoTask()
+        {
+            StartBackgroundHardwareDiscovery();
+            lock (_backgroundDiscoveryLock) { return _storageInfoTask; }
+        }
+
+        private Task<HardwareDiscoveryResult> GetMotherboardInfoTask()
+        {
+            StartBackgroundHardwareDiscovery();
+            lock (_backgroundDiscoveryLock) { return _motherboardInfoTask; }
+        }
+
+        private void UpdateHardwareBrandImages()
+        {
+            string cpuText = cpuModel.Text;
+            string gpuText = gpuModel.Text;
+
+            if (gpuText.IndexOf("nvidia", StringComparison.OrdinalIgnoreCase) >= 0)
+                gpuBrandPic.Image = Properties.Resources.nvidia;
+            else if (gpuText.IndexOf("amd", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                     gpuText.IndexOf("radeon", StringComparison.OrdinalIgnoreCase) >= 0)
+                gpuBrandPic.Image = Properties.Resources.amd;
+            else if (gpuText.IndexOf("intel", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                     gpuText.IndexOf("arc", StringComparison.OrdinalIgnoreCase) >= 0)
+                gpuBrandPic.Image = Properties.Resources.intel;
+
+            if (cpuText.IndexOf("intel", StringComparison.OrdinalIgnoreCase) >= 0)
+                cpuBrandPic.Image = Properties.Resources.intel;
+            else if (cpuText.IndexOf("amd", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                     cpuText.IndexOf("ryzen", StringComparison.OrdinalIgnoreCase) >= 0)
+                cpuBrandPic.Image = Properties.Resources.amd;
+        }
+
+        private void UpdateInitialSensorHardware(List<IHardware> hardwares, string savedIdentifier, int savedIndex)
+        {
+            if (hardwares == null || hardwares.Count == 0)
+                return;
+
+            int index = GetSavedHardwareIndex(hardwares, savedIdentifier, savedIndex);
+
+            try
+            {
+                UpdateHardwareRecursive(hardwares[index]);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("Initial sensor update failed for " + hardwares[index].Name + ": " + ex);
+            }
+        }
+
         private void UpdateHardwareRecursive(IHardware hardware)
         {
             hardware.Update();
@@ -793,8 +1095,10 @@ namespace TrayTemps
             if (_isShutdownInitiated || _isRefreshingTemps || _resourcesDisposed)
                 return;
 
-            _isRefreshingTemps = true;
+            if (!_temperatureTimerConfigured && _computer == null)
+                return;
 
+            _isRefreshingTemps = true;
             try
             {
                 _tempTimer.Stop();
@@ -894,6 +1198,9 @@ namespace TrayTemps
                 BringToFront();
                 Activate();
                 UpdateTrayIcons();
+
+                if (!HandleDeferredPawnIoPrompt())
+                    return;
             }
             finally
             {
@@ -3614,7 +3921,7 @@ namespace TrayTemps
             return hardwares
                 .Select((hardware, index) => string.IsNullOrWhiteSpace(hardware?.Name)
                     ? $"{(isCpu ? "CPU" : "GPU")} {index}"
-                    : $"{index}: {hardware.Name}")
+                    : $"{index}: {HardwareReportFormatHelper.Safe(hardware.Name)}")
                 .ToList();
         }
 
@@ -3738,8 +4045,9 @@ namespace TrayTemps
 
         private void SetupSelectedCpuHardware(bool updateHardware)
         {
-            cpuModel.Text = _selectedCpuHardware.Name;
-            cpuName.Text = _selectedCpuHardware.Name;
+            string hardwareName = HardwareReportFormatHelper.Safe(_selectedCpuHardware.Name);
+            cpuModel.Text = hardwareName;
+            cpuName.Text = hardwareName;
 
             if (updateHardware)
                 UpdateHardwareRecursive(_selectedCpuHardware);
@@ -3751,8 +4059,9 @@ namespace TrayTemps
 
         private void SetupSelectedGpuHardware(bool updateHardware)
         {
-            gpuModel.Text = _selectedGpuHardware.Name;
-            gpuName.Text = _selectedGpuHardware.Name;
+            string hardwareName = HardwareReportFormatHelper.Safe(_selectedGpuHardware.Name);
+            gpuModel.Text = hardwareName;
+            gpuName.Text = hardwareName;
 
             if (updateHardware)
                 UpdateHardwareRecursive(_selectedGpuHardware);
@@ -4006,26 +4315,32 @@ namespace TrayTemps
 
             _sensorElevationPromptShown = true;
 
-            if (minimizeOnStart.Checked)
-            {
-                return !IsStartMinimizedWithAdminRights || !RestartElevatedAndClose();
-            }
+            bool shouldConfirmConfiguredElevation =
+                _requireStartupElevationConsent && IsStartMinimizedWithAdminRights;
 
-            const string message =
-                "Tray-Temps can read more complete hardware sensor data when run as administrator.\n\n" +
-                "If you continue without administrator rights, some temperatures, storage health data, or hardware details may be missing, partial, or less reliable.\n\n" +
-                "Windows Security / Microsoft Defender may block low-level hardware access. Only allow the app or add an exclusion if you trust this specific build/source.\n\n" +
-                "Restart Tray-Temps as administrator now?";
+            if (minimizeOnStart.Checked && !shouldConfirmConfiguredElevation)
+                return !IsStartMinimizedWithAdminRights || !RestartElevatedAndClose();
+
+            return PromptForElevationWithUserConsent();
+        }
+
+        private bool PromptForElevationWithUserConsent()
+        {
+            if (IsRunningAsAdministrator() || _isShutdownInitiated || _resourcesDisposed)
+                return true;
 
             DialogResult result = MessageBox.Show(
                 this,
-                message,
+                "TrayTemps can read more complete hardware sensor data when run as administrator.\n\n" +
+                "If you continue without administrator rights, some temperatures, storage health data, or hardware details may be missing, partial, or less reliable.\n\n" +
+                "Restart TrayTemps as administrator now?",
                 "Sensor Access",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Warning);
 
             if (result != DialogResult.Yes)
                 return true;
+                
 
             if (!RestartElevatedAndClose())
             {
@@ -4038,8 +4353,53 @@ namespace TrayTemps
 
                 return true;
             }
-
+           
             return false;
+        }
+
+        private bool HandleDeferredPawnIoPrompt()
+        {
+            if (!_deferPawnIoPrompt || _isShutdownInitiated || _resourcesDisposed || IsDisposed)
+                return true;
+
+            _deferPawnIoPrompt = false;
+
+            PawnIoStartupAction pawnIoAction = PawnIoSetupHelper.EnsureCompatibleInstallation();
+
+            if (pawnIoAction == PawnIoStartupAction.ExitApplication)
+            {
+                Close();
+                return false;
+            }
+
+            if (pawnIoAction == PawnIoStartupAction.RestartApplication)
+            {
+                if (TryRestartElevated())
+                {
+                    ExecuteShutdownSequence();
+                    Close();
+                    return false;
+                }
+
+                MessageBox.Show(
+                    this,
+                    "PawnIO was installed, but Windows did not allow TrayTemps to restart with administrator rights. " +
+                    "TrayTemps will continue normally with the sensors and WMI fallbacks currently available.",
+                    "TrayTemps Restart Failed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+
+                _sensorElevationPromptShown = true;
+                return true;
+            }
+
+            if (pawnIoAction == PawnIoStartupAction.ContinueWithElevationConsent &&
+                IsStartMinimizedWithAdminRights)
+            {
+                return PromptForElevationWithUserConsent();
+            }
+
+            return true;
         }
 
         private static bool IsUsableTemperatureSensor(ISensor sensor)
@@ -4086,34 +4446,83 @@ namespace TrayTemps
 
         private void UpdateStorageDetailsText()
         {
-            List<string> storageNames = _storageHardwares?
-                .Where(hardware => !string.IsNullOrWhiteSpace(hardware?.Name))
-                .Select(hardware => hardware.Name)
-                .ToList();
+            List<string> storageNames = _wmiStorageDisplayNames != null && _wmiStorageDisplayNames.Count > 0
+                ? _wmiStorageDisplayNames
+                : GetLhmStorageDisplayNames();
 
-            if (storageNames == null || storageNames.Count == 0)
-                storageNames = _wmiStorageDisplayNames?.Where(name => !string.IsNullOrWhiteSpace(name)).ToList();
-
-            storageDetails.Text = storageNames == null || storageNames.Count == 0
+            storageDetails.Text = storageNames.Count == 0
                 ? "No Disk found"
                 : string.Join(" | ", storageNames.Select((name, index) => $"{index + 1}.{name}"));
         }
 
-        private static List<string> LoadWmiStorageDisplayNames()
+        private List<string> GetLhmStorageDisplayNames()
         {
-            var displayNames = new List<string>();
-            List<ManagementObject> disks = WmiQueryHelper.WmiQuery("SELECT * FROM Win32_DiskDrive");
-            try
+            return _storageHardwares?
+                .Where(hardware => hardware != null && !string.IsNullOrWhiteSpace(hardware.Name))
+                .GroupBy(
+                    hardware => hardware.Identifier.ToString(),
+                    StringComparer.OrdinalIgnoreCase)
+                .Select(group => HardwareReportFormatHelper.Safe(group.First().Name))
+                .Where(name => name != "N/A")
+                .ToList() ?? new List<string>();
+        }
+
+        private static List<string> MergeStorageDisplayNames(
+            IEnumerable<string> wmiNames,
+            IEnumerable<string> lhmNames)
+        {
+            List<string> reliableWmiNames = wmiNames?
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Select(HardwareReportFormatHelper.SanitizeSingleLineText)
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .ToList() ?? new List<string>();
+
+            var mergedNames = new List<string>(reliableWmiNames);
+
+            if (lhmNames == null)
+                return mergedNames;
+
+            foreach (string lhmName in lhmNames.Where(name => !string.IsNullOrWhiteSpace(name)))
             {
-                foreach (ManagementObject disk in disks)
-                    displayNames.Add(HardwareReportFormatHelper.GetDiskDisplayTitle(disk["Model"], disk["SerialNumber"]));
-            }
-            finally
-            {
-                WmiQueryHelper.DisposeAll(disks);
+                string cleanLhmName = HardwareReportFormatHelper.SanitizeSingleLineText(lhmName);
+                string normalizedLhmName = HardwareReportFormatHelper.NormalizeStorageText(cleanLhmName);
+                bool alreadyRepresentedByWmi = reliableWmiNames.Any(wmiName =>
+                    string.Equals(
+                        HardwareReportFormatHelper.NormalizeStorageText(wmiName),
+                        normalizedLhmName,
+                        StringComparison.OrdinalIgnoreCase));
+
+                if (!alreadyRepresentedByWmi)
+                    mergedNames.Add(cleanLhmName);
             }
 
-            return displayNames;
+            return mergedNames;
+        }
+
+        private void ApplyWmiCpuFallbackDisplay()
+        {
+            string displayText = _wmiCpuDisplayNames.Count == 1
+                ? _wmiCpuDisplayNames[0]
+                : string.Join(" | ", _wmiCpuDisplayNames.Select((name, index) => $"{index + 1}.{name}"));
+
+            cpuModel.Text = displayText;
+            cpuName.Text = _wmiCpuDisplayNames.Count == 1 ? _wmiCpuDisplayNames[0] : "Processors";
+            PopulateTemperatureSensorSelector(cpuTempSensorSelect, null, null);
+            _selectedCpuHardware = null;
+            _cpuTempSensor = null;
+        }
+
+        private void ApplyWmiGpuFallbackDisplay()
+        {
+            string displayText = _wmiGpuDisplayNames.Count == 1
+                ? _wmiGpuDisplayNames[0]
+                : string.Join(" | ", _wmiGpuDisplayNames.Select((name, index) => $"{index + 1}.{name}"));
+
+            gpuModel.Text = displayText;
+            gpuName.Text = _wmiGpuDisplayNames.Count == 1 ? _wmiGpuDisplayNames[0] : "Graphics Adapters";
+            PopulateTemperatureSensorSelector(gpuTempSensorSelect, null, null);
+            _selectedGpuHardware = null;
+            _gpuTempSensor = null;
         }
 
         private void CpuColorValue_Click(object sender, EventArgs e)
@@ -4150,16 +4559,28 @@ namespace TrayTemps
 
         public async void CpuModel_Click(object sender, EventArgs e)
         {
+            int cpuCount = Math.Max(_cpuHardwares?.Count ?? 0, _wmiCpuDisplayNames.Count);
+            string dialogTitle = HardwareDialogTextHelper.GetCategoryDialogTitle(
+                HardwareDialogTextHelper.GetComponentDisplayName(_selectedCpuHardware, cpuModel.Text, "CPU"),
+                "Processors",
+                cpuCount);
+
             await HardwareDialogCoordinator.ShowHardwareDialogFromClickAsync(
                 this,
                 "CpuModel_Click",
-                HardwareDialogTextHelper.GetComponentDisplayName(_selectedCpuHardware, cpuModel.Text, "CPU"),
+                dialogTitle,
                 "CPU",
-                () => HardwareCpuInfoQueryHelper.GetCpuDetails(
-                    _selectedCpuHardware != null,
-                    _selectedCpuHardware?.Name,
-                    _selectedCpuHardware?.Identifier.ToString(),
-                    WmiQueryHelper.WmiQuery),
+                BuildInitialHardwareDialogText("CPU", cpuModel.Text),
+                async () =>
+                {
+                    HardwareDiscoveryResult info = await GetCpuInfoTask().ConfigureAwait(false);
+                    IHardware selectedHardware = _selectedCpuHardware;
+                    return HardwareCpuInfoQueryHelper.FormatCpuDetails(
+                        info.Details,
+                        selectedHardware != null,
+                        selectedHardware?.Name,
+                        selectedHardware?.Identifier.ToString());
+                },
                 _hardwareUpdateLock,
                 UpdateHardwareRecursive,
                 RegisterHardwareDialog,
@@ -4171,15 +4592,25 @@ namespace TrayTemps
 
         public async void GpuModel_Click(object sender, EventArgs e)
         {
+            int gpuCount = Math.Max(_gpuHardwares?.Count ?? 0, _wmiGpuDisplayNames.Count);
+            string specificName = _selectedGpuHardware?.Name ?? _wmiGpuDisplayNames.FirstOrDefault() ?? gpuModel.Text;
+            string dialogTitle = HardwareDialogTextHelper.GetCategoryDialogTitle(specificName, "Graphics Adapters", gpuCount);
+
             await HardwareDialogCoordinator.ShowHardwareDialogFromClickAsync(
                 this,
                 "GpuModel_Click",
-                HardwareDialogTextHelper.GetComponentDisplayName(_selectedGpuHardware, gpuModel.Text, "GPU"),
+                dialogTitle,
                 "GPU",
-                () => HardwareGpuInfoQueryHelper.GetGpuDetails(
-                    _selectedGpuHardware?.Name,
-                    _selectedGpuHardware?.Identifier.ToString(),
-                    WmiQueryHelper.WmiQuery),
+                BuildInitialHardwareDialogText("GPU", gpuModel.Text),
+                async () =>
+                {
+                    HardwareDiscoveryResult info = await GetGpuInfoTask().ConfigureAwait(false);
+                    IHardware selectedHardware = _selectedGpuHardware;
+                    return HardwareGpuInfoQueryHelper.FormatGpuDetails(
+                        info.Details,
+                        selectedHardware?.Name,
+                        selectedHardware?.Identifier.ToString());
+                },
                 _hardwareUpdateLock,
                 UpdateHardwareRecursive,
                 RegisterHardwareDialog,
@@ -4191,29 +4622,53 @@ namespace TrayTemps
 
         public async void RamDetails_Click(object sender, EventArgs e)
         {
-            await HardwareDialogCoordinator.ShowHardwareDialogFromClickAsync(
+            string dialogTitle = HardwareDialogTextHelper.GetCategoryDialogTitle("System Memory", "Memory", _wmiRamModuleCount);
+            Task<IHardware> memoryTask = EnsureMemoryHardwareAvailableAsync();
+            IHardware memoryHardware = memoryTask.Status == TaskStatus.RanToCompletion ? memoryTask.Result : null;
+
+            HardwareDetailsDialog dialog = await HardwareDialogCoordinator.ShowHardwareDialogFromClickAsync(
                 this,
                 "RamDetails_Click",
-                HardwareDialogTextHelper.GetCleanDialogTitle(ramDetails.Text, "RAM"),
+                dialogTitle,
                 "RAM",
-                () => HardwareInfoQueryHelper.GetRamDetails(WmiQueryHelper.WmiQuery),
+                BuildInitialHardwareDialogText("RAM", ramDetails.Text),
+                async () => (await GetRamInfoTask().ConfigureAwait(false)).Details,
                 _hardwareUpdateLock,
                 UpdateHardwareRecursive,
                 RegisterHardwareDialog,
                 UnregisterHardwareDialog,
                 () => _isShutdownInitiated,
                 IsLightModeEnabled,
-                GetFirstHardware(HardwareType.Memory));
+                memoryHardware);
+
+            if (dialog != null && memoryHardware == null)
+            {
+                memoryHardware = await memoryTask;
+
+                if (memoryHardware != null && !dialog.IsDisposed)
+                {
+                    dialog.SetLiveTextFactory(HardwareDialogCoordinator.BuildLiveTextFactory(
+                        null,
+                        memoryHardware,
+                        _hardwareUpdateLock,
+                        UpdateHardwareRecursive));
+                }
+            }
         }
 
         public async void StorageDetails_Click(object sender, EventArgs e)
         {
+            int storageCount = Math.Max(_storageHardwares?.Count ?? 0, _wmiStorageDisplayNames.Count);
+            string storageName = _storageHardwares?.FirstOrDefault()?.Name ?? _wmiStorageDisplayNames.FirstOrDefault();
+            string dialogTitle = HardwareDialogTextHelper.GetCategoryDialogTitle(storageName, "Storage", storageCount);
+
             await HardwareDialogCoordinator.ShowHardwareDialogFromClickAsync(
                 this,
                 "StorageDetails_Click",
+                dialogTitle,
                 "Storage",
-                "Storage",
-                () => StorageReportHelper.GetStorageDetails(_storageHardwares, UpdateHardwareRecursive, WmiQueryHelper.WmiQuery),
+                BuildInitialHardwareDialogText("Storage", storageDetails.Text),
+                async () => (await GetStorageInfoTask().ConfigureAwait(false)).Details,
                 _hardwareUpdateLock,
                 UpdateHardwareRecursive,
                 RegisterHardwareDialog,
@@ -4225,19 +4680,60 @@ namespace TrayTemps
 
         public async void MotherboardDetails_Click(object sender, EventArgs e)
         {
-            await HardwareDialogCoordinator.ShowHardwareDialogFromClickAsync(
+            string dialogTitle = HardwareDialogTextHelper.GetCategoryDialogTitle(
+                motherboardDetails.Text,
+                "Motherboards / BIOS",
+                _wmiMotherboardCount);
+
+            IHardware motherboardHardware = GetFirstHardware(HardwareType.Motherboard);
+            HardwareDetailsDialog dialog = await HardwareDialogCoordinator.ShowHardwareDialogFromClickAsync(
                 this,
                 "MotherboardDetails_Click",
-                HardwareDialogTextHelper.GetCleanDialogTitle(motherboardDetails.Text, "Motherboard"),
+                dialogTitle,
                 "Motherboard",
-                () => HardwareInfoQueryHelper.GetMotherboardDetails(WmiQueryHelper.WmiQuery),
+                BuildInitialHardwareDialogText("Motherboard", motherboardDetails.Text),
+                async () => (await GetMotherboardInfoTask().ConfigureAwait(false)).Details,
                 _hardwareUpdateLock,
                 UpdateHardwareRecursive,
                 RegisterHardwareDialog,
                 UnregisterHardwareDialog,
                 () => _isShutdownInitiated,
                 IsLightModeEnabled,
-                GetFirstHardware(HardwareType.Motherboard));
+                motherboardHardware);
+
+            if (dialog != null && motherboardHardware == null)
+            {
+                Task componentTask;
+                StartBackgroundHardwareDiscovery();
+                lock (_backgroundDiscoveryLock) { componentTask = _componentSensorDiscoveryTask; }
+                await componentTask;
+                motherboardHardware = GetFirstHardware(HardwareType.Motherboard);
+
+                if (motherboardHardware != null && !dialog.IsDisposed)
+                {
+                    dialog.SetLiveTextFactory(HardwareDialogCoordinator.BuildLiveTextFactory(
+                        null,
+                        motherboardHardware,
+                        _hardwareUpdateLock,
+                        UpdateHardwareRecursive));
+                }
+            }
+        }
+
+        private static string BuildInitialHardwareDialogText(string category, string availableText)
+        {
+            var text = new System.Text.StringBuilder();
+            text.Append(HardwareReportFormatHelper.Section(category));
+
+            if (!string.IsNullOrWhiteSpace(availableText) &&
+                availableText.IndexOf("Loading hardware information", StringComparison.OrdinalIgnoreCase) < 0)
+            {
+                text.Append(HardwareReportFormatHelper.Label("Available", availableText));
+                text.AppendLine();
+            }
+
+            text.AppendLine("  Loading detailed hardware information...");
+            return text.ToString();
         }
 
         private void ApplyLabelHover(params Label[] labels)
@@ -4266,45 +4762,65 @@ namespace TrayTemps
             return _computer.Hardware.FirstOrDefault(h => h.HardwareType == hardwareType);
         }
 
+        private Task<IHardware> EnsureMemoryHardwareAvailableAsync()
+        {
+            StartBackgroundHardwareDiscovery();
+            lock (_backgroundDiscoveryLock) { return _memoryHardwareTask; }
+        }
+
 
         // =========================
         // Live Sensors
 
-        private Task<string> BuildAllStorageSensorsTextAsync()
+        private async Task<string> BuildAllStorageSensorsTextAsync()
         {
-            return Task.Run(() =>
+            StartBackgroundHardwareDiscovery();
+
+            Task componentDiscoveryTask;
+            lock (_backgroundDiscoveryLock)
             {
+                componentDiscoveryTask = _componentSensorDiscoveryTask;
+            }
+
+            if (componentDiscoveryTask != null)
+                await componentDiscoveryTask.ConfigureAwait(false);
+
+            return await Task.Run(() =>
+            {
+                List<StorageLiveFallbackDevice> fallbackDevices;
+
+                try
+                {
+                    fallbackDevices = StorageLiveSensorFallbackHelper.GetSnapshot();
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine("WMI live storage fallback failed: " + ex);
+                    fallbackDevices = new List<StorageLiveFallbackDevice>();
+                }
+
                 lock (_hardwareUpdateLock)
                 {
+                    // Storage devices can be added by LibreHardwareMonitor after the
+                    // deferred background discovery has completed. Refresh the cached
+                    // list here without reopening or rescanning the monitor.
+                    if (_computer != null && !_isShutdownInitiated && !_resourcesDisposed)
+                        _storageHardwares = GetStorageHardwares(_computer);
+
                     return HardwareLiveSensorsTextHelper.BuildAllStorageSensorsText(
                         _storageHardwares,
-                        UpdateHardwareRecursive);
+                        UpdateHardwareRecursive,
+                        fallbackDevices);
                 }
-            });
+            }).ConfigureAwait(false);
         }
 
-        // =========================
-        // WMI Helpers
-        // =========================
-        // =========================
-        // CPU
-        // =========================
-
-        // =========================
-        // GPU
-        // =========================
-
-        // =========================
-        // RAM
-        // =========================
-
-        // =========================
-        // STORAGE
-        // =========================
-
-        // =========================
-        // MOTHERBOARD + BIOS
-        // =========================
+        private static List<IHardware> GetStorageHardwares(Computer computer)
+        {
+            return computer?.Hardware
+                .Where(hardware => hardware.HardwareType == HardwareType.Storage)
+                .ToList() ?? new List<IHardware>();
+        }
 
         #endregion
 
@@ -4430,14 +4946,11 @@ namespace TrayTemps
             if (minimizeOnStart.Checked)
                 return IsStartMinimizedWithAdminRights && RestartElevatedAndClose();
 
-            string message =
-                "TrayTemps could not initialize full hardware sensors without administrator rights.\n\n" +
-                "Restart as administrator to enable low-level temperature sensors?\n\n" +
-                "Reason: " + reason;
-
             DialogResult result = MessageBox.Show(
                 this,
-                message,
+                "TrayTemps could not initialize full hardware sensors without administrator rights.\n\n" +
+                "Restart as administrator to enable low-level temperature sensors?\n\n" +
+                "Reason: " + reason,
                 "Sensor Access",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Warning);
@@ -4460,15 +4973,15 @@ namespace TrayTemps
             return true;
         }
 
-        private void PromptForElevationIfCriticalSensorsAreMissing()
+        private void PromptForElevationIfCriticalSensorsAreMissing(bool storageDiscoveryCompleted)
         {
             if (_sensorElevationPromptShown || IsRunningAsAdministrator() || _isShutdownInitiated || _resourcesDisposed)
                 return;
 
             bool hasCpuHardware = _cpuHardwares != null && _cpuHardwares.Count > 0;
-            bool missingCpuTemperature = hasCpuHardware &&
-                (_cpuTempSensor == null || !TemperatureFormatHelper.IsValidTemp(_cpuTempSensor.Value));
-            bool missingStorage = _storageHardwares == null || _storageHardwares.Count == 0;
+            bool missingCpuTemperature = hasCpuHardware && !IsUsableTemperatureSensor(_cpuTempSensor);
+            bool missingStorage = storageDiscoveryCompleted &&
+                (_storageHardwares == null || _storageHardwares.Count == 0);
 
             if (!missingCpuTemperature && !missingStorage)
                 return;
@@ -4547,19 +5060,11 @@ namespace TrayTemps
 
             _isShutdownInitiated = true;
             _resourcesDisposed = true;
+            _backgroundExpansionReady.TrySetResult(false);
 
             StopTemperatureTimerForShutdown();
             CloseHardwareDialogsForShutdown();
             CloseHardwareMonitorForShutdown();
-
-            try
-            {
-                ServiceManager.StopService("R0TrayTemps", 5);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine("ExecuteShutdownSequence: ServiceManager.StopService failed: " + ex);
-            }
 
             DisposeTrayIconsForShutdown();
             DisposeUiResourcesForShutdown();
@@ -4589,29 +5094,62 @@ namespace TrayTemps
         {
             try
             {
+                Computer computerToClose;
+
                 lock (_hardwareUpdateLock)
                 {
-                    try
-                    {
-                        _computer?.Close();
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine("ExecuteShutdownSequence: _computer.Close failed: " + ex);
-                    }
-
+                    computerToClose = _computer;
                     _computer = null;
-
                     _selectedCpuHardware = null;
                     _selectedGpuHardware = null;
-
                     _cpuTempSensor = null;
                     _gpuTempSensor = null;
+                }
+
+                Task<IHardware> memoryTask;
+                Task<HardwareDiscoveryResult> storageInfoTask;
+                lock (_backgroundDiscoveryLock)
+                {
+                    memoryTask = _memoryHardwareTask;
+                    storageInfoTask = _storageInfoTask;
+                }
+
+                if (computerToClose == null)
+                    return;
+
+                var pendingComputerTasks = new List<Task>();
+
+                if (memoryTask != null && !memoryTask.IsCompleted)
+                    pendingComputerTasks.Add(memoryTask);
+                if (storageInfoTask != null && !storageInfoTask.IsCompleted)
+                    pendingComputerTasks.Add(storageInfoTask);
+
+                if (pendingComputerTasks.Count > 0)
+                {
+                    Task.WhenAll(pendingComputerTasks).ContinueWith(
+                        task => CloseComputerSafely(computerToClose),
+                        TaskScheduler.Default);
+                }
+                else
+                {
+                    CloseComputerSafely(computerToClose);
                 }
             }
             catch (Exception ex)
             {
                 Debug.WriteLine("ExecuteShutdownSequence: error while clearing hardware refs: " + ex);
+            }
+        }
+
+        private static void CloseComputerSafely(Computer computer)
+        {
+            try
+            {
+                computer?.Close();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("ExecuteShutdownSequence: _computer.Close failed: " + ex);
             }
         }
 
@@ -4789,7 +5327,10 @@ namespace TrayTemps
 
             var result = MessageBox.Show(
                 this,
-                "Remove installed app, shortcut, and startup entry?\n\nYes = Remove all\nNo = Remove only startup entry\nCancel = Do nothing",
+                "Choose what to remove:\n\n" +
+                "Yes = Remove all (TrayTemps, startup task, and settings/user data)\n" +
+                "No = Remove startup task only\n" +
+                "Cancel = Make no changes",
                 "Confirm Remove",
                 MessageBoxButtons.YesNoCancel,
                 MessageBoxIcon.Warning);
@@ -4827,6 +5368,18 @@ namespace TrayTemps
 
         private async Task HandleAutostartDisableNo()
         {
+            if (!IsStartupEntryPresent())
+            {
+                SaveSettings();
+                MessageBox.Show(
+                    this,
+                    "The startup task is already removed. TrayTemps and its settings were not changed.",
+                    "Info",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return;
+            }
+
             if (!IsRunningAsAdministrator())
             {
                 HandleAutostartAdminRequired(
@@ -5090,11 +5643,11 @@ namespace TrayTemps
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
 
-            if (string.IsNullOrEmpty(InstallPath) || !Directory.Exists(InstallPath))
+            if (!TryGetOwnedInstallDirectory(out string installDirectory))
             {
                 MessageBox.Show(
                     this,
-                    "Installation folder not found.",
+                    "The TrayTemps installation folder could not be verified.",
                     "Uninstall Error",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
@@ -5109,12 +5662,25 @@ namespace TrayTemps
                 $"{AppName}.lnk");
             string settingsFolder = Path.GetDirectoryName(SettingsFilePath);
 
+            if (!TryRemoveStartupTask(out string taskError))
+            {
+                MessageBox.Show(
+                    this,
+                    "The TrayTemps startup task could not be removed.\n\n" + taskError,
+                    "Uninstall Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                return;
+            }
+
             if (!shouldCloseCurrentApp)
             {
-                if (TryDirectUninstallInstalledCopy(shortcutPath, out string error))
+                if (TryDirectUninstallInstalledCopy(installDirectory, shortcutPath, settingsFolder, out string error))
                 {
+                    _settingsLoaded = false;
                     InstallPath = string.Empty;
-                    UpdateAutostartCheckboxStateAndText();
+                    ExecuteShutdownSequence();
+                    Close();
                 }
                 else
                 {
@@ -5136,10 +5702,7 @@ namespace TrayTemps
 setlocal
 cd /d ""%~dp0""
 
-schtasks /Delete /TN ""{AppName}"" /F > nul 2>&1
-sc stop ""R0TrayTemps"" > nul 2>&1
-
-set ""install_folder={InstallPath}""
+set ""install_folder={installDirectory}""
 set ""settings_folder={settingsFolder}""
 set attempts=0
 
@@ -5188,19 +5751,51 @@ if exist ""{shortcutPath}"" del /f /q ""{shortcutPath}""
             Close();
         }
 
-        private bool TryDirectUninstallInstalledCopy(string shortcutPath, out string error)
+        private bool TryGetOwnedInstallDirectory(out string installDirectory)
+        {
+            installDirectory = string.Empty;
+
+            try
+            {
+                if (string.IsNullOrWhiteSpace(InstallPath))
+                    return false;
+
+                string fullPath = Path.GetFullPath(InstallPath)
+                    .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+                if (!string.Equals(Path.GetFileName(fullPath), AppName, StringComparison.OrdinalIgnoreCase) ||
+                    !File.Exists(Path.Combine(fullPath, AppName + ".exe")))
+                {
+                    return false;
+                }
+
+                installDirectory = fullPath;
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private bool TryDirectUninstallInstalledCopy(
+            string installDirectory,
+            string shortcutPath,
+            string settingsFolder,
+            out string error)
         {
             error = string.Empty;
 
             try
             {
-                RunProcessAndWait("schtasks.exe", $"/Delete /TN \"{AppName}\" /F", out string _);
-
-                if (Directory.Exists(InstallPath))
-                    Directory.Delete(InstallPath, true);
+                if (Directory.Exists(installDirectory))
+                    Directory.Delete(installDirectory, true);
 
                 if (File.Exists(shortcutPath))
                     File.Delete(shortcutPath);
+
+                if (Directory.Exists(settingsFolder))
+                    Directory.Delete(settingsFolder, true);
 
                 return true;
             }
@@ -5209,6 +5804,19 @@ if exist ""{shortcutPath}"" del /f /q ""{shortcutPath}""
                 error = ex.Message;
                 return false;
             }
+        }
+
+        private bool TryRemoveStartupTask(out string error)
+        {
+            error = string.Empty;
+
+            if (!IsStartupEntryPresent())
+                return true;
+
+            return RunProcessAndWait(
+                "schtasks.exe",
+                $"/Delete /TN \"{AppName}\" /F",
+                out error);
         }
 
         private Task AddStartupTaskAsync()

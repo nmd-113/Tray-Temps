@@ -11,16 +11,11 @@ namespace TrayTemps
 {
     internal static class HardwareGpuInfoQueryHelper
     {
-        internal static string GetGpuDetails(string selectedGpuName, string selectedGpuIdentifier, Func<string, List<ManagementObject>> wmiQuery)
+        internal static HardwareDiscoveryResult GetGpuInfo(Func<string, List<ManagementObject>> wmiQuery)
         {
             var sb = new StringBuilder();
             sb.Append(HardwareReportFormatHelper.Section("GPU"));
-
-            if (selectedGpuName != null || selectedGpuIdentifier != null)
-            {
-                sb.AppendLine(HardwareReportFormatHelper.Label("Selected GPU", selectedGpuName));
-                sb.AppendLine(HardwareReportFormatHelper.Label("Identifier", selectedGpuIdentifier));
-            }
+            var displayNames = new List<string>();
 
             var gpus = wmiQuery("SELECT * FROM Win32_VideoController");
             try
@@ -29,30 +24,37 @@ namespace TrayTemps
                 {
                     sb.AppendLine();
                     sb.AppendLine("  No GPU information found.");
-                    return sb.ToString();
+                    return new HardwareDiscoveryResult("Unknown GPU", sb.ToString(), displayNames, 0);
                 }
 
                 int index = 1;
+                string displayResolutionSummary = GetDisplayResolutionSummary();
+                bool hasDisplayResolutionSummary = !string.IsNullOrWhiteSpace(displayResolutionSummary);
+                string resolutionLabel = hasDisplayResolutionSummary
+                    ? (displayResolutionSummary.Contains(";") ? "Current Resolutions" : "Current Resolution")
+                    : "Resolution";
 
                 foreach (var gpu in gpus)
                 {
+                    string name = HardwareReportFormatHelper.NormalizeUnknownValue(gpu["Name"]);
+                    if (name != "Unknown")
+                        displayNames.Add(name);
+
                     sb.Append(HardwareReportFormatHelper.Group($"GPU #{index++}"));
 
                     string width = HardwareReportFormatHelper.Safe(gpu["CurrentHorizontalResolution"]);
                     string height = HardwareReportFormatHelper.Safe(gpu["CurrentVerticalResolution"]);
                     string refresh = HardwareReportFormatHelper.Safe(gpu["CurrentRefreshRate"]);
-                    string displayResolutionSummary = GetDisplayResolutionSummary();
-                    bool hasDisplayResolutionSummary = !string.IsNullOrWhiteSpace(displayResolutionSummary);
-                    string resolutionLabel = hasDisplayResolutionSummary
-                        ? (displayResolutionSummary.Contains(";") ? "Current Resolutions" : "Current Resolution")
-                        : "Resolution";
                     string resolutionValue = hasDisplayResolutionSummary
                         ? displayResolutionSummary
                         : $"{width} x {height} @ {refresh}Hz";
                     AppendGpuDetailsFields(sb, gpu, resolutionLabel, resolutionValue);
                 }
 
-                return sb.ToString();
+                string summary = displayNames.Count == 1
+                    ? displayNames[0]
+                    : displayNames.Count > 1 ? "Graphics Adapters" : "Unknown GPU";
+                return new HardwareDiscoveryResult(summary, sb.ToString(), displayNames, gpus.Count);
             }
             finally
             {
@@ -60,16 +62,140 @@ namespace TrayTemps
             }
         }
 
+        internal static string FormatGpuDetails(string details, string selectedGpuName, string selectedGpuIdentifier)
+        {
+            if (selectedGpuName == null && selectedGpuIdentifier == null)
+                return details;
+
+            string section = HardwareReportFormatHelper.Section("GPU");
+            string selection =
+                HardwareReportFormatHelper.Label("Selected GPU", selectedGpuName) + Environment.NewLine +
+                HardwareReportFormatHelper.Label("Identifier", selectedGpuIdentifier) + Environment.NewLine;
+
+            return details != null && details.StartsWith(section, StringComparison.Ordinal)
+                ? section + selection + details.Substring(section.Length)
+                : section + selection + (details ?? string.Empty);
+        }
+
         private static void AppendGpuDetailsFields(StringBuilder sb, ManagementObject gpu, string resolutionLabel, string resolutionValue)
         {
             sb.AppendLine(HardwareReportFormatHelper.Label("Name", gpu["Name"]));
-            sb.AppendLine(HardwareReportFormatHelper.Label("Driver", gpu["DriverVersion"]));
+            sb.AppendLine(HardwareReportFormatHelper.Label("Driver", GetGpuDriverVersionText(gpu)));
             sb.AppendLine(HardwareReportFormatHelper.Label("Driver Date", HardwareReportFormatHelper.FormatWmiDate(HardwareReportFormatHelper.Safe(gpu["DriverDate"]))));
             sb.AppendLine(HardwareReportFormatHelper.Label("Video Processor", gpu["VideoProcessor"]));
             sb.AppendLine(HardwareReportFormatHelper.Label("Dedicated VRAM", GetGpuVramText(gpu)));
-            sb.AppendLine(HardwareReportFormatHelper.Label("DAC Type", gpu["AdapterDACType"]));
             sb.AppendLine(HardwareReportFormatHelper.Label(resolutionLabel, resolutionValue));
             sb.AppendLine(HardwareReportFormatHelper.Label("PNP Device ID", gpu["PNPDeviceID"]));
+        }
+
+        private static string GetGpuDriverVersionText(ManagementObject gpu)
+        {
+            string rawVersion = HardwareReportFormatHelper.NormalizeUnknownValue(gpu["DriverVersion"]);
+            string gpuName = HardwareReportFormatHelper.Safe(gpu["Name"]);
+            string pnpId = HardwareReportFormatHelper.Safe(gpu["PNPDeviceID"]);
+
+            if (IsNvidiaGpu(gpuName, pnpId) && TryConvertNvidiaDriverVersion(rawVersion, out string nvidiaVersion))
+                return nvidiaVersion;
+
+            if (IsAmdGpu(gpuName, pnpId) && TryGetAmdSoftwareVersion(out string amdVersion))
+                return amdVersion;
+
+            // Intel's familiar DCH version uses the same four-part form exposed by WMI.
+            return rawVersion;
+        }
+
+        private static bool IsNvidiaGpu(string name, string pnpId)
+        {
+            return name.IndexOf("NVIDIA", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   pnpId.IndexOf("VEN_10DE", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static bool IsAmdGpu(string name, string pnpId)
+        {
+            return name.IndexOf("AMD", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   name.IndexOf("Radeon", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   pnpId.IndexOf("VEN_1002", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static bool TryConvertNvidiaDriverVersion(string rawVersion, out string vendorVersion)
+        {
+            vendorVersion = null;
+            string[] parts = rawVersion.Split('.');
+
+            if (parts.Length != 4 ||
+                !int.TryParse(parts[2], out int thirdPart) ||
+                !int.TryParse(parts[3], out int fourthPart) ||
+                thirdPart < 10 || thirdPart > 19 ||
+                fourthPart < 0 || fourthPart > 9999)
+            {
+                return false;
+            }
+
+            string vendorDigits = (thirdPart % 10).ToString() + fourthPart.ToString("D4");
+
+            if (vendorDigits.Length != 5)
+                return false;
+
+            vendorVersion = vendorDigits.Substring(0, 3) + "." + vendorDigits.Substring(3, 2);
+            return true;
+        }
+
+        private static bool TryGetAmdSoftwareVersion(out string version)
+        {
+            version = null;
+
+            foreach (RegistryView view in new[] { RegistryView.Registry64, RegistryView.Registry32 })
+            {
+                try
+                {
+                    using (RegistryKey baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, view))
+                    {
+                        string candidate;
+
+                        using (RegistryKey installedDriverKey = baseKey.OpenSubKey(
+                            @"SOFTWARE\AMD\AMDInstallManager\CheckForUpdates\GraphicsDriverConsumer"))
+                        {
+                            candidate = installedDriverKey?.GetValue("VersionCurrentlyInstalled")?.ToString().Trim();
+                        }
+
+                        if (IsFamiliarAmdVersion(candidate))
+                        {
+                            version = candidate;
+                            return true;
+                        }
+
+                        using (RegistryKey amdKey = baseKey.OpenSubKey(@"SOFTWARE\AMD\CN"))
+                        {
+                            candidate = amdKey?.GetValue("RadeonSoftwareVersion")?.ToString().Trim();
+                        }
+
+                        if (IsFamiliarAmdVersion(candidate))
+                        {
+                            version = candidate;
+                            return true;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine("Reading AMD software version failed: " + ex);
+                }
+            }
+
+            return false;
+        }
+
+        private static bool IsFamiliarAmdVersion(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value) || value.Length > 24)
+                return false;
+
+            string[] parts = value.Split('.');
+
+            if (parts.Length < 2 || parts.Length > 3)
+                return false;
+
+            return parts.All(part => part.Length > 0 && part.Length <= 4 && part.All(char.IsDigit));
         }
 
         private static string GetGpuVramText(ManagementObject gpu)
