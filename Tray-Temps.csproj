@@ -189,6 +189,9 @@
     <EmbeddedResource Include="Dialogs\HardwareDetailsDialog.resx">
       <DependentUpon>HardwareDetailsDialog.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="Dialogs\HardwareSelectionConfig.resx">
+      <DependentUpon>HardwareSelectionConfig.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="MainForm.resx">
       <DependentUpon>MainForm.cs</DependentUpon>
     </EmbeddedResource>

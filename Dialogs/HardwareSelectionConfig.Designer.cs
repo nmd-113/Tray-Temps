@@ -1,4 +1,4 @@
-namespace TrayTemps
+﻿namespace TrayTemps
 {
     partial class HardwareSelectionConfig
     {
@@ -23,9 +23,9 @@ namespace TrayTemps
             this.formTitle = new System.Windows.Forms.Label();
             this.mainPanel.SuspendLayout();
             this.SuspendLayout();
-            //
+            // 
             // exitBtn
-            //
+            // 
             this.exitBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.exitBtn.FlatAppearance.BorderSize = 0;
             this.exitBtn.FlatAppearance.MouseOverBackColor = System.Drawing.Color.Red;
@@ -35,13 +35,15 @@ namespace TrayTemps
             this.exitBtn.Name = "exitBtn";
             this.exitBtn.Size = new System.Drawing.Size(46, 44);
             this.exitBtn.TabIndex = 0;
-            this.exitBtn.Text = "\u2716";
+            this.exitBtn.Text = "✖";
             this.exitBtn.UseVisualStyleBackColor = true;
             this.exitBtn.Click += new System.EventHandler(this.ExitBtn_Click);
-            //
+            // 
             // mainPanel
-            //
-            this.mainPanel.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right)));
+            // 
+            this.mainPanel.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.mainPanel.Controls.Add(this.saveBtn);
             this.mainPanel.Controls.Add(this.sensorSelect);
             this.mainPanel.Controls.Add(this.sensorLabel);
@@ -51,21 +53,21 @@ namespace TrayTemps
             this.mainPanel.Name = "mainPanel";
             this.mainPanel.Size = new System.Drawing.Size(326, 158);
             this.mainPanel.TabIndex = 1;
-            //
+            // 
             // saveBtn
-            //
+            // 
             this.saveBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.saveBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold);
             this.saveBtn.Location = new System.Drawing.Point(22, 109);
             this.saveBtn.Name = "saveBtn";
             this.saveBtn.Size = new System.Drawing.Size(282, 34);
             this.saveBtn.TabIndex = 4;
-            this.saveBtn.Text = "\uD83D\uDCBE SAVE";
+            this.saveBtn.Text = "💾 SAVE";
             this.saveBtn.UseVisualStyleBackColor = false;
             this.saveBtn.Click += new System.EventHandler(this.SaveBtn_Click);
-            //
+            // 
             // sensorSelect
-            //
+            // 
             this.sensorSelect.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.sensorSelect.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.sensorSelect.FormattingEnabled = true;
@@ -73,18 +75,18 @@ namespace TrayTemps
             this.sensorSelect.Name = "sensorSelect";
             this.sensorSelect.Size = new System.Drawing.Size(282, 24);
             this.sensorSelect.TabIndex = 3;
-            //
+            // 
             // sensorLabel
-            //
+            // 
             this.sensorLabel.AutoSize = true;
             this.sensorLabel.Location = new System.Drawing.Point(22, 54);
             this.sensorLabel.Name = "sensorLabel";
-            this.sensorLabel.Size = new System.Drawing.Size(139, 16);
+            this.sensorLabel.Size = new System.Drawing.Size(129, 16);
             this.sensorLabel.TabIndex = 2;
             this.sensorLabel.Text = "Temperature sensor";
-            //
+            // 
             // hardwareSelect
-            //
+            // 
             this.hardwareSelect.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.hardwareSelect.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.hardwareSelect.FormattingEnabled = true;
@@ -93,28 +95,28 @@ namespace TrayTemps
             this.hardwareSelect.Size = new System.Drawing.Size(282, 24);
             this.hardwareSelect.TabIndex = 1;
             this.hardwareSelect.SelectedIndexChanged += new System.EventHandler(this.HardwareSelect_SelectedIndexChanged);
-            //
+            // 
             // hardwareLabel
-            //
+            // 
             this.hardwareLabel.AutoSize = true;
             this.hardwareLabel.Location = new System.Drawing.Point(22, 5);
             this.hardwareLabel.Name = "hardwareLabel";
-            this.hardwareLabel.Size = new System.Drawing.Size(105, 16);
+            this.hardwareLabel.Size = new System.Drawing.Size(113, 16);
             this.hardwareLabel.TabIndex = 0;
             this.hardwareLabel.Text = "Detected devices";
-            //
+            // 
             // formTitle
-            //
+            // 
             this.formTitle.AutoSize = true;
             this.formTitle.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold);
             this.formTitle.Location = new System.Drawing.Point(22, 15);
             this.formTitle.Name = "formTitle";
-            this.formTitle.Size = new System.Drawing.Size(76, 16);
+            this.formTitle.Size = new System.Drawing.Size(73, 16);
             this.formTitle.TabIndex = 2;
             this.formTitle.Text = "Configure";
-            //
+            // 
             // HardwareSelectionConfig
-            //
+            // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
             this.ClientSize = new System.Drawing.Size(330, 206);
@@ -128,7 +130,7 @@ namespace TrayTemps
             this.MinimizeBox = false;
             this.Name = "HardwareSelectionConfig";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-            this.Text = "HardwareSelectionConfig";
+            this.Text = "Hardware Selection Config";
             this.Load += new System.EventHandler(this.HardwareSelectionConfig_Load);
             this.MouseDown += new System.Windows.Forms.MouseEventHandler(this.HardwareSelectionConfig_MouseDown);
             this.MouseMove += new System.Windows.Forms.MouseEventHandler(this.HardwareSelectionConfig_MouseMove);
@@ -137,6 +139,7 @@ namespace TrayTemps
             this.mainPanel.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
+
         }
 
         private System.Windows.Forms.Button exitBtn;

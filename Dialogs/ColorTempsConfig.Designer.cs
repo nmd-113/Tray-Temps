@@ -280,7 +280,7 @@
             this.MinimizeBox = false;
             this.Name = "ColorTempsConfig";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "ColorTempsConfig";
+            this.Text = "Temps Color Config";
             this.Load += new System.EventHandler(this.ColorTempsConfig_Load);
             this.MouseDown += new System.Windows.Forms.MouseEventHandler(this.ColorTempsConfig_MouseDown);
             this.MouseMove += new System.Windows.Forms.MouseEventHandler(this.ColorTempsConfig_MouseMove);

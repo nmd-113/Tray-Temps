@@ -22,7 +22,7 @@ namespace TrayTemps
         #region [ Fields / Constants ]
 
         private const string AppName = "TrayTemps";
-        private const string EmbeddedBunkenBoldDisplayName = "Bunken Tech Sans Pro Bold (Embedded)";
+        private const string EmbeddedBunkenBoldDisplayName = "Bunken Tech Sans Pro Bold";
         private string InstallPath;
         private string SettingsFilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), AppName, "settings.json");
         private const int IconSize = 16;
@@ -711,6 +711,8 @@ namespace TrayTemps
 
                         ApplySelectedCpuHardwareFromCurrentIndex(updateHardware: false);
                         ApplySelectedGpuHardwareFromCurrentIndex(updateHardware: false);
+                        UpdateCpuModelText();
+                        UpdateGpuModelText();
                         float? cpuTemp = IsUsableTemperatureSensor(_cpuTempSensor) ? _cpuTempSensor.Value : null;
                         float? gpuTemp = IsUsableTemperatureSensor(_gpuTempSensor) ? _gpuTempSensor.Value : null;
 
@@ -916,6 +918,8 @@ namespace TrayTemps
                 _wmiCpuDisplayNames = info.DisplayNames;
                 if ((_cpuHardwares == null || _cpuHardwares.Count == 0) && _wmiCpuDisplayNames.Count > 0)
                     ApplyWmiCpuFallbackDisplay();
+                else
+                    UpdateCpuModelText();
                 UpdateHardwareBrandImages();
             });
 
@@ -924,6 +928,8 @@ namespace TrayTemps
                 _wmiGpuDisplayNames = info.DisplayNames;
                 if ((_gpuHardwares == null || _gpuHardwares.Count == 0) && _wmiGpuDisplayNames.Count > 0)
                     ApplyWmiGpuFallbackDisplay();
+                else
+                    UpdateGpuModelText();
                 UpdateHardwareBrandImages();
             });
 
@@ -1028,8 +1034,12 @@ namespace TrayTemps
 
         private void UpdateHardwareBrandImages()
         {
-            string cpuText = cpuModel.Text;
-            string gpuText = gpuModel.Text;
+            string cpuText = _selectedCpuHardware != null
+                ? HardwareReportFormatHelper.Safe(_selectedCpuHardware.Name)
+                : _wmiCpuDisplayNames.FirstOrDefault() ?? cpuName.Text;
+            string gpuText = _selectedGpuHardware != null
+                ? HardwareReportFormatHelper.Safe(_selectedGpuHardware.Name)
+                : _wmiGpuDisplayNames.FirstOrDefault() ?? gpuName.Text;
 
             if (gpuText.IndexOf("nvidia", StringComparison.OrdinalIgnoreCase) >= 0)
                 gpuBrandPic.Image = Properties.Resources.nvidia;
@@ -4046,7 +4056,6 @@ namespace TrayTemps
         private void SetupSelectedCpuHardware(bool updateHardware)
         {
             string hardwareName = HardwareReportFormatHelper.Safe(_selectedCpuHardware.Name);
-            cpuModel.Text = hardwareName;
             cpuName.Text = hardwareName;
 
             if (updateHardware)
@@ -4055,12 +4064,14 @@ namespace TrayTemps
             PopulateTemperatureSensorSelector(cpuTempSensorSelect, _selectedCpuHardware, _savedCpuTemperatureSensorIdentifier);
             _cpuTempSensor = GetConfiguredTemperatureSensor(cpuTempSensorSelect, _selectedCpuHardware, isCpu: true);
             _cpuInvalidSensorCycles = 0;
+
+            if (updateHardware)
+                UpdateHardwareBrandImages();
         }
 
         private void SetupSelectedGpuHardware(bool updateHardware)
         {
             string hardwareName = HardwareReportFormatHelper.Safe(_selectedGpuHardware.Name);
-            gpuModel.Text = hardwareName;
             gpuName.Text = hardwareName;
 
             if (updateHardware)
@@ -4069,6 +4080,9 @@ namespace TrayTemps
             PopulateTemperatureSensorSelector(gpuTempSensorSelect, _selectedGpuHardware, _savedGpuTemperatureSensorIdentifier);
             _gpuTempSensor = GetConfiguredTemperatureSensor(gpuTempSensorSelect, _selectedGpuHardware, isCpu: false);
             _gpuInvalidSensorCycles = 0;
+
+            if (updateHardware)
+                UpdateHardwareBrandImages();
         }
 
         private void PopulateTemperatureSensorSelector(ComboBox selector, IHardware hardware, string savedSensorIdentifier)
@@ -4499,13 +4513,159 @@ namespace TrayTemps
             return mergedNames;
         }
 
+        private void UpdateCpuModelText()
+        {
+            cpuModel.Text = FormatComponentDisplayNames(
+                MergeComponentDisplayNames(_wmiCpuDisplayNames, GetLhmComponentDisplayNames(_cpuHardwares)),
+                "No CPU found");
+        }
+
+        private void UpdateGpuModelText()
+        {
+            gpuModel.Text = FormatComponentDisplayNames(
+                MergeComponentDisplayNames(_wmiGpuDisplayNames, GetLhmComponentDisplayNames(_gpuHardwares)),
+                "No GPU found");
+        }
+
+        private static List<string> GetLhmComponentDisplayNames(IEnumerable<IHardware> hardwares)
+        {
+            return hardwares?
+                .Where(hardware => hardware != null && !string.IsNullOrWhiteSpace(hardware.Name))
+                .GroupBy(hardware => hardware.Identifier.ToString(), StringComparer.OrdinalIgnoreCase)
+                .Select(group => HardwareReportFormatHelper.Safe(group.First().Name))
+                .Where(name => name != "N/A")
+                .ToList() ?? new List<string>();
+        }
+
+        private static List<string> MergeComponentDisplayNames(
+            IEnumerable<string> wmiNames,
+            IEnumerable<string> lhmNames)
+        {
+            List<string> cleanWmiNames = CleanComponentDisplayNames(wmiNames);
+            List<string> cleanLhmNames = CleanComponentDisplayNames(lhmNames);
+            var mergedNames = new List<string>(cleanWmiNames);
+            var matchedWmiNames = new bool[cleanWmiNames.Count];
+
+            foreach (string lhmName in cleanLhmNames)
+            {
+                int matchingWmiIndex = -1;
+
+                for (int index = 0; index < cleanWmiNames.Count; index++)
+                {
+                    if (!matchedWmiNames[index] &&
+                        AreSameComponentDisplayName(cleanWmiNames[index], lhmName))
+                    {
+                        matchingWmiIndex = index;
+                        break;
+                    }
+                }
+
+                if (matchingWmiIndex >= 0)
+                    matchedWmiNames[matchingWmiIndex] = true;
+                else
+                    mergedNames.Add(lhmName);
+            }
+
+            return mergedNames;
+        }
+
+        private static bool AreSameComponentDisplayName(string firstName, string secondName)
+        {
+            string first = NormalizeComponentDisplayName(firstName);
+            string second = NormalizeComponentDisplayName(secondName);
+
+            return !string.IsNullOrEmpty(first) &&
+                string.Equals(first, second, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string NormalizeComponentDisplayName(string name)
+        {
+            string text = HardwareReportFormatHelper.SanitizeSingleLineText(name).ToUpperInvariant();
+            text = text.Replace("(R)", string.Empty)
+                .Replace("(TM)", string.Empty);
+
+            int wmiCpuClockSuffixIndex = text.IndexOf(" CPU @ ", StringComparison.Ordinal);
+            if (wmiCpuClockSuffixIndex >= 0 &&
+                IsWmiCpuClockSuffix(text.Substring(wmiCpuClockSuffixIndex + " CPU @ ".Length)))
+            {
+                text = text.Substring(0, wmiCpuClockSuffixIndex);
+            }
+
+            string tokenText = new string(text
+                .Select(character => char.IsLetterOrDigit(character) ? character : ' ')
+                .ToArray());
+            var tokens = tokenText
+                .Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)
+                .ToList();
+
+            string generationSuffix = tokens.Count > 0 && tokens[0].Length > 2
+                ? tokens[0].Substring(tokens[0].Length - 2)
+                : string.Empty;
+            bool hasGenerationPrefix = tokens.Count >= 2 && tokens[1] == "GEN" &&
+                (generationSuffix == "ST" || generationSuffix == "ND" ||
+                 generationSuffix == "RD" || generationSuffix == "TH") &&
+                int.TryParse(tokens[0].Substring(0, tokens[0].Length - 2), out _);
+
+            if (hasGenerationPrefix)
+            {
+                tokens.RemoveRange(0, 2);
+            }
+
+            if (tokens.Count > 0 &&
+                (tokens[tokens.Count - 1] == "PROCESSOR" ||
+                 tokens[tokens.Count - 1] == "CPU" ||
+                 tokens[tokens.Count - 1] == "GPU"))
+            {
+                tokens.RemoveAt(tokens.Count - 1);
+            }
+
+            if (tokens.Count >= 2 && tokens[tokens.Count - 1] == "CORE" &&
+                int.TryParse(tokens[tokens.Count - 2], out _))
+            {
+                tokens.RemoveRange(tokens.Count - 2, 2);
+            }
+
+            return string.Concat(tokens);
+        }
+
+        private static bool IsWmiCpuClockSuffix(string suffix)
+        {
+            string compactSuffix = suffix.Replace(" ", string.Empty);
+            string unit = compactSuffix.EndsWith("GHZ", StringComparison.Ordinal)
+                ? "GHZ"
+                : compactSuffix.EndsWith("MHZ", StringComparison.Ordinal) ? "MHZ" : null;
+
+            return unit != null &&
+                double.TryParse(
+                    compactSuffix.Substring(0, compactSuffix.Length - unit.Length),
+                    NumberStyles.AllowDecimalPoint,
+                    CultureInfo.InvariantCulture,
+                    out double clock) &&
+                clock > 0;
+        }
+
+        private static List<string> CleanComponentDisplayNames(IEnumerable<string> names)
+        {
+            return names?
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Select(HardwareReportFormatHelper.SanitizeSingleLineText)
+                .Where(name => !string.IsNullOrWhiteSpace(name) && name != "N/A")
+                .ToList() ?? new List<string>();
+        }
+
+        private static string FormatComponentDisplayNames(IReadOnlyList<string> names, string emptyText)
+        {
+            if (names == null || names.Count == 0)
+                return emptyText;
+
+            return names.Count == 1
+                ? names[0]
+                : string.Join(" | ", names.Select((name, index) => $"{index + 1}.{name}"));
+        }
+
         private void ApplyWmiCpuFallbackDisplay()
         {
-            string displayText = _wmiCpuDisplayNames.Count == 1
-                ? _wmiCpuDisplayNames[0]
-                : string.Join(" | ", _wmiCpuDisplayNames.Select((name, index) => $"{index + 1}.{name}"));
-
-            cpuModel.Text = displayText;
+            UpdateCpuModelText();
             cpuName.Text = _wmiCpuDisplayNames.Count == 1 ? _wmiCpuDisplayNames[0] : "Processors";
             PopulateTemperatureSensorSelector(cpuTempSensorSelect, null, null);
             _selectedCpuHardware = null;
@@ -4514,11 +4674,7 @@ namespace TrayTemps
 
         private void ApplyWmiGpuFallbackDisplay()
         {
-            string displayText = _wmiGpuDisplayNames.Count == 1
-                ? _wmiGpuDisplayNames[0]
-                : string.Join(" | ", _wmiGpuDisplayNames.Select((name, index) => $"{index + 1}.{name}"));
-
-            gpuModel.Text = displayText;
+            UpdateGpuModelText();
             gpuName.Text = _wmiGpuDisplayNames.Count == 1 ? _wmiGpuDisplayNames[0] : "Graphics Adapters";
             PopulateTemperatureSensorSelector(gpuTempSensorSelect, null, null);
             _selectedGpuHardware = null;
@@ -4559,7 +4715,9 @@ namespace TrayTemps
 
         public async void CpuModel_Click(object sender, EventArgs e)
         {
-            int cpuCount = Math.Max(_cpuHardwares?.Count ?? 0, _wmiCpuDisplayNames.Count);
+            int cpuCount = MergeComponentDisplayNames(
+                _wmiCpuDisplayNames,
+                GetLhmComponentDisplayNames(_cpuHardwares)).Count;
             string dialogTitle = HardwareDialogTextHelper.GetCategoryDialogTitle(
                 HardwareDialogTextHelper.GetComponentDisplayName(_selectedCpuHardware, cpuModel.Text, "CPU"),
                 "Processors",
@@ -4592,7 +4750,9 @@ namespace TrayTemps
 
         public async void GpuModel_Click(object sender, EventArgs e)
         {
-            int gpuCount = Math.Max(_gpuHardwares?.Count ?? 0, _wmiGpuDisplayNames.Count);
+            int gpuCount = MergeComponentDisplayNames(
+                _wmiGpuDisplayNames,
+                GetLhmComponentDisplayNames(_gpuHardwares)).Count;
             string specificName = _selectedGpuHardware?.Name ?? _wmiGpuDisplayNames.FirstOrDefault() ?? gpuModel.Text;
             string dialogTitle = HardwareDialogTextHelper.GetCategoryDialogTitle(specificName, "Graphics Adapters", gpuCount);
 

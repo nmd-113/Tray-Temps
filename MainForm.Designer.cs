@@ -74,8 +74,6 @@
             this.storageDetails = new System.Windows.Forms.Label();
             this.CompMotherboardLabel = new System.Windows.Forms.Label();
             this.motherboardDetails = new System.Windows.Forms.Label();
-            this.placeholderLabel1 = new System.Windows.Forms.Label();
-            this.placeholderLabel2 = new System.Windows.Forms.Label();
             this.gpuConfigButton = new System.Windows.Forms.Button();
             this.tempsWrapper = new System.Windows.Forms.TableLayoutPanel();
             this.gpuPanel = new System.Windows.Forms.TableLayoutPanel();
@@ -163,7 +161,6 @@
             this.gpuTrayIcon = new System.Windows.Forms.NotifyIcon(this.components);
             this.NotifyIcon = new System.Windows.Forms.NotifyIcon(this.components);
             this.colorDialog = new System.Windows.Forms.ColorDialog();
-            this.placeholderLabel3 = new System.Windows.Forms.Label();
             this.mainMenu.SuspendLayout();
             this.aboutPanel.SuspendLayout();
             this.settingsPanel.SuspendLayout();
@@ -199,7 +196,7 @@
             this.SuspendLayout();
             // 
             // cpuTempSensorSelect
-            //
+            // 
             this.cpuTempSensorSelect.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.cpuTempSensorSelect.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.cpuTempSensorSelect.DropDownHeight = 110;
@@ -218,9 +215,9 @@
             this.cpuTempSensorSelect.Size = new System.Drawing.Size(110, 21);
             this.cpuTempSensorSelect.TabIndex = 35;
             this.cpuTempSensorSelect.SelectedIndexChanged += new System.EventHandler(this.CpuTempSensorSelect_SelectedIndexChanged);
-            //
+            // 
             // cpuIndexSelect
-            //
+            // 
             this.cpuIndexSelect.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.cpuIndexSelect.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.cpuIndexSelect.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
@@ -238,9 +235,9 @@
             this.cpuIndexSelect.Size = new System.Drawing.Size(50, 21);
             this.cpuIndexSelect.TabIndex = 23;
             this.cpuIndexSelect.SelectedIndexChanged += new System.EventHandler(this.CpuIndexSelect_SelectedIndexChanged);
-            //
+            // 
             // gpuTempSensorSelect
-            //
+            // 
             this.gpuTempSensorSelect.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.gpuTempSensorSelect.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.gpuTempSensorSelect.DropDownHeight = 110;
@@ -259,9 +256,9 @@
             this.gpuTempSensorSelect.Size = new System.Drawing.Size(110, 21);
             this.gpuTempSensorSelect.TabIndex = 36;
             this.gpuTempSensorSelect.SelectedIndexChanged += new System.EventHandler(this.GpuTempSensorSelect_SelectedIndexChanged);
-            //
+            // 
             // gpuIndexSelect
-            //
+            // 
             this.gpuIndexSelect.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.gpuIndexSelect.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.gpuIndexSelect.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
@@ -279,7 +276,7 @@
             this.gpuIndexSelect.Size = new System.Drawing.Size(50, 21);
             this.gpuIndexSelect.TabIndex = 24;
             this.gpuIndexSelect.SelectedIndexChanged += new System.EventHandler(this.GpuIndexSelect_SelectedIndexChanged);
-            //
+            // 
             // mainMenu
             // 
             this.mainMenu.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
@@ -578,7 +575,7 @@
             this.mainComponentsPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 30F));
             this.mainComponentsPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 60F));
             this.mainComponentsPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.mainComponentsPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 60F));
+            this.mainComponentsPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 30F));
             this.mainComponentsPanel.Controls.Add(this.cpuIcon, 0, 1);
             this.mainComponentsPanel.Controls.Add(this.gpuIcon, 0, 2);
             this.mainComponentsPanel.Controls.Add(this.ramIcon, 0, 3);
@@ -598,9 +595,6 @@
             this.mainComponentsPanel.Controls.Add(this.storageDetails, 2, 4);
             this.mainComponentsPanel.Controls.Add(this.CompMotherboardLabel, 1, 5);
             this.mainComponentsPanel.Controls.Add(this.motherboardDetails, 2, 5);
-            this.mainComponentsPanel.Controls.Add(this.placeholderLabel1, 3, 5);
-            this.mainComponentsPanel.Controls.Add(this.placeholderLabel2, 3, 3);
-            this.mainComponentsPanel.Controls.Add(this.placeholderLabel3, 3, 4);
             this.mainComponentsPanel.Controls.Add(this.gpuConfigButton, 3, 2);
             this.mainComponentsPanel.Location = new System.Drawing.Point(33, 323);
             this.mainComponentsPanel.Margin = new System.Windows.Forms.Padding(0);
@@ -681,7 +675,7 @@
             this.componentType.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.mainComponentsPanel.SetColumnSpan(this.componentType, 2);
             this.componentType.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.componentType.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.999999F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.componentType.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
             this.componentType.ForeColor = System.Drawing.Color.Gray;
             this.componentType.Location = new System.Drawing.Point(5, 5);
             this.componentType.Margin = new System.Windows.Forms.Padding(0);
@@ -696,37 +690,37 @@
             // 
             this.indexLabel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.indexLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.indexLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.999999F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.indexLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
             this.indexLabel.ForeColor = System.Drawing.Color.Gray;
-            this.indexLabel.Location = new System.Drawing.Point(560, 5);
+            this.indexLabel.Location = new System.Drawing.Point(590, 5);
             this.indexLabel.Margin = new System.Windows.Forms.Padding(0);
             this.indexLabel.Name = "indexLabel";
             this.indexLabel.Padding = new System.Windows.Forms.Padding(3);
-            this.indexLabel.Size = new System.Drawing.Size(60, 37);
+            this.indexLabel.Size = new System.Drawing.Size(30, 37);
             this.indexLabel.TabIndex = 22;
-            this.indexLabel.Text = "Setup";
+            this.indexLabel.Text = " ";
             this.indexLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
             // componentModel
             // 
             this.componentModel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.componentModel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.componentModel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.999999F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.componentModel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
             this.componentModel.ForeColor = System.Drawing.Color.Gray;
             this.componentModel.Location = new System.Drawing.Point(95, 5);
             this.componentModel.Margin = new System.Windows.Forms.Padding(0);
             this.componentModel.Name = "componentModel";
             this.componentModel.Padding = new System.Windows.Forms.Padding(3);
-            this.componentModel.Size = new System.Drawing.Size(465, 37);
+            this.componentModel.Size = new System.Drawing.Size(495, 37);
             this.componentModel.TabIndex = 3;
-            this.componentModel.Text = "Click 🠟 for details";
+            this.componentModel.Text = "Click the label 🠟 for details";
             this.componentModel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
             // compCpuLabel
             // 
             this.compCpuLabel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.compCpuLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.compCpuLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.compCpuLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
             this.compCpuLabel.ForeColor = System.Drawing.Color.DarkGray;
             this.compCpuLabel.Location = new System.Drawing.Point(35, 42);
             this.compCpuLabel.Margin = new System.Windows.Forms.Padding(0);
@@ -738,19 +732,19 @@
             this.compCpuLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // cpuConfigButton
-            //
+            // 
             this.cpuConfigButton.Cursor = System.Windows.Forms.Cursors.Hand;
             this.cpuConfigButton.Dock = System.Windows.Forms.DockStyle.Fill;
             this.cpuConfigButton.Enabled = false;
             this.cpuConfigButton.FlatAppearance.BorderSize = 0;
             this.cpuConfigButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.cpuConfigButton.Font = new System.Drawing.Font("Segoe UI Symbol", 11F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.cpuConfigButton.Location = new System.Drawing.Point(560, 42);
+            this.cpuConfigButton.Font = new System.Drawing.Font("Segoe UI Symbol", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.cpuConfigButton.Location = new System.Drawing.Point(590, 42);
             this.cpuConfigButton.Margin = new System.Windows.Forms.Padding(0);
             this.cpuConfigButton.Name = "cpuConfigButton";
-            this.cpuConfigButton.Size = new System.Drawing.Size(60, 30);
+            this.cpuConfigButton.Size = new System.Drawing.Size(30, 30);
             this.cpuConfigButton.TabIndex = 35;
-            this.cpuConfigButton.Text = "⚙";
+            this.cpuConfigButton.Text = "⛭";
             this.cpuConfigButton.UseVisualStyleBackColor = true;
             this.cpuConfigButton.Click += new System.EventHandler(this.CpuConfigButton_Click);
             // 
@@ -766,7 +760,7 @@
             this.cpuModel.Margin = new System.Windows.Forms.Padding(0);
             this.cpuModel.Name = "cpuModel";
             this.cpuModel.Padding = new System.Windows.Forms.Padding(3);
-            this.cpuModel.Size = new System.Drawing.Size(465, 30);
+            this.cpuModel.Size = new System.Drawing.Size(495, 30);
             this.cpuModel.TabIndex = 20;
             this.cpuModel.Text = "Loading hardware information...";
             this.cpuModel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -776,7 +770,7 @@
             // 
             this.compGpuLabel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.compGpuLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.compGpuLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.compGpuLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
             this.compGpuLabel.ForeColor = System.Drawing.Color.DarkGray;
             this.compGpuLabel.Location = new System.Drawing.Point(35, 72);
             this.compGpuLabel.Margin = new System.Windows.Forms.Padding(0);
@@ -799,7 +793,7 @@
             this.gpuModel.Margin = new System.Windows.Forms.Padding(0);
             this.gpuModel.Name = "gpuModel";
             this.gpuModel.Padding = new System.Windows.Forms.Padding(3);
-            this.gpuModel.Size = new System.Drawing.Size(465, 30);
+            this.gpuModel.Size = new System.Drawing.Size(495, 30);
             this.gpuModel.TabIndex = 21;
             this.gpuModel.Text = "Loading hardware information...";
             this.gpuModel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -809,7 +803,7 @@
             // 
             this.compRamLabel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.compRamLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.compRamLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.compRamLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
             this.compRamLabel.ForeColor = System.Drawing.Color.DarkGray;
             this.compRamLabel.Location = new System.Drawing.Point(35, 102);
             this.compRamLabel.Margin = new System.Windows.Forms.Padding(0);
@@ -832,7 +826,7 @@
             this.ramDetails.Margin = new System.Windows.Forms.Padding(0);
             this.ramDetails.Name = "ramDetails";
             this.ramDetails.Padding = new System.Windows.Forms.Padding(3);
-            this.ramDetails.Size = new System.Drawing.Size(465, 30);
+            this.ramDetails.Size = new System.Drawing.Size(495, 30);
             this.ramDetails.TabIndex = 17;
             this.ramDetails.Text = "Loading hardware information...";
             this.ramDetails.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -842,7 +836,7 @@
             // 
             this.CompStorageLabel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.CompStorageLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.CompStorageLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.CompStorageLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
             this.CompStorageLabel.ForeColor = System.Drawing.Color.DarkGray;
             this.CompStorageLabel.Location = new System.Drawing.Point(35, 132);
             this.CompStorageLabel.Margin = new System.Windows.Forms.Padding(0);
@@ -865,7 +859,7 @@
             this.storageDetails.Margin = new System.Windows.Forms.Padding(0);
             this.storageDetails.Name = "storageDetails";
             this.storageDetails.Padding = new System.Windows.Forms.Padding(3);
-            this.storageDetails.Size = new System.Drawing.Size(465, 30);
+            this.storageDetails.Size = new System.Drawing.Size(495, 30);
             this.storageDetails.TabIndex = 18;
             this.storageDetails.Text = "Loading hardware information...";
             this.storageDetails.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -875,7 +869,7 @@
             // 
             this.CompMotherboardLabel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.CompMotherboardLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.CompMotherboardLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.CompMotherboardLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
             this.CompMotherboardLabel.ForeColor = System.Drawing.Color.DarkGray;
             this.CompMotherboardLabel.Location = new System.Drawing.Point(35, 162);
             this.CompMotherboardLabel.Margin = new System.Windows.Forms.Padding(0, 0, 0, 2);
@@ -883,7 +877,7 @@
             this.CompMotherboardLabel.Padding = new System.Windows.Forms.Padding(3);
             this.CompMotherboardLabel.Size = new System.Drawing.Size(60, 30);
             this.CompMotherboardLabel.TabIndex = 14;
-            this.CompMotherboardLabel.Text = "MBO:";
+            this.CompMotherboardLabel.Text = "MB:";
             this.CompMotherboardLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // motherboardDetails
@@ -898,59 +892,29 @@
             this.motherboardDetails.Margin = new System.Windows.Forms.Padding(0, 0, 0, 2);
             this.motherboardDetails.Name = "motherboardDetails";
             this.motherboardDetails.Padding = new System.Windows.Forms.Padding(3);
-            this.motherboardDetails.Size = new System.Drawing.Size(465, 30);
+            this.motherboardDetails.Size = new System.Drawing.Size(495, 30);
             this.motherboardDetails.TabIndex = 19;
             this.motherboardDetails.Text = "Loading hardware information...";
             this.motherboardDetails.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             this.motherboardDetails.Click += new System.EventHandler(this.MotherboardDetails_Click);
             // 
-            // placeholderLabel1
-            // 
-            this.placeholderLabel1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
-            this.placeholderLabel1.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.placeholderLabel1.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.placeholderLabel1.ForeColor = System.Drawing.Color.DarkGray;
-            this.placeholderLabel1.Location = new System.Drawing.Point(560, 162);
-            this.placeholderLabel1.Margin = new System.Windows.Forms.Padding(0, 0, 0, 2);
-            this.placeholderLabel1.Name = "placeholderLabel1";
-            this.placeholderLabel1.Padding = new System.Windows.Forms.Padding(3);
-            this.placeholderLabel1.Size = new System.Drawing.Size(60, 30);
-            this.placeholderLabel1.TabIndex = 27;
-            this.placeholderLabel1.Text = "-";
-            this.placeholderLabel1.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            // 
-            // placeholderLabel2
-            // 
-            this.placeholderLabel2.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
-            this.placeholderLabel2.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.placeholderLabel2.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.placeholderLabel2.ForeColor = System.Drawing.Color.DarkGray;
-            this.placeholderLabel2.Location = new System.Drawing.Point(560, 102);
-            this.placeholderLabel2.Margin = new System.Windows.Forms.Padding(0);
-            this.placeholderLabel2.Name = "placeholderLabel2";
-            this.placeholderLabel2.Padding = new System.Windows.Forms.Padding(3);
-            this.placeholderLabel2.Size = new System.Drawing.Size(60, 30);
-            this.placeholderLabel2.TabIndex = 26;
-            this.placeholderLabel2.Text = "-";
-            this.placeholderLabel2.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            // 
             // gpuConfigButton
-            //
+            // 
             this.gpuConfigButton.Cursor = System.Windows.Forms.Cursors.Hand;
             this.gpuConfigButton.Dock = System.Windows.Forms.DockStyle.Fill;
             this.gpuConfigButton.Enabled = false;
             this.gpuConfigButton.FlatAppearance.BorderSize = 0;
             this.gpuConfigButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.gpuConfigButton.Font = new System.Drawing.Font("Segoe UI Symbol", 11F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.gpuConfigButton.Location = new System.Drawing.Point(560, 72);
+            this.gpuConfigButton.Font = new System.Drawing.Font("Segoe UI Symbol", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.gpuConfigButton.Location = new System.Drawing.Point(590, 72);
             this.gpuConfigButton.Margin = new System.Windows.Forms.Padding(0);
             this.gpuConfigButton.Name = "gpuConfigButton";
-            this.gpuConfigButton.Size = new System.Drawing.Size(60, 30);
+            this.gpuConfigButton.Size = new System.Drawing.Size(30, 30);
             this.gpuConfigButton.TabIndex = 36;
-            this.gpuConfigButton.Text = "⚙";
+            this.gpuConfigButton.Text = "⛭";
             this.gpuConfigButton.UseVisualStyleBackColor = true;
             this.gpuConfigButton.Click += new System.EventHandler(this.GpuConfigButton_Click);
-            //
+            // 
             // tempsWrapper
             // 
             this.tempsWrapper.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
@@ -1014,7 +978,7 @@
             this.gpuTempLabel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.gpuPanel.SetColumnSpan(this.gpuTempLabel, 2);
             this.gpuTempLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.gpuTempLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.gpuTempLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.gpuTempLabel.ForeColor = System.Drawing.Color.DarkGray;
             this.gpuTempLabel.Location = new System.Drawing.Point(12, 12);
             this.gpuTempLabel.Margin = new System.Windows.Forms.Padding(0);
@@ -1030,7 +994,7 @@
             this.gpuName.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.gpuPanel.SetColumnSpan(this.gpuName, 3);
             this.gpuName.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.gpuName.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.999999F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.gpuName.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.gpuName.ForeColor = System.Drawing.Color.Silver;
             this.gpuName.Location = new System.Drawing.Point(12, 36);
             this.gpuName.Margin = new System.Windows.Forms.Padding(0);
@@ -1174,7 +1138,7 @@
             this.cpuTempLabel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.cpuPanel.SetColumnSpan(this.cpuTempLabel, 2);
             this.cpuTempLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.cpuTempLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.cpuTempLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.cpuTempLabel.ForeColor = System.Drawing.Color.DarkGray;
             this.cpuTempLabel.Location = new System.Drawing.Point(12, 12);
             this.cpuTempLabel.Margin = new System.Windows.Forms.Padding(0);
@@ -1190,7 +1154,7 @@
             this.cpuName.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.cpuPanel.SetColumnSpan(this.cpuName, 3);
             this.cpuName.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.cpuName.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.999999F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.cpuName.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.cpuName.ForeColor = System.Drawing.Color.Silver;
             this.cpuName.Location = new System.Drawing.Point(12, 36);
             this.cpuName.Margin = new System.Windows.Forms.Padding(0);
@@ -1402,16 +1366,16 @@
             // 
             // clearSettings
             // 
-            this.clearSettings.Anchor = System.Windows.Forms.AnchorStyles.Left;
             this.clearSettings.BackColor = System.Drawing.Color.Crimson;
+            this.clearSettings.Dock = System.Windows.Forms.DockStyle.Left;
             this.clearSettings.FlatAppearance.BorderSize = 0;
             this.clearSettings.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.clearSettings.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.clearSettings.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.clearSettings.ForeColor = System.Drawing.Color.White;
-            this.clearSettings.Location = new System.Drawing.Point(327, 91);
-            this.clearSettings.Margin = new System.Windows.Forms.Padding(9, 0, 0, 0);
+            this.clearSettings.Location = new System.Drawing.Point(327, 93);
+            this.clearSettings.Margin = new System.Windows.Forms.Padding(9, 6, 6, 6);
             this.clearSettings.Name = "clearSettings";
-            this.clearSettings.Size = new System.Drawing.Size(236, 34);
+            this.clearSettings.Size = new System.Drawing.Size(157, 31);
             this.clearSettings.TabIndex = 24;
             this.clearSettings.Text = "🔁 Reset Settings";
             this.clearSettings.UseVisualStyleBackColor = false;
@@ -1419,19 +1383,18 @@
             // 
             // refreshPanel
             // 
-            this.refreshPanel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left)));
             this.refreshPanel.ColumnCount = 2;
             this.refreshPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 140F));
             this.refreshPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.refreshPanel.Controls.Add(this.refreshLabel, 0, 0);
             this.refreshPanel.Controls.Add(this.refreshValue, 1, 0);
+            this.refreshPanel.Dock = System.Windows.Forms.DockStyle.Left;
             this.refreshPanel.Location = new System.Drawing.Point(321, 49);
             this.refreshPanel.Name = "refreshPanel";
             this.refreshPanel.Padding = new System.Windows.Forms.Padding(3);
             this.refreshPanel.RowCount = 1;
             this.refreshPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.refreshPanel.Size = new System.Drawing.Size(245, 35);
+            this.refreshPanel.Size = new System.Drawing.Size(220, 35);
             this.refreshPanel.TabIndex = 23;
             // 
             // refreshLabel
@@ -1502,7 +1465,7 @@
             this.refreshValue.Location = new System.Drawing.Point(145, 5);
             this.refreshValue.Margin = new System.Windows.Forms.Padding(2, 0, 0, 0);
             this.refreshValue.Name = "refreshValue";
-            this.refreshValue.Size = new System.Drawing.Size(97, 24);
+            this.refreshValue.Size = new System.Drawing.Size(72, 24);
             this.refreshValue.TabIndex = 3;
             this.refreshValue.SelectedIndexChanged += new System.EventHandler(this.RefreshValue_ValueChanged);
             // 
@@ -1616,7 +1579,7 @@
             this.colortempsConfig.Enabled = false;
             this.colortempsConfig.FlatAppearance.BorderColor = System.Drawing.Color.DarkGray;
             this.colortempsConfig.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.colortempsConfig.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.colortempsConfig.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.colortempsConfig.ForeColor = System.Drawing.Color.LightGray;
             this.colortempsConfig.Location = new System.Drawing.Point(204, 7);
             this.colortempsConfig.Name = "colortempsConfig";
@@ -1628,19 +1591,18 @@
             // 
             // fontFamilyPanel
             // 
-            this.fontFamilyPanel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left)));
             this.fontFamilyPanel.ColumnCount = 2;
             this.fontFamilyPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 102F));
             this.fontFamilyPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.fontFamilyPanel.Controls.Add(this.fontFamilyLabel, 0, 0);
             this.fontFamilyPanel.Controls.Add(this.fontFamilyValue, 1, 0);
+            this.fontFamilyPanel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.fontFamilyPanel.Location = new System.Drawing.Point(321, 108);
             this.fontFamilyPanel.Name = "fontFamilyPanel";
             this.fontFamilyPanel.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
             this.fontFamilyPanel.RowCount = 1;
             this.fontFamilyPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.fontFamilyPanel.Size = new System.Drawing.Size(251, 44);
+            this.fontFamilyPanel.Size = new System.Drawing.Size(296, 44);
             this.fontFamilyPanel.TabIndex = 23;
             // 
             // fontFamilyLabel
@@ -1670,7 +1632,7 @@
             this.fontFamilyValue.Location = new System.Drawing.Point(108, 11);
             this.fontFamilyValue.Margin = new System.Windows.Forms.Padding(1);
             this.fontFamilyValue.Name = "fontFamilyValue";
-            this.fontFamilyValue.Size = new System.Drawing.Size(137, 21);
+            this.fontFamilyValue.Size = new System.Drawing.Size(182, 21);
             this.fontFamilyValue.TabIndex = 24;
             this.fontFamilyValue.SelectedIndexChanged += new System.EventHandler(this.Setting_SelectedIndexChanged);
             // 
@@ -1721,19 +1683,18 @@
             // 
             // cpuColorPanel
             // 
-            this.cpuColorPanel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left)));
             this.cpuColorPanel.ColumnCount = 2;
             this.cpuColorPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 102F));
             this.cpuColorPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.cpuColorPanel.Controls.Add(this.cpuColorValue, 1, 0);
             this.cpuColorPanel.Controls.Add(this.cpuColorLabel, 0, 0);
+            this.cpuColorPanel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.cpuColorPanel.Location = new System.Drawing.Point(321, 8);
             this.cpuColorPanel.Name = "cpuColorPanel";
             this.cpuColorPanel.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
             this.cpuColorPanel.RowCount = 1;
             this.cpuColorPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.cpuColorPanel.Size = new System.Drawing.Size(251, 44);
+            this.cpuColorPanel.Size = new System.Drawing.Size(296, 44);
             this.cpuColorPanel.TabIndex = 16;
             // 
             // cpuColorValue
@@ -1747,7 +1708,7 @@
             this.cpuColorValue.Location = new System.Drawing.Point(107, 5);
             this.cpuColorValue.Margin = new System.Windows.Forms.Padding(0);
             this.cpuColorValue.Name = "cpuColorValue";
-            this.cpuColorValue.Size = new System.Drawing.Size(139, 34);
+            this.cpuColorValue.Size = new System.Drawing.Size(184, 34);
             this.cpuColorValue.TabIndex = 10;
             this.cpuColorValue.Text = "🎨";
             this.cpuColorValue.UseVisualStyleBackColor = false;
@@ -1767,19 +1728,18 @@
             // 
             // gpuColorPanel
             // 
-            this.gpuColorPanel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left)));
             this.gpuColorPanel.ColumnCount = 2;
             this.gpuColorPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 102F));
             this.gpuColorPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.gpuColorPanel.Controls.Add(this.gpuColorValue, 1, 0);
             this.gpuColorPanel.Controls.Add(this.gpuColorLabel, 0, 0);
+            this.gpuColorPanel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.gpuColorPanel.Location = new System.Drawing.Point(321, 58);
             this.gpuColorPanel.Name = "gpuColorPanel";
             this.gpuColorPanel.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
             this.gpuColorPanel.RowCount = 1;
             this.gpuColorPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.gpuColorPanel.Size = new System.Drawing.Size(251, 44);
+            this.gpuColorPanel.Size = new System.Drawing.Size(296, 44);
             this.gpuColorPanel.TabIndex = 17;
             // 
             // gpuColorValue
@@ -1793,7 +1753,7 @@
             this.gpuColorValue.Location = new System.Drawing.Point(107, 5);
             this.gpuColorValue.Margin = new System.Windows.Forms.Padding(0);
             this.gpuColorValue.Name = "gpuColorValue";
-            this.gpuColorValue.Size = new System.Drawing.Size(139, 34);
+            this.gpuColorValue.Size = new System.Drawing.Size(184, 34);
             this.gpuColorValue.TabIndex = 11;
             this.gpuColorValue.Text = "🎨";
             this.gpuColorValue.UseVisualStyleBackColor = false;
@@ -1813,19 +1773,18 @@
             // 
             // iconsizePanel
             // 
-            this.iconsizePanel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left)));
             this.iconsizePanel.ColumnCount = 2;
             this.iconsizePanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 100F));
             this.iconsizePanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.iconsizePanel.Controls.Add(this.iconsizeLabel, 0, 0);
             this.iconsizePanel.Controls.Add(this.iconsizeValue, 1, 0);
+            this.iconsizePanel.Dock = System.Windows.Forms.DockStyle.Left;
             this.iconsizePanel.Location = new System.Drawing.Point(321, 158);
             this.iconsizePanel.Name = "iconsizePanel";
             this.iconsizePanel.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
             this.iconsizePanel.RowCount = 1;
             this.iconsizePanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.iconsizePanel.Size = new System.Drawing.Size(251, 44);
+            this.iconsizePanel.Size = new System.Drawing.Size(185, 44);
             this.iconsizePanel.TabIndex = 21;
             // 
             // iconsizeLabel
@@ -1870,7 +1829,7 @@
             this.iconsizeValue.Location = new System.Drawing.Point(108, 10);
             this.iconsizeValue.Margin = new System.Windows.Forms.Padding(3, 0, 0, 0);
             this.iconsizeValue.Name = "iconsizeValue";
-            this.iconsizeValue.Size = new System.Drawing.Size(138, 24);
+            this.iconsizeValue.Size = new System.Drawing.Size(72, 24);
             this.iconsizeValue.TabIndex = 2;
             this.iconsizeValue.SelectedIndexChanged += new System.EventHandler(this.IconsizeValue_ValueChanged);
             // 
@@ -2063,7 +2022,7 @@
             this.contextMenuStrip.Name = "contextMenuStrip1";
             this.contextMenuStrip.RenderMode = System.Windows.Forms.ToolStripRenderMode.Professional;
             this.contextMenuStrip.ShowImageMargin = false;
-            this.contextMenuStrip.Size = new System.Drawing.Size(149, 136);
+            this.contextMenuStrip.Size = new System.Drawing.Size(156, 158);
             this.contextMenuStrip.Opening += new System.ComponentModel.CancelEventHandler(this.ContextMenuStrip_Opening);
             // 
             // ShowForm
@@ -2094,7 +2053,7 @@
             this.trayTemperatureColorsMenu,
             this.trayConfigureColorsMenu});
             this.trayDisplayMenu.Name = "trayDisplayMenu";
-            this.trayDisplayMenu.Size = new System.Drawing.Size(145, 30);
+            this.trayDisplayMenu.Size = new System.Drawing.Size(148, 30);
             this.trayDisplayMenu.Text = "Display";
             // 
             // trayCpuEnabledMenu
@@ -2187,21 +2146,6 @@
             this.NotifyIcon.Text = "TrayTemps";
             this.NotifyIcon.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.NotifyIcon_MouseDoubleClick);
             // 
-            // placeholderLabel3
-            //
-            this.placeholderLabel3.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
-            this.placeholderLabel3.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.placeholderLabel3.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.placeholderLabel3.ForeColor = System.Drawing.Color.DarkGray;
-            this.placeholderLabel3.Location = new System.Drawing.Point(560, 132);
-            this.placeholderLabel3.Margin = new System.Windows.Forms.Padding(0);
-            this.placeholderLabel3.Name = "placeholderLabel3";
-            this.placeholderLabel3.Padding = new System.Windows.Forms.Padding(3);
-            this.placeholderLabel3.Size = new System.Drawing.Size(60, 30);
-            this.placeholderLabel3.TabIndex = 37;
-            this.placeholderLabel3.Text = "-";
-            this.placeholderLabel3.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            //
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
@@ -2221,11 +2165,11 @@
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Margin = new System.Windows.Forms.Padding(4);
             this.MaximizeBox = false;
-            this.MaximumSize = new System.Drawing.Size(900, 700);
-            this.MinimumSize = new System.Drawing.Size(720, 560);
+            this.MaximumSize = new System.Drawing.Size(1200, 800);
+            this.MinimumSize = new System.Drawing.Size(720, 580);
             this.Name = "MainForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
-            this.Text = "Test Tool";
+            this.Text = "TrayTemps";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.MainForm_FormClosing);
             this.Load += new System.EventHandler(this.MainForm_Load);
             this.MouseDown += new System.Windows.Forms.MouseEventHandler(this.MainForm_MouseDown);
@@ -2336,15 +2280,12 @@
         private System.Windows.Forms.Label ramDetails;
         private System.Windows.Forms.Label gpuModel;
         private System.Windows.Forms.Label cpuModel;
-        private System.Windows.Forms.Label indexLabel;
         private System.Windows.Forms.ComboBox cpuTempSensorSelect;
         private System.Windows.Forms.ComboBox cpuIndexSelect;
         private System.Windows.Forms.ComboBox gpuTempSensorSelect;
         private System.Windows.Forms.ComboBox gpuIndexSelect;
         private System.Windows.Forms.Button cpuConfigButton;
         private System.Windows.Forms.Button gpuConfigButton;
-        private System.Windows.Forms.Label placeholderLabel1;
-        private System.Windows.Forms.Label placeholderLabel2;
         private System.Windows.Forms.TableLayoutPanel generalSettingsPanel;
         private System.Windows.Forms.CheckBox autostartInstall;
         private System.Windows.Forms.CheckBox tempsFahrenheit;
@@ -2409,6 +2350,6 @@
         private System.Windows.Forms.CheckBox lightModeSwitch;
         private System.Windows.Forms.CheckBox minimizeOnStart;
         private System.Windows.Forms.Button checkUpdates;
-        private System.Windows.Forms.Label placeholderLabel3;
+        private System.Windows.Forms.Label indexLabel;
     }
 }
