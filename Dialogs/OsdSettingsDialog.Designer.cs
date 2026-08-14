@@ -616,7 +616,7 @@ namespace TrayTemps
             this.hotkeyLabel.Name = "hotkeyLabel";
             this.hotkeyLabel.Size = new System.Drawing.Size(103, 16);
             this.hotkeyLabel.TabIndex = 0;
-            this.hotkeyLabel.Text = "Global hotkey";
+            this.hotkeyLabel.Text = "Global hotkey (press Ctrl, Shift, or Alt + a key)";
             // 
             // hotkeyEnabled
             // 
@@ -627,7 +627,6 @@ namespace TrayTemps
             this.hotkeyEnabled.TabIndex = 0;
             this.hotkeyEnabled.Text = "Enable OSD hotkey";
             this.hotkeyEnabled.UseVisualStyleBackColor = true;
-            this.hotkeyEnabled.CheckedChanged += new System.EventHandler(this.HotkeyEnabled_CheckedChanged);
             // 
             // hotkeyValue
             // 

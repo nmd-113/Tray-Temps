@@ -78,6 +78,7 @@ namespace TrayTemps
         private OsdConfiguration _osdConfiguration = new OsdConfiguration();
         private OsdConfiguration _osdPreviewConfiguration;
         private OsdOverlay _osdOverlay;
+        private OsdSettingsDialog _osdSettingsDialog;
         private ForegroundFpsMonitor _fpsMonitor;
         private bool _osdHotkeyRegistered;
         private OsdHotkeyModifiers _registeredOsdHotkeyModifiers;
@@ -508,6 +509,15 @@ namespace TrayTemps
 
             if (m.Msg == WM_HOTKEY && m.WParam.ToInt32() == OsdHotkeyId)
             {
+                if (_osdSettingsDialog != null &&
+                    !_osdSettingsDialog.IsDisposed &&
+                    _osdSettingsDialog.CaptureRegisteredHotkey(
+                        _registeredOsdHotkeyModifiers,
+                        _registeredOsdHotkeyKey))
+                {
+                    return;
+                }
+
                 ToggleOsdFromHotkey();
                 return;
             }
@@ -3965,6 +3975,7 @@ namespace TrayTemps
         {
             using (var dialog = new OsdSettingsDialog(this, CaptureOsdConfiguration()))
             {
+                _osdSettingsDialog = dialog;
                 dialog.PreviewConfigurationChanged += PreviewOsdConfiguration;
                 try
                 {
@@ -3980,6 +3991,7 @@ namespace TrayTemps
                 }
                 finally
                 {
+                    _osdSettingsDialog = null;
                     dialog.PreviewConfigurationChanged -= PreviewOsdConfiguration;
                     _osdPreviewConfiguration = null;
                     UpdateOsd(GetCurrentKnownTemperature(_cpuTempSensor), GetCurrentKnownTemperature(_gpuTempSensor));

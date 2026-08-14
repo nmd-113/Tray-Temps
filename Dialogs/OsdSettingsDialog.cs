@@ -83,6 +83,14 @@ namespace TrayTemps
             base.OnFormClosed(e);
         }
 
+        protected override bool ProcessCmdKey(ref Message message, Keys keyData)
+        {
+            if (hotkeyValue != null && hotkeyValue.Focused && TryCaptureHotkey(keyData))
+                return true;
+
+            return base.ProcessCmdKey(ref message, keyData);
+        }
+
         private void UnsubscribeFromThemeChanges()
         {
             if (_themeSubscribed && _mainForm != null)
@@ -289,37 +297,53 @@ namespace TrayTemps
             return string.IsNullOrWhiteSpace(text) ? fallback : text;
         }
 
-        private void HotkeyEnabled_CheckedChanged(object sender, EventArgs e)
-        {
-            hotkeyValue.Enabled = hotkeyEnabled.Checked;
-        }
-
         private void HotkeyValue_KeyDown(object sender, KeyEventArgs e)
         {
             e.Handled = true;
             e.SuppressKeyPress = true;
 
+            TryCaptureHotkey(e.KeyData);
+        }
+
+        private bool TryCaptureHotkey(Keys keyData)
+        {
             OsdHotkeyModifiers modifiers = OsdHotkeyModifiers.None;
-            if (e.Control)
+            if ((keyData & Keys.Control) != Keys.None)
                 modifiers |= OsdHotkeyModifiers.Control;
-            if (e.Shift)
+            if ((keyData & Keys.Shift) != Keys.None)
                 modifiers |= OsdHotkeyModifiers.Shift;
-            if (e.Alt)
+            if ((keyData & Keys.Alt) != Keys.None)
                 modifiers |= OsdHotkeyModifiers.Alt;
 
-            Keys key = e.KeyCode & Keys.KeyCode;
+            Keys key = keyData & Keys.KeyCode;
             if (!OsdHotkeyHelper.IsValid(modifiers, key))
-                return;
+                return false;
 
             _hotkeyModifiers = modifiers;
             _hotkeyKey = key;
             UpdateHotkeyDisplay();
+            return true;
+        }
+
+        internal bool CaptureRegisteredHotkey(OsdHotkeyModifiers modifiers, Keys key)
+        {
+            if (hotkeyValue == null || !hotkeyValue.Focused)
+                return false;
+
+            Keys keyData = key & Keys.KeyCode;
+            if ((modifiers & OsdHotkeyModifiers.Control) != 0)
+                keyData |= Keys.Control;
+            if ((modifiers & OsdHotkeyModifiers.Shift) != 0)
+                keyData |= Keys.Shift;
+            if ((modifiers & OsdHotkeyModifiers.Alt) != 0)
+                keyData |= Keys.Alt;
+
+            return TryCaptureHotkey(keyData);
         }
 
         private void UpdateHotkeyDisplay()
         {
             hotkeyValue.Text = OsdHotkeyHelper.Format(_hotkeyModifiers, _hotkeyKey);
-            hotkeyValue.Enabled = hotkeyEnabled.Checked;
         }
 
         private void OpacityValue_ValueChanged(object sender, EventArgs e)

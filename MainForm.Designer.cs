@@ -1412,9 +1412,9 @@
             this.osdEnable.ForeColor = System.Drawing.Color.LightGray;
             this.osdEnable.Location = new System.Drawing.Point(4, 4);
             this.osdEnable.Name = "osdEnable";
-            this.osdEnable.Size = new System.Drawing.Size(161, 23);
+            this.osdEnable.Size = new System.Drawing.Size(166, 23);
             this.osdEnable.TabIndex = 13;
-            this.osdEnable.Text = "On-screen display temps";
+            this.osdEnable.Text = "Enable On-screen display";
             this.osdEnable.UseVisualStyleBackColor = true;
             this.osdEnable.CheckedChanged += new System.EventHandler(this.OsdEnable_CheckedChanged);
             // 
