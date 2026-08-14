@@ -37,6 +37,8 @@ namespace TrayTemps
         private const int MaximumIconSizePercent = 100;
         private const int DefaultIconSizePercent = 90;
         private const int StartupTaskQueryTimeoutMs = 2000;
+        private const int OsdHotkeyId = 0x5453;
+        private const int OsdHotkeyTestId = 0x5454;
         private static readonly TimeSpan TemperatureAlertCooldown = TimeSpan.FromSeconds(5);
         private const string GitHubTagsApiUrl = "https://api.github.com/repos/nmd-113/Tray-Temps/tags?per_page=100";
         private const string GitHubReleasePageUrl = "https://github.com/nmd-113/Tray-Temps/releases/tag/";
@@ -73,6 +75,13 @@ namespace TrayTemps
         private Task<HardwareDiscoveryResult> _ramInfoTask;
         private Task<HardwareDiscoveryResult> _storageInfoTask;
         private Task<HardwareDiscoveryResult> _motherboardInfoTask;
+        private OsdConfiguration _osdConfiguration = new OsdConfiguration();
+        private OsdConfiguration _osdPreviewConfiguration;
+        private OsdOverlay _osdOverlay;
+        private ForegroundFpsMonitor _fpsMonitor;
+        private bool _osdHotkeyRegistered;
+        private OsdHotkeyModifiers _registeredOsdHotkeyModifiers;
+        private Keys _registeredOsdHotkeyKey;
 
         private int _savedCpuIndex = 0;
         private int _savedGpuIndex = 0;
@@ -134,6 +143,7 @@ namespace TrayTemps
         private readonly bool _requireStartupElevationConsent;
         private bool _deferPawnIoPrompt;
         private bool _initialWindowDisplaySuppressed = true;
+        private bool _initialHardwareInitializationCompleted;
         private int _cpuInvalidSensorCycles;
         private int _gpuInvalidSensorCycles;
         private bool _cpuHotAlertRaised;
@@ -179,6 +189,8 @@ namespace TrayTemps
 
         private const int WM_NCLBUTTONDOWN = 0xA1;
         private const int WM_DPICHANGED = 0x02E0;
+        private const int WM_HOTKEY = 0x0312;
+        private const uint ModNoRepeat = 0x4000;
         private const int HTCAPTION = 0x2;
         private const int HTBOTTOMRIGHT = 17;
 
@@ -199,6 +211,12 @@ namespace TrayTemps
 
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool DestroyIcon(IntPtr hIcon);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint virtualKey);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
         [StructLayout(LayoutKind.Sequential)]
         private struct NativeRect
@@ -253,6 +271,15 @@ namespace TrayTemps
                 RefreshCurrentDpiScale();
 
             WindowCornerHelper.ApplyRoundedCorners(Handle);
+
+            if (_settingsLoaded && !_isShutdownInitiated)
+                ApplyOsdHotkeyRegistration(showError: false);
+        }
+
+        protected override void OnHandleDestroyed(EventArgs e)
+        {
+            UnregisterOsdHotkey();
+            base.OnHandleDestroyed(e);
         }
 
         private void RefreshCurrentDpiScale()
@@ -345,7 +372,10 @@ namespace TrayTemps
                 bool startHidden = ShouldStartHidden;
 
                 if (!startHidden)
+                {
                     RestoreInitialWindowDisplay();
+                    UpdateOsd(GetCurrentKnownTemperature(_cpuTempSensor), GetCurrentKnownTemperature(_gpuTempSensor));
+                }
 
                 UpdateTrayIcons();
 
@@ -354,7 +384,15 @@ namespace TrayTemps
 
                 SelectedTabChanged(this, EventArgs.Empty);
 
-                await InitializeHardwareMonitorAsync();
+                try
+                {
+                    await InitializeHardwareMonitorAsync();
+                }
+                finally
+                {
+                    _initialHardwareInitializationCompleted = true;
+                    UpdateTrayIcons();
+                }
 
                 SetupTimer();
                 _backgroundExpansionReady.TrySetResult(true);
@@ -467,6 +505,12 @@ namespace TrayTemps
             const int WM_EXITSIZEMOVE = 0x0232;
             const int HTLEFT = 10, HTRIGHT = 11, HTTOP = 12, HTTOPLEFT = 13;
             const int HTTOPRIGHT = 14, HTBOTTOM = 15, HTBOTTOMLEFT = 16;
+
+            if (m.Msg == WM_HOTKEY && m.WParam.ToInt32() == OsdHotkeyId)
+            {
+                ToggleOsdFromHotkey();
+                return;
+            }
 
             if (m.Msg == WM_ENTERSIZEMOVE)
             {
@@ -720,6 +764,7 @@ namespace TrayTemps
                         UpdateTemperatureTrayCheckboxAvailability();
                         UpdateAllTrayIcons(cpuTemp, gpuTemp);
                         EvaluateTemperatureAlerts(cpuTemp, gpuTemp);
+                        UpdateOsd(cpuTemp, gpuTemp);
 
                         UpdateHardwareBrandImages();
 
@@ -776,9 +821,10 @@ namespace TrayTemps
                 _ramInfoTask = StartHardwareInfoTask("RAM", () => HardwareInfoQueryHelper.GetRamInfo(WmiQueryHelper.WmiQuery));
                 _motherboardInfoTask = StartHardwareInfoTask("motherboard/BIOS", () => HardwareInfoQueryHelper.GetMotherboardInfo(WmiQueryHelper.WmiQuery));
                 _storageInfoTask = LoadStorageInfoAsync(_componentSensorDiscoveryTask);
-                _memoryHardwareTask = DiscoverMemoryHardwareAsync(_componentSensorDiscoveryTask);
+                _memoryHardwareTask = DiscoverMemoryHardwareAsync();
                 _backgroundHardwareDiscoveryTask = CompleteBackgroundHardwareDiscoveryAsync(
                     _componentSensorDiscoveryTask,
+                    _memoryHardwareTask,
                     _cpuInfoTask,
                     _gpuInfoTask,
                     _ramInfoTask,
@@ -868,9 +914,10 @@ namespace TrayTemps
         {
         }
 
-        private async Task<IHardware> DiscoverMemoryHardwareAsync(Task componentDiscoveryTask)
+        private async Task<IHardware> DiscoverMemoryHardwareAsync()
         {
-            await componentDiscoveryTask.ConfigureAwait(false);
+            if (!await _backgroundExpansionReady.Task.ConfigureAwait(false))
+                return null;
 
             return await Task.Run(() =>
             {
@@ -888,7 +935,14 @@ namespace TrayTemps
                         if (_isShutdownInitiated || _resourcesDisposed)
                             return null;
 
-                        return computer.Hardware.FirstOrDefault(hardware => hardware.HardwareType == HardwareType.Memory);
+                        List<IHardware> memoryHardwares = computer.Hardware
+                            .Where(hardware => hardware.HardwareType == HardwareType.Memory)
+                            .ToList();
+                        IHardware memoryHardware = memoryHardwares.FirstOrDefault(hardware =>
+                                                       hardware.Name.Equals("Total Memory", StringComparison.OrdinalIgnoreCase))
+                            ?? memoryHardwares.FirstOrDefault();
+                        memoryHardware?.Update();
+                        return memoryHardware;
                     }
                     catch (Exception ex)
                     {
@@ -901,6 +955,7 @@ namespace TrayTemps
 
         private async Task CompleteBackgroundHardwareDiscoveryAsync(
             Task componentDiscoveryTask,
+            Task<IHardware> memoryHardwareTask,
             Task<HardwareDiscoveryResult> cpuInfoTask,
             Task<HardwareDiscoveryResult> gpuInfoTask,
             Task<HardwareDiscoveryResult> ramInfoTask,
@@ -911,6 +966,13 @@ namespace TrayTemps
             {
                 UpdateStorageDetailsText();
                 PromptForElevationIfCriticalSensorsAreMissing(storageDiscoveryCompleted: true);
+            });
+
+            Task applyMemoryTask = ApplyBackgroundResultAsync(memoryHardwareTask, () =>
+            {
+                OsdConfiguration displayConfiguration = _osdPreviewConfiguration ?? _osdConfiguration;
+                if (osdEnable.Checked && displayConfiguration.ShowRamUsage)
+                    UpdateOsd(GetCurrentKnownTemperature(_cpuTempSensor), GetCurrentKnownTemperature(_gpuTempSensor));
             });
 
             Task applyCpuTask = ApplyBackgroundResultAsync(cpuInfoTask, info =>
@@ -955,6 +1017,7 @@ namespace TrayTemps
 
             await Task.WhenAll(
                 applyComponentsTask,
+                applyMemoryTask,
                 applyCpuTask,
                 applyGpuTask,
                 applyRamTask,
@@ -1120,6 +1183,13 @@ namespace TrayTemps
 
             try
             {
+                OsdConfiguration displayConfiguration = _osdPreviewConfiguration ?? _osdConfiguration;
+                bool preparedFpsEnabled = osdEnable.Checked && displayConfiguration.ShowFps;
+                UpdateFpsMonitoring(preparedFpsEnabled);
+                IHardware osdMemoryHardware = displayConfiguration.ShowRamUsage
+                    ? GetCompletedMemoryHardware()
+                    : null;
+
                 await Task.Run(() =>
                 {
                     lock (_hardwareUpdateLock)
@@ -1132,6 +1202,8 @@ namespace TrayTemps
 
                         if (_selectedGpuHardware != null)
                             UpdateHardwareRecursive(_selectedGpuHardware);
+
+                        osdMemoryHardware?.Update();
 
                         RefreshUnavailableTemperatureSensors();
                     }
@@ -1152,6 +1224,7 @@ namespace TrayTemps
                 UpdateTemperatureTrayCheckboxAvailability();
                 UpdateAllTrayIcons(cpuTemp, gpuTemp);
                 EvaluateTemperatureAlerts(cpuTemp, gpuTemp);
+                UpdateOsd(cpuTemp, gpuTemp, preparedFpsEnabled);
             }
             catch (Exception ex)
             {
@@ -1272,10 +1345,26 @@ namespace TrayTemps
             if (gpuTrayIcon != null)
                 gpuTrayIcon.Visible = gpuChecked && !combinedTray;
 
-            bool isHidden = !Visible || WindowState == FormWindowState.Minimized;
+            bool isHidden =
+                !Visible ||
+                WindowState == FormWindowState.Minimized ||
+                (_initialWindowDisplaySuppressed && ShouldStartHidden);
+            bool hasTemperatureTrayIcon =
+                (cpuTrayIcon?.Visible == true && cpuTrayIcon.Icon != null) ||
+                (gpuTrayIcon?.Visible == true && gpuTrayIcon.Icon != null);
+            bool waitForInitialTemperatureTrayIcon =
+                _initialWindowDisplaySuppressed &&
+                !_initialHardwareInitializationCompleted &&
+                (cpuChecked || gpuChecked);
 
             if (NotifyIcon != null)
-                NotifyIcon.Visible = isHidden && !cpuChecked && !gpuChecked;
+            {
+                NotifyIcon.Visible =
+                    isHidden &&
+                    _settingsLoaded &&
+                    !hasTemperatureTrayIcon &&
+                    !waitForInitialTemperatureTrayIcon;
+            }
         }
 
         private void UpdateTemperatures(float? cpuTemp, float? gpuTemp)
@@ -1411,36 +1500,8 @@ namespace TrayTemps
             string cpuHover = cpuTemp.HasValue ? $"{TemperatureFormatHelper.GetDisplayTemp(cpuTemp.Value, useFahrenheit):F0}{unit}" : "N/A";
             string gpuHover = gpuTemp.HasValue ? $"{TemperatureFormatHelper.GetDisplayTemp(gpuTemp.Value, useFahrenheit):F0}{unit}" : "N/A";
 
-            if (colortempsEnable.Checked)
-            {
-                if (cpuTemp.HasValue)
-                {
-                    float val = cpuTemp.Value;
-                    if (val < WarmTempMin) _cpuBrush.Color = NormalColor;
-                    else if (val <= WarmTempMax) _cpuBrush.Color = WarningColor;
-                    else _cpuBrush.Color = CriticalColor;
-                }
-                else
-                {
-                    _cpuBrush.Color = Color.Gray;
-                }
-                if (gpuTemp.HasValue)
-                {
-                    float val = gpuTemp.Value;
-                    if (val < WarmTempMin) _gpuBrush.Color = NormalColor;
-                    else if (val <= WarmTempMax) _gpuBrush.Color = WarningColor;
-                    else _gpuBrush.Color = CriticalColor;
-                }
-                else
-                {
-                    _gpuBrush.Color = Color.Gray;
-                }
-            }
-            else
-            {
-                _cpuBrush.Color = cpuColorValue.BackColor;
-                _gpuBrush.Color = gpuColorValue.BackColor;
-            }
+            _cpuBrush.Color = GetTemperatureDisplayColor(cpuTemp, cpuColorValue.BackColor);
+            _gpuBrush.Color = GetTemperatureDisplayColor(gpuTemp, gpuColorValue.BackColor);
 
             // ---------------------------------
 
@@ -1666,6 +1727,20 @@ namespace TrayTemps
                 return systemSmallIconSize;
 
             return Math.Max(IconSize, (int)Math.Round(IconSize * _dpiScale));
+        }
+
+        private Color GetTemperatureDisplayColor(float? temperature, Color hardwareColor)
+        {
+            if (!colortempsEnable.Checked)
+                return hardwareColor;
+
+            if (!temperature.HasValue)
+                return Color.Gray;
+
+            if (temperature.Value < WarmTempMin)
+                return NormalColor;
+
+            return temperature.Value <= WarmTempMax ? WarningColor : CriticalColor;
         }
 
         private static float GetDeviceIdentityLineReservedSpace(int iconPixelSize)
@@ -2227,6 +2302,9 @@ namespace TrayTemps
             enableGpuTray.Checked = false;
             singleIconTray.Checked = false;
             colortempsEnable.Checked = false;
+            osdEnable.Checked = false;
+            osdSettings.Enabled = false;
+            _osdConfiguration = new OsdConfiguration();
 
             _desiredEnableCpuTray = false;
             _desiredEnableGpuTray = false;
@@ -2304,7 +2382,8 @@ namespace TrayTemps
                     GpuTemperatureSensorIdentifier = GetSelectedTemperatureSensorIdentifier(gpuTempSensorSelect),
                     InstallFolder = InstallPath,
                     StartMinimizedToTray = minimizeOnStart.Checked,
-                    StartMinimizedWithAdminRights = _startMinimizedWithAdminRights
+                    StartMinimizedWithAdminRights = _startMinimizedWithAdminRights,
+                    Osd = CaptureOsdConfiguration()
                 };
 
                 Rectangle? windowBounds = Visible && WindowState == FormWindowState.Normal && IsWindowBoundsVisible(Bounds)
@@ -2483,6 +2562,9 @@ namespace TrayTemps
             colortempsEnable.Checked = settings.TempBasedIconColor;
             TemperatureAlertsEnabled = settings.TemperatureAlertsEnabled;
             ShowTemperatureColorCorners = settings.ShowTemperatureColorCorners;
+            _osdConfiguration = NormalizeOsdConfiguration(settings.Osd);
+            osdEnable.Checked = _osdConfiguration.Enabled;
+            osdSettings.Enabled = osdEnable.Checked;
 
             _desiredEnableCpuTray = enableCpuTray.Checked;
             _desiredEnableGpuTray = enableGpuTray.Checked;
@@ -2530,6 +2612,12 @@ namespace TrayTemps
             ApplyTheme();
             UpdateAutostartCheckboxStateAndText();
             _settingsLoaded = true;
+            ApplyOsdHotkeyRegistration(showError: false);
+
+            // During initial startup, wait until MainForm_Load has resolved whether
+            // the main window should be shown or hidden before creating the OSD.
+            if (!_initialWindowDisplaySuppressed)
+                UpdateOsd(GetCurrentKnownTemperature(_cpuTempSensor), GetCurrentKnownTemperature(_gpuTempSensor));
         }
 
         private void PopulateFontFamilyOptions()
@@ -2707,6 +2795,7 @@ namespace TrayTemps
                 gpuColorPanel,
                 iconsizePanel,
                 colortempsPanel);
+            ApplyBackColor(theme.SurfaceBack, osdPanel);
             ApplyBackColor(theme.NavBack, mainMenu, AppDataPnl, homePanel, settingsPanel, aboutPanel);
             ApplyBackColor(theme.Accent, divider1, divider2, divider3, sidepanelHome, sidepanelSettings, sidepanelAbout);
         }
@@ -2792,6 +2881,7 @@ namespace TrayTemps
             ApplyWindowButtonTheme(theme, minimizeBtn);
             ApplyWindowButtonTheme(theme, exitBtn);
             ApplyAccentButtonTheme(theme, colortempsConfig);
+            ApplyAccentButtonTheme(theme, osdSettings);
             ApplyColorButtonTheme(theme, cpuColorValue, gpuColorValue);
         }
 
@@ -3404,6 +3494,7 @@ namespace TrayTemps
                 return;
 
             HideToTray();
+            UpdateOsd(GetCurrentKnownTemperature(_cpuTempSensor), GetCurrentKnownTemperature(_gpuTempSensor));
         }
 
         private void ConfirmExit()
@@ -3846,6 +3937,562 @@ namespace TrayTemps
 
             UpdateTemperatures(cpuTemp, gpuTemp);
             RefreshTrayIconsFromCurrentValues(cpuTemp, gpuTemp);
+            UpdateOsd(cpuTemp, gpuTemp);
+        }
+
+        private void OsdEnable_CheckedChanged(object sender, EventArgs e)
+        {
+            osdSettings.Enabled = osdEnable.Checked;
+            _osdConfiguration.Enabled = osdEnable.Checked;
+            UpdateTrayIcons();
+
+            if (!_settingsLoaded)
+            {
+                if (!osdEnable.Checked)
+                    CloseOsdOverlay();
+                return;
+            }
+
+            if (osdEnable.Checked)
+                UpdateOsd(GetCurrentKnownTemperature(_cpuTempSensor), GetCurrentKnownTemperature(_gpuTempSensor));
+            else
+                CloseOsdOverlay();
+
+            SaveSettings();
+        }
+
+        private void OsdSettings_Click(object sender, EventArgs e)
+        {
+            using (var dialog = new OsdSettingsDialog(this, CaptureOsdConfiguration()))
+            {
+                dialog.PreviewConfigurationChanged += PreviewOsdConfiguration;
+                try
+                {
+                    if (dialog.ShowDialog(this) == DialogResult.OK && dialog.SelectedConfiguration != null)
+                    {
+                        bool enabled = osdEnable.Checked;
+                        _osdConfiguration = NormalizeOsdConfiguration(dialog.SelectedConfiguration);
+                        _osdConfiguration.Enabled = enabled;
+                        if (!ApplyOsdHotkeyRegistration(showError: true))
+                            _osdConfiguration.HotkeyEnabled = false;
+                        SaveSettings();
+                    }
+                }
+                finally
+                {
+                    dialog.PreviewConfigurationChanged -= PreviewOsdConfiguration;
+                    _osdPreviewConfiguration = null;
+                    UpdateOsd(GetCurrentKnownTemperature(_cpuTempSensor), GetCurrentKnownTemperature(_gpuTempSensor));
+                }
+            }
+        }
+
+        private void PreviewOsdConfiguration(OsdConfiguration configuration)
+        {
+            if (configuration == null || _isShutdownInitiated || _resourcesDisposed)
+                return;
+
+            _osdPreviewConfiguration = configuration.Clone();
+            UpdateOsd(GetCurrentKnownTemperature(_cpuTempSensor), GetCurrentKnownTemperature(_gpuTempSensor));
+        }
+
+        private OsdConfiguration CaptureOsdConfiguration()
+        {
+            OsdConfiguration configuration = NormalizeOsdConfiguration(_osdConfiguration);
+            configuration.Enabled = osdEnable != null && osdEnable.Checked;
+            return configuration;
+        }
+
+        private OsdConfiguration NormalizeOsdConfiguration(OsdConfiguration configuration)
+        {
+            OsdConfiguration result = configuration?.Clone() ?? new OsdConfiguration();
+            result.Position = (OsdPosition)ValueHelper.ClampInt((int)result.Position, 0, 8);
+            result.LabelMode = result.LabelMode == OsdLabelMode.Custom
+                ? OsdLabelMode.Custom
+                : OsdLabelMode.Short;
+            result.FontFamily = HardwareReportFormatHelper.SanitizeSingleLineText(result.FontFamily);
+            if (string.IsNullOrWhiteSpace(result.FontFamily))
+                result.FontFamily = OsdFontHelper.DefaultFamily;
+            result.FontSize = float.IsNaN(result.FontSize) || float.IsInfinity(result.FontSize)
+                ? 16f
+                : Math.Max(8f, Math.Min(48f, result.FontSize));
+            result.OpacityPercent = ValueHelper.ClampInt(result.OpacityPercent, 20, 100);
+            result.BackgroundOpacityPercent = result.TransparentBackground
+                ? 0
+                : ValueHelper.ClampInt(result.BackgroundOpacityPercent, 0, 100);
+            result.TransparentBackground = result.BackgroundOpacityPercent == 0;
+            if (!result.BackgroundColor.HasValue)
+            {
+                result.BackgroundColor = OsdColorHelper
+                    .GetDefaultBackground(IsLightModeEnabled)
+                    .ToArgb();
+            }
+            result.ScreenMargin = ValueHelper.ClampInt(result.ScreenMargin, 0, 100);
+            result.Columns = ValueHelper.ClampInt(result.Columns, 1, 4);
+            result.CustomCpuLabel = NormalizeOsdLabel(result.CustomCpuLabel, "CPU Temp");
+            result.CustomGpuLabel = NormalizeOsdLabel(result.CustomGpuLabel, "GPU Temp");
+            result.CustomCpuUsageLabel = NormalizeOsdLabel(result.CustomCpuUsageLabel, "CPU Load");
+            result.CustomGpuUsageLabel = NormalizeOsdLabel(result.CustomGpuUsageLabel, "GPU Load");
+            result.CustomRamLabel = NormalizeOsdLabel(result.CustomRamLabel, "RAM Use");
+            result.CustomVramLabel = NormalizeOsdLabel(result.CustomVramLabel, "VRAM Use");
+            result.CustomFpsLabel = NormalizeOsdLabel(result.CustomFpsLabel, "FPS");
+            int labelValueSpacing = result.HasExplicitLabelValueSpacing
+                ? result.LabelValueSpacing
+                : result.CpuTemperatureSpacing ??
+                  result.GpuTemperatureSpacing ??
+                  result.CpuUsageSpacing ??
+                  result.GpuUsageSpacing ??
+                  result.RamUsageSpacing ??
+                  result.VramUsageSpacing ??
+                  result.FpsSpacing ?? 14;
+            result.LabelValueSpacing = ValueHelper.ClampInt(labelValueSpacing, 0, 100);
+            result.CpuTemperatureSpacing = null;
+            result.GpuTemperatureSpacing = null;
+            result.CpuUsageSpacing = null;
+            result.GpuUsageSpacing = null;
+            result.RamUsageSpacing = null;
+            result.VramUsageSpacing = null;
+            result.FpsSpacing = null;
+            result.ItemOrder = OsdItemOrderHelper.Serialize(OsdItemOrderHelper.Parse(result.ItemOrder));
+            if (!result.ShowCpu && !result.ShowGpu && !result.ShowRamUsage &&
+                !result.ShowVramUsage && !result.ShowFps)
+                result.ShowCpu = true;
+            OsdHotkeyModifiers modifiers =
+                (OsdHotkeyModifiers)result.HotkeyModifiers & OsdHotkeyHelper.AllowedModifiers;
+            Keys key = (Keys)result.HotkeyKey & Keys.KeyCode;
+            if (!OsdHotkeyHelper.IsValid(modifiers, key))
+            {
+                modifiers = OsdHotkeyHelper.DefaultModifiers;
+                key = OsdHotkeyHelper.DefaultKey;
+                result.HotkeyEnabled = false;
+            }
+            result.HotkeyModifiers = (int)modifiers;
+            result.HotkeyKey = (int)key;
+            return result;
+        }
+
+        private static string NormalizeOsdLabel(string value, string fallback)
+        {
+            string text = HardwareReportFormatHelper.SanitizeSingleLineText(value);
+            return string.IsNullOrWhiteSpace(text) ? fallback : text;
+        }
+
+        private void UpdateOsd(
+            float? cpuTemp,
+            float? gpuTemp,
+            bool? preparedFpsEnabled = null)
+        {
+            if (!osdEnable.Checked || _isShutdownInitiated || _resourcesDisposed)
+            {
+                CloseOsdOverlay();
+                return;
+            }
+
+            if (_osdOverlay == null || _osdOverlay.IsDisposed)
+                _osdOverlay = new OsdOverlay();
+
+            OsdConfiguration displayConfiguration = _osdPreviewConfiguration ?? _osdConfiguration;
+            if (!preparedFpsEnabled.HasValue ||
+                preparedFpsEnabled.Value != displayConfiguration.ShowFps)
+            {
+                UpdateFpsMonitoring(displayConfiguration.ShowFps);
+            }
+            List<OsdMetric> metrics = BuildOsdMetrics(cpuTemp, gpuTemp, displayConfiguration);
+            Rectangle workingArea = Screen.FromControl(this).WorkingArea;
+            _osdOverlay.UpdateDisplay(
+                displayConfiguration,
+                metrics,
+                workingArea);
+
+            if (!_osdOverlay.Visible)
+                _osdOverlay.Show();
+        }
+
+        private List<OsdMetric> BuildOsdMetrics(
+            float? cpuTemp,
+            float? gpuTemp,
+            OsdConfiguration configuration)
+        {
+            string cpuLabel = GetOsdLabel(configuration, configuration.CustomCpuLabel, "CPU Temp");
+            string gpuLabel = GetOsdLabel(configuration, configuration.CustomGpuLabel, "GPU Temp");
+            string cpuUsageLabel = GetOsdLabel(configuration, configuration.CustomCpuUsageLabel, "CPU Load");
+            string gpuUsageLabel = GetOsdLabel(configuration, configuration.CustomGpuUsageLabel, "GPU Load");
+            string ramLabel = GetOsdLabel(configuration, configuration.CustomRamLabel, "RAM Use");
+            string vramLabel = GetOsdLabel(configuration, configuration.CustomVramLabel, "VRAM Use");
+            string fpsLabel = GetOsdLabel(configuration, configuration.CustomFpsLabel, "FPS");
+            bool useFahrenheit = tempsFahrenheit.Checked;
+            string unit = TemperatureFormatHelper.GetUnit(useFahrenheit);
+            string temperatureWidthTemplate = "###" + unit;
+            string cpuTemperature = cpuTemp.HasValue
+                ? $"{TemperatureFormatHelper.GetDisplayTemp(cpuTemp.Value, useFahrenheit):F0}{unit}"
+                : "N/A";
+            string gpuTemperature = gpuTemp.HasValue
+                ? $"{TemperatureFormatHelper.GetDisplayTemp(gpuTemp.Value, useFahrenheit):F0}{unit}"
+                : "N/A";
+            Color cpuDisplayColor = Color.FromArgb(configuration.CpuFontColor);
+            Color gpuDisplayColor = Color.FromArgb(configuration.GpuFontColor);
+            var availableMetrics = new Dictionary<OsdItemKind, OsdMetric>();
+            string cpuUsage = configuration.ShowCpu && configuration.ShowCpuUsage
+                ? FormatOsdPercent(GetPreferredLoadValue(_selectedCpuHardware, isCpu: true))
+                : null;
+            string gpuUsage = configuration.ShowGpu && configuration.ShowGpuUsage
+                ? FormatOsdPercent(GetPreferredLoadValue(_selectedGpuHardware, isCpu: false))
+                : null;
+
+            if (configuration.ShowCpu)
+            {
+                var metric = new OsdMetric(
+                    cpuLabel,
+                    cpuTemperature,
+                    configuration.CombineTemperatureAndUsage ? cpuUsage : null,
+                    cpuDisplayColor)
+                {
+                    ValueWidthTemplate = temperatureWidthTemplate
+                };
+                availableMetrics[OsdItemKind.CpuTemperature] = metric;
+                if (configuration.CombineTemperatureAndUsage && cpuUsage != null)
+                    availableMetrics[OsdItemKind.CpuUsage] = metric;
+            }
+
+            if (configuration.ShowGpu)
+            {
+                var metric = new OsdMetric(
+                    gpuLabel,
+                    gpuTemperature,
+                    configuration.CombineTemperatureAndUsage ? gpuUsage : null,
+                    gpuDisplayColor)
+                {
+                    ValueWidthTemplate = temperatureWidthTemplate
+                };
+                availableMetrics[OsdItemKind.GpuTemperature] = metric;
+                if (configuration.CombineTemperatureAndUsage && gpuUsage != null)
+                    availableMetrics[OsdItemKind.GpuUsage] = metric;
+            }
+
+            if (cpuUsage != null && !configuration.CombineTemperatureAndUsage)
+                availableMetrics[OsdItemKind.CpuUsage] = new OsdMetric(
+                    cpuUsageLabel,
+                    cpuUsage,
+                    cpuDisplayColor)
+                {
+                    ValueWidthTemplate = "###%"
+                };
+
+            if (gpuUsage != null && !configuration.CombineTemperatureAndUsage)
+                availableMetrics[OsdItemKind.GpuUsage] = new OsdMetric(
+                    gpuUsageLabel,
+                    gpuUsage,
+                    gpuDisplayColor)
+                {
+                    ValueWidthTemplate = "###%"
+                };
+
+            if (configuration.ShowRamUsage)
+            {
+                string ramUsage = FormatMemoryUsage(
+                    GetCompletedMemoryHardware(),
+                    "Memory",
+                    out string ramWidthTemplate);
+                availableMetrics[OsdItemKind.RamUsage] = new OsdMetric(
+                    ramLabel,
+                    ramUsage,
+                    Color.FromArgb(configuration.RamFontColor))
+                {
+                    ValueWidthTemplate = ramWidthTemplate
+                };
+            }
+
+            if (configuration.ShowVramUsage)
+            {
+                string vramUsage = FormatMemoryUsage(
+                    _selectedGpuHardware,
+                    "GPU Memory",
+                    out string vramWidthTemplate);
+                availableMetrics[OsdItemKind.VramUsage] = new OsdMetric(
+                    vramLabel,
+                    vramUsage,
+                    Color.FromArgb(configuration.VramFontColor))
+                {
+                    ValueWidthTemplate = vramWidthTemplate
+                };
+            }
+
+            if (configuration.ShowFps)
+            {
+                int? fps = _fpsMonitor?.GetLatestFps();
+                availableMetrics[OsdItemKind.Fps] = new OsdMetric(
+                    fpsLabel,
+                    fps.HasValue ? fps.Value.ToString(CultureInfo.InvariantCulture) : "N/A",
+                    Color.FromArgb(configuration.FpsFontColor))
+                {
+                    ValueWidthTemplate = "####"
+                };
+            }
+
+            return OsdItemOrderHelper.Parse(configuration.ItemOrder)
+                .Where(availableMetrics.ContainsKey)
+                .Select(item => availableMetrics[item])
+                .Distinct()
+                .ToList();
+        }
+
+        private static string GetOsdLabel(
+            OsdConfiguration configuration,
+            string customLabel,
+            string fallback)
+        {
+            return configuration.LabelMode == OsdLabelMode.Custom
+                ? NormalizeOsdLabel(customLabel, fallback)
+                : fallback;
+        }
+
+        private static float? GetPreferredLoadValue(IHardware hardware, bool isCpu)
+        {
+            List<ISensor> sensors = EnumerateSensorsRecursive(hardware)
+                .Where(sensor => sensor.SensorType == SensorType.Load && sensor.Value.HasValue)
+                .ToList();
+            if (sensors.Count == 0)
+                return null;
+
+            string[] preferredNames = isCpu
+                ? new[] { "CPU Total", "Total CPU", "CPU Core Total" }
+                : new[] { "GPU Core", "GPU Total", "D3D 3D" };
+
+            foreach (string name in preferredNames)
+            {
+                ISensor match = sensors.FirstOrDefault(sensor =>
+                    sensor.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+                if (match != null)
+                    return match.Value;
+            }
+
+            return sensors.FirstOrDefault(sensor =>
+                sensor.Name.IndexOf(isCpu ? "Total" : "Core", StringComparison.OrdinalIgnoreCase) >= 0)?.Value;
+        }
+
+        private static string FormatOsdPercent(float? value)
+        {
+            return value.HasValue ? $"{Math.Max(0f, Math.Min(100f, value.Value)):F0}%" : "N/A";
+        }
+
+        private static string FormatMemoryUsage(
+            IHardware hardware,
+            string sensorPrefix,
+            out string widthTemplate)
+        {
+            widthTemplate = null;
+            List<ISensor> sensors = EnumerateSensorsRecursive(hardware)
+                .Where(sensor => sensor.Value.HasValue &&
+                    (sensor.SensorType == SensorType.Data || sensor.SensorType == SensorType.SmallData))
+                .ToList();
+            ISensor used = FindMemorySensor(sensors, sensorPrefix, "Used");
+            ISensor total = FindMemorySensor(sensors, sensorPrefix, "Total");
+            ISensor available = FindMemorySensor(sensors, sensorPrefix, "Available") ??
+                FindMemorySensor(sensors, sensorPrefix, "Free");
+
+            if (sensorPrefix == "GPU Memory" && (used == null || total == null))
+            {
+                used = used ?? FindMemorySensor(sensors, "D3D Dedicated Memory", "Used");
+                total = total ?? FindMemorySensor(sensors, "D3D Dedicated Memory", "Total");
+                available = available ?? FindMemorySensor(sensors, "D3D Dedicated Memory", "Free");
+            }
+
+            double? usedGb = ToGigabytes(used);
+            double? totalGb = ToGigabytes(total);
+            double? availableGb = ToGigabytes(available);
+            if (!totalGb.HasValue && usedGb.HasValue && availableGb.HasValue)
+                totalGb = usedGb.Value + availableGb.Value;
+
+            if (usedGb.HasValue && totalGb.HasValue)
+            {
+                widthTemplate = CreateMemoryWidthTemplate(totalGb.Value);
+                return $"{usedGb.Value:0.0} / {totalGb.Value:0.#}G";
+            }
+
+            if (sensorPrefix == "Memory" &&
+                SystemMemoryUsageHelper.TryGetPhysicalMemoryUsage(out double systemUsedGb, out double systemTotalGb))
+            {
+                widthTemplate = CreateMemoryWidthTemplate(systemTotalGb);
+                return $"{systemUsedGb:0.0} / {systemTotalGb:0.#}G";
+            }
+
+            return "N/A";
+        }
+
+        private static string CreateMemoryWidthTemplate(double totalGb)
+        {
+            string maximumValue = Math.Max(0d, totalGb).ToString("0.0");
+            string numericTemplate = new string(
+                maximumValue.Select(character => char.IsDigit(character) ? '#' : character).ToArray());
+            return numericTemplate + " / " + numericTemplate + "G";
+        }
+
+        private static ISensor FindMemorySensor(IEnumerable<ISensor> sensors, string prefix, string valueName)
+        {
+            return sensors.FirstOrDefault(sensor =>
+                sensor.Name.IndexOf(prefix, StringComparison.OrdinalIgnoreCase) >= 0 &&
+                sensor.Name.IndexOf(valueName, StringComparison.OrdinalIgnoreCase) >= 0);
+        }
+
+        private static double? ToGigabytes(ISensor sensor)
+        {
+            if (sensor == null || !sensor.Value.HasValue)
+                return null;
+
+            return sensor.SensorType == SensorType.SmallData
+                ? sensor.Value.Value / 1024d
+                : sensor.Value.Value;
+        }
+
+        private static IEnumerable<ISensor> EnumerateSensorsRecursive(IHardware hardware)
+        {
+            if (hardware == null)
+                yield break;
+
+            foreach (ISensor sensor in hardware.Sensors)
+            {
+                if (sensor != null)
+                    yield return sensor;
+            }
+
+            foreach (IHardware subHardware in hardware.SubHardware)
+            {
+                foreach (ISensor sensor in EnumerateSensorsRecursive(subHardware))
+                    yield return sensor;
+            }
+        }
+
+        private IHardware GetCompletedMemoryHardware()
+        {
+            Task<IHardware> task;
+            lock (_backgroundDiscoveryLock)
+                task = _memoryHardwareTask;
+
+            return task != null && task.Status == TaskStatus.RanToCompletion ? task.Result : null;
+        }
+
+        private void CloseOsdOverlay()
+        {
+            StopFpsMonitoring();
+
+            if (_osdOverlay == null)
+                return;
+
+            try
+            {
+                _osdOverlay.Close();
+                _osdOverlay.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("Closing OSD failed: " + ex);
+            }
+            finally
+            {
+                _osdOverlay = null;
+            }
+        }
+
+        private void UpdateFpsMonitoring(bool enabled)
+        {
+            if (!enabled)
+            {
+                StopFpsMonitoring();
+                return;
+            }
+
+            if (_fpsMonitor == null)
+            {
+                _fpsMonitor = new ForegroundFpsMonitor();
+                _fpsMonitor.Start();
+            }
+
+            _fpsMonitor.UpdateForegroundProcess();
+        }
+
+        private void StopFpsMonitoring()
+        {
+            ForegroundFpsMonitor monitor = _fpsMonitor;
+            _fpsMonitor = null;
+            monitor?.Dispose();
+        }
+
+        internal bool CanRegisterOsdHotkey(OsdHotkeyModifiers modifiers, Keys key)
+        {
+            if (!OsdHotkeyHelper.IsValid(modifiers, key) || !IsHandleCreated || IsDisposed)
+                return false;
+
+            if (_osdHotkeyRegistered &&
+                _registeredOsdHotkeyModifiers == modifiers &&
+                _registeredOsdHotkeyKey == key)
+                return true;
+
+            bool registered = RegisterHotKey(
+                Handle,
+                OsdHotkeyTestId,
+                (uint)modifiers | ModNoRepeat,
+                (uint)key);
+
+            if (registered)
+                UnregisterHotKey(Handle, OsdHotkeyTestId);
+
+            return registered;
+        }
+
+        private bool ApplyOsdHotkeyRegistration(bool showError)
+        {
+            UnregisterOsdHotkey();
+
+            if (!_osdConfiguration.HotkeyEnabled || !IsHandleCreated || IsDisposed || _isShutdownInitiated)
+                return true;
+
+            OsdHotkeyModifiers modifiers = (OsdHotkeyModifiers)_osdConfiguration.HotkeyModifiers;
+            Keys key = (Keys)_osdConfiguration.HotkeyKey & Keys.KeyCode;
+            if (!OsdHotkeyHelper.IsValid(modifiers, key))
+                return false;
+
+            _osdHotkeyRegistered = RegisterHotKey(
+                Handle,
+                OsdHotkeyId,
+                (uint)modifiers | ModNoRepeat,
+                (uint)key);
+
+            if (_osdHotkeyRegistered)
+            {
+                _registeredOsdHotkeyModifiers = modifiers;
+                _registeredOsdHotkeyKey = key;
+                return true;
+            }
+
+            if (showError)
+            {
+                MessageBox.Show(
+                    this,
+                    "Windows could not register the selected OSD hotkey. It may already be in use by another application.",
+                    "OSD Hotkey",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+            }
+
+            return false;
+        }
+
+        private void UnregisterOsdHotkey()
+        {
+            if (_osdHotkeyRegistered && IsHandleCreated)
+                UnregisterHotKey(Handle, OsdHotkeyId);
+
+            _osdHotkeyRegistered = false;
+            _registeredOsdHotkeyModifiers = OsdHotkeyModifiers.None;
+            _registeredOsdHotkeyKey = Keys.None;
+        }
+
+        private void ToggleOsdFromHotkey()
+        {
+            if (_isShutdownInitiated || _resourcesDisposed || osdEnable == null || osdEnable.IsDisposed)
+                return;
+
+            osdEnable.Checked = !osdEnable.Checked;
         }
 
         private static float? GetCurrentKnownTemperature(ISensor sensor)
@@ -4464,9 +5111,7 @@ namespace TrayTemps
                 ? _wmiStorageDisplayNames
                 : GetLhmStorageDisplayNames();
 
-            storageDetails.Text = storageNames.Count == 0
-                ? "No Disk found"
-                : string.Join(" | ", storageNames.Select((name, index) => $"{index + 1}.{name}"));
+            storageDetails.Text = FormatComponentDisplayNames(storageNames, "No Disk found");
         }
 
         private List<string> GetLhmStorageDisplayNames()
@@ -4516,14 +5161,14 @@ namespace TrayTemps
         private void UpdateCpuModelText()
         {
             cpuModel.Text = FormatComponentDisplayNames(
-                MergeComponentDisplayNames(_wmiCpuDisplayNames, GetLhmComponentDisplayNames(_cpuHardwares)),
+                MergeComponentDisplayNames(_wmiCpuDisplayNames, GetLhmComponentDisplayNames(_cpuHardwares), isCpu: true),
                 "No CPU found");
         }
 
         private void UpdateGpuModelText()
         {
             gpuModel.Text = FormatComponentDisplayNames(
-                MergeComponentDisplayNames(_wmiGpuDisplayNames, GetLhmComponentDisplayNames(_gpuHardwares)),
+                MergeComponentDisplayNames(_wmiGpuDisplayNames, GetLhmComponentDisplayNames(_gpuHardwares), isCpu: false),
                 "No GPU found");
         }
 
@@ -4539,7 +5184,8 @@ namespace TrayTemps
 
         private static List<string> MergeComponentDisplayNames(
             IEnumerable<string> wmiNames,
-            IEnumerable<string> lhmNames)
+            IEnumerable<string> lhmNames,
+            bool isCpu)
         {
             List<string> cleanWmiNames = CleanComponentDisplayNames(wmiNames);
             List<string> cleanLhmNames = CleanComponentDisplayNames(lhmNames);
@@ -4553,7 +5199,7 @@ namespace TrayTemps
                 for (int index = 0; index < cleanWmiNames.Count; index++)
                 {
                     if (!matchedWmiNames[index] &&
-                        AreSameComponentDisplayName(cleanWmiNames[index], lhmName))
+                        AreSameComponentDisplayName(cleanWmiNames[index], lhmName, isCpu))
                     {
                         matchingWmiIndex = index;
                         break;
@@ -4569,26 +5215,30 @@ namespace TrayTemps
             return mergedNames;
         }
 
-        private static bool AreSameComponentDisplayName(string firstName, string secondName)
+        private static bool AreSameComponentDisplayName(string firstName, string secondName, bool isCpu)
         {
-            string first = NormalizeComponentDisplayName(firstName);
-            string second = NormalizeComponentDisplayName(secondName);
+            string first = NormalizeComponentDisplayName(firstName, isCpu);
+            string second = NormalizeComponentDisplayName(secondName, isCpu);
 
             return !string.IsNullOrEmpty(first) &&
                 string.Equals(first, second, StringComparison.OrdinalIgnoreCase);
         }
 
-        private static string NormalizeComponentDisplayName(string name)
+        private static string NormalizeComponentDisplayName(string name, bool isCpu)
         {
             string text = HardwareReportFormatHelper.SanitizeSingleLineText(name).ToUpperInvariant();
             text = text.Replace("(R)", string.Empty)
                 .Replace("(TM)", string.Empty);
 
-            int wmiCpuClockSuffixIndex = text.IndexOf(" CPU @ ", StringComparison.Ordinal);
-            if (wmiCpuClockSuffixIndex >= 0 &&
-                IsWmiCpuClockSuffix(text.Substring(wmiCpuClockSuffixIndex + " CPU @ ".Length)))
+            int clockSuffixIndex = text.LastIndexOf(" @ ", StringComparison.Ordinal);
+            bool hasWmiCpuClockSuffix = isCpu && clockSuffixIndex > 0 &&
+                (" " + text.Substring(0, clockSuffixIndex) + " ")
+                    .IndexOf(" CPU ", StringComparison.Ordinal) >= 0 &&
+                IsClockFrequencySuffix(text.Substring(clockSuffixIndex + " @ ".Length));
+
+            if (hasWmiCpuClockSuffix)
             {
-                text = text.Substring(0, wmiCpuClockSuffixIndex);
+                text = text.Substring(0, clockSuffixIndex);
             }
 
             string tokenText = new string(text
@@ -4598,10 +5248,10 @@ namespace TrayTemps
                 .Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)
                 .ToList();
 
-            string generationSuffix = tokens.Count > 0 && tokens[0].Length > 2
+            string generationSuffix = isCpu && tokens.Count > 0 && tokens[0].Length > 2
                 ? tokens[0].Substring(tokens[0].Length - 2)
                 : string.Empty;
-            bool hasGenerationPrefix = tokens.Count >= 2 && tokens[1] == "GEN" &&
+            bool hasGenerationPrefix = isCpu && tokens.Count >= 2 && tokens[1] == "GEN" &&
                 (generationSuffix == "ST" || generationSuffix == "ND" ||
                  generationSuffix == "RD" || generationSuffix == "TH") &&
                 int.TryParse(tokens[0].Substring(0, tokens[0].Length - 2), out _);
@@ -4611,16 +5261,20 @@ namespace TrayTemps
                 tokens.RemoveRange(0, 2);
             }
 
-            if (tokens.Count > 0 &&
-                (tokens[tokens.Count - 1] == "PROCESSOR" ||
-                 tokens[tokens.Count - 1] == "CPU" ||
-                 tokens[tokens.Count - 1] == "GPU"))
+            if (isCpu)
+            {
+                tokens.RemoveAll(token => token == "CPU" || token == "PROCESSOR");
+                RemoveAmdIntegratedGraphicsSuffix(tokens);
+            }
+
+            if (!isCpu && tokens.Count > 0 &&
+                (tokens[tokens.Count - 1] == "PROCESSOR" || tokens[tokens.Count - 1] == "GPU"))
             {
                 tokens.RemoveAt(tokens.Count - 1);
             }
 
-            if (tokens.Count >= 2 && tokens[tokens.Count - 1] == "CORE" &&
-                int.TryParse(tokens[tokens.Count - 2], out _))
+            if (isCpu && tokens.Count >= 2 && tokens[tokens.Count - 1] == "CORE" &&
+                IsCoreCountToken(tokens[tokens.Count - 2]))
             {
                 tokens.RemoveRange(tokens.Count - 2, 2);
             }
@@ -4628,7 +5282,48 @@ namespace TrayTemps
             return string.Concat(tokens);
         }
 
-        private static bool IsWmiCpuClockSuffix(string suffix)
+        private static void RemoveAmdIntegratedGraphicsSuffix(List<string> tokens)
+        {
+            if (tokens.Count < 4 || tokens[0] != "AMD" ||
+                (tokens[tokens.Count - 1] != "GRAPHICS" && tokens[tokens.Count - 1] != "GFX"))
+            {
+                return;
+            }
+
+            for (int index = 2; index + 1 < tokens.Count; index++)
+            {
+                if ((tokens[index] == "WITH" || tokens[index] == "W") &&
+                    tokens[index + 1] == "RADEON")
+                {
+                    tokens.RemoveRange(index, tokens.Count - index);
+                    return;
+                }
+            }
+        }
+
+        private static bool IsCoreCountToken(string token)
+        {
+            if (int.TryParse(token, out _))
+                return true;
+
+            switch (token)
+            {
+                case "SINGLE":
+                case "DUAL":
+                case "TRIPLE":
+                case "QUAD":
+                case "SIX":
+                case "EIGHT":
+                case "TEN":
+                case "TWELVE":
+                case "SIXTEEN":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private static bool IsClockFrequencySuffix(string suffix)
         {
             string compactSuffix = suffix.Replace(" ", string.Empty);
             string unit = compactSuffix.EndsWith("GHZ", StringComparison.Ordinal)
@@ -4717,7 +5412,8 @@ namespace TrayTemps
         {
             int cpuCount = MergeComponentDisplayNames(
                 _wmiCpuDisplayNames,
-                GetLhmComponentDisplayNames(_cpuHardwares)).Count;
+                GetLhmComponentDisplayNames(_cpuHardwares),
+                isCpu: true).Count;
             string dialogTitle = HardwareDialogTextHelper.GetCategoryDialogTitle(
                 HardwareDialogTextHelper.GetComponentDisplayName(_selectedCpuHardware, cpuModel.Text, "CPU"),
                 "Processors",
@@ -4752,7 +5448,8 @@ namespace TrayTemps
         {
             int gpuCount = MergeComponentDisplayNames(
                 _wmiGpuDisplayNames,
-                GetLhmComponentDisplayNames(_gpuHardwares)).Count;
+                GetLhmComponentDisplayNames(_gpuHardwares),
+                isCpu: false).Count;
             string specificName = _selectedGpuHardware?.Name ?? _wmiGpuDisplayNames.FirstOrDefault() ?? gpuModel.Text;
             string dialogTitle = HardwareDialogTextHelper.GetCategoryDialogTitle(specificName, "Graphics Adapters", gpuCount);
 
@@ -5220,8 +5917,10 @@ namespace TrayTemps
 
             _isShutdownInitiated = true;
             _resourcesDisposed = true;
+            _osdPreviewConfiguration = null;
             _backgroundExpansionReady.TrySetResult(false);
 
+            UnregisterOsdHotkey();
             StopTemperatureTimerForShutdown();
             CloseHardwareDialogsForShutdown();
             CloseHardwareMonitorForShutdown();
@@ -5245,6 +5944,7 @@ namespace TrayTemps
 
         private void CloseHardwareDialogsForShutdown()
         {
+            CloseOsdOverlay();
             HardwareDialogStateHelper.CloseOpenHardwareDialogs(
                 _openHardwareDialogs,
                 bounds => _savedHardwareDialogBounds = bounds);

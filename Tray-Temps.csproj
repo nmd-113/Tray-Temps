@@ -10,6 +10,7 @@
     <AssemblyName>TrayTemps</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <LangVersion>7.3</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
     <IsWebBootstrapper>false</IsWebBootstrapper>
@@ -137,6 +138,18 @@
     <Compile Include="Dialogs\ColorTempsConfig.Designer.cs">
       <DependentUpon>ColorTempsConfig.cs</DependentUpon>
     </Compile>
+    <Compile Include="Dialogs\OsdOverlay.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Dialogs\OsdOverlay.Designer.cs">
+      <DependentUpon>OsdOverlay.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Dialogs\OsdSettingsDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Dialogs\OsdSettingsDialog.Designer.cs">
+      <DependentUpon>OsdSettingsDialog.cs</DependentUpon>
+    </Compile>
     <Compile Include="Dialogs\HardwareSelectionConfig.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -157,10 +170,13 @@
     <Compile Include="Helpers\Hardware\HardwareGpuInfoQueryHelper.cs" />
     <Compile Include="Helpers\Hardware\HardwareInfoQueryHelper.cs" />
     <Compile Include="Helpers\Hardware\HardwareLiveSensorsTextHelper.cs" />
+    <Compile Include="Helpers\Hardware\SystemMemoryUsageHelper.cs" />
+    <Compile Include="Helpers\Performance\ForegroundFpsMonitor.cs" />
     <Compile Include="MainForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Helpers\UI\MainFormShadowHelper.cs" />
+    <Compile Include="Helpers\UI\OsdModels.cs" />
     <Compile Include="Helpers\Storage\StorageReportHelper.cs" />
     <Compile Include="Helpers\Storage\StorageLiveSensorFallbackHelper.cs" />
     <Compile Include="Helpers\Storage\StorageSmartInfoHelper.cs" />
@@ -191,6 +207,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Dialogs\HardwareSelectionConfig.resx">
       <DependentUpon>HardwareSelectionConfig.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Dialogs\OsdSettingsDialog.resx">
+      <DependentUpon>OsdSettingsDialog.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="MainForm.resx">
       <DependentUpon>MainForm.cs</DependentUpon>
@@ -262,8 +281,15 @@
       <Version>2.6.4</Version>
     </PackageReference>
   </ItemGroup>
-  <Target Name="RemoveReferenceXmlDocsFromOutput" AfterTargets="Build">
+  <Target Name="RemoveEmbeddedManagedReferencesFromOutput" AfterTargets="Build">
+    <ItemGroup>
+      <_EmbeddedManagedReference Include="@(ReferenceCopyLocalPaths)" Condition="'%(ReferenceCopyLocalPaths.Extension)' == '.dll'" />
+      <_EmbeddedManagedOutput Include="@(_EmbeddedManagedReference->'$(OutDir)%(DestinationSubDirectory)%(Filename)%(Extension)')" />
+      <_EmbeddedManagedOutput Include="@(_EmbeddedManagedReference->'$(OutDir)%(DestinationSubDirectory)%(Filename).pdb')" />
+      <_EmbeddedManagedOutput Include="@(_EmbeddedManagedReference->'$(OutDir)%(DestinationSubDirectory)%(Filename).xml')" />
+    </ItemGroup>
     <Delete Files="@(ReferenceCopyLocalPaths->'$(OutDir)%(Filename).xml')" />
+    <Delete Files="@(_EmbeddedManagedOutput)" />
   </Target>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

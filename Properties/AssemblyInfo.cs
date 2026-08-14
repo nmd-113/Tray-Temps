@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("TrayTemps")]
-[assembly: AssemblyDescription("Simple app to show CPU and GPU temps in tray.")]
+[assembly: AssemblyDescription("Simple app to monitor CPU and GPU temps, usage, and system stats in the tray and on-screen display (OSD).")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("NaeTech")]
 [assembly: AssemblyProduct("Tray Temps")]
@@ -28,5 +28,5 @@ using System.Runtime.InteropServices;
 //      Build Number
 //      Revision
 //
-[assembly: AssemblyVersion("2.1.0.1")]
-[assembly: AssemblyFileVersion("2.1.0.1")]
+[assembly: AssemblyVersion("2.2.0.0")]
+[assembly: AssemblyFileVersion("2.2.0.0")]

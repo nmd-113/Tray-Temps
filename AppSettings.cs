@@ -39,5 +39,6 @@
     public int NormalTempColor { get; set; }
     public int WarmTempColor { get; set; }
     public int HotTempColor { get; set; }
+    public TrayTemps.OsdConfiguration Osd { get; set; } = new TrayTemps.OsdConfiguration();
 
 }

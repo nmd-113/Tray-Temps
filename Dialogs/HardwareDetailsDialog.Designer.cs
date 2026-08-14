@@ -16,6 +16,7 @@
     private void InitializeComponent()
     {
             this.components = new System.ComponentModel.Container();
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(HardwareDetailsDialog));
             this.outerBorder = new System.Windows.Forms.Panel();
             this.mainPanel = new System.Windows.Forms.Panel();
             this.contentArea = new System.Windows.Forms.Panel();
@@ -58,7 +59,7 @@
             this.outerBorder.Controls.Add(this.mainPanel);
             this.outerBorder.Controls.Add(this.leftMenu);
             this.outerBorder.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.outerBorder.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.outerBorder.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.outerBorder.Location = new System.Drawing.Point(0, 0);
             this.outerBorder.Name = "outerBorder";
             this.outerBorder.Padding = new System.Windows.Forms.Padding(1);
@@ -157,11 +158,11 @@
             // contentHeaderLabel
             // 
             this.contentHeaderLabel.AutoSize = true;
-            this.contentHeaderLabel.Font = new System.Drawing.Font("Bunken Tech Sans Pro Bold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.contentHeaderLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.contentHeaderLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(150)))), ((int)(((byte)(150)))), ((int)(((byte)(150)))));
             this.contentHeaderLabel.Location = new System.Drawing.Point(0, 9);
             this.contentHeaderLabel.Name = "contentHeaderLabel";
-            this.contentHeaderLabel.Size = new System.Drawing.Size(132, 17);
+            this.contentHeaderLabel.Size = new System.Drawing.Size(138, 16);
             this.contentHeaderLabel.TabIndex = 0;
             this.contentHeaderLabel.Text = "System information";
             // 
@@ -187,7 +188,7 @@
             this._closeBtn.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(75)))), ((int)(((byte)(75)))), ((int)(((byte)(75)))));
             this._closeBtn.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
             this._closeBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this._closeBtn.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 8.999999F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this._closeBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.999999F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this._closeBtn.ForeColor = System.Drawing.Color.WhiteSmoke;
             this._closeBtn.Location = new System.Drawing.Point(308, 10);
             this._closeBtn.Name = "_closeBtn";
@@ -204,7 +205,7 @@
             this.copyAllBtn.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
             this.copyAllBtn.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(55)))), ((int)(((byte)(55)))), ((int)(((byte)(55)))));
             this.copyAllBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.copyAllBtn.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 8.999999F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.copyAllBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.999999F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.copyAllBtn.ForeColor = System.Drawing.Color.WhiteSmoke;
             this.copyAllBtn.Location = new System.Drawing.Point(408, 10);
             this.copyAllBtn.Margin = new System.Windows.Forms.Padding(5, 0, 0, 0);
@@ -223,7 +224,7 @@
             this._copyBtn.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
             this._copyBtn.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(55)))), ((int)(((byte)(55)))), ((int)(((byte)(55)))));
             this._copyBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this._copyBtn.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 8.999999F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this._copyBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.999999F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this._copyBtn.ForeColor = System.Drawing.Color.WhiteSmoke;
             this._copyBtn.Location = new System.Drawing.Point(508, 10);
             this._copyBtn.Name = "_copyBtn";
@@ -250,7 +251,7 @@
             // 
             this._subtitleLabel.AutoEllipsis = true;
             this._subtitleLabel.Dock = System.Windows.Forms.DockStyle.Top;
-            this._subtitleLabel.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this._subtitleLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this._subtitleLabel.ForeColor = System.Drawing.Color.DarkGray;
             this._subtitleLabel.Location = new System.Drawing.Point(0, 32);
             this._subtitleLabel.Name = "_subtitleLabel";
@@ -263,7 +264,7 @@
             // 
             this.titleLabel.AutoEllipsis = true;
             this.titleLabel.Dock = System.Windows.Forms.DockStyle.Top;
-            this.titleLabel.Font = new System.Drawing.Font("Bunken Tech Sans Pro Bold", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.titleLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.titleLabel.ForeColor = System.Drawing.Color.WhiteSmoke;
             this.titleLabel.Location = new System.Drawing.Point(0, 0);
             this.titleLabel.Name = "titleLabel";
@@ -279,7 +280,7 @@
             this.minimizeBtn.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(70)))), ((int)(((byte)(70)))), ((int)(((byte)(70)))));
             this.minimizeBtn.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(50)))), ((int)(((byte)(50)))), ((int)(((byte)(50)))));
             this.minimizeBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.minimizeBtn.Font = new System.Drawing.Font("Bunken Tech Sans Pro Bold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.minimizeBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.minimizeBtn.ForeColor = System.Drawing.Color.WhiteSmoke;
             this.minimizeBtn.Location = new System.Drawing.Point(538, 0);
             this.minimizeBtn.Name = "minimizeBtn";
@@ -297,7 +298,7 @@
             this.closeTopBtn.FlatAppearance.MouseDownBackColor = System.Drawing.Color.DarkRed;
             this.closeTopBtn.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(200)))), ((int)(((byte)(50)))), ((int)(((byte)(50)))));
             this.closeTopBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.closeTopBtn.Font = new System.Drawing.Font("Bunken Tech Sans Pro Bold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.closeTopBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.closeTopBtn.ForeColor = System.Drawing.Color.WhiteSmoke;
             this.closeTopBtn.Location = new System.Drawing.Point(588, 0);
             this.closeTopBtn.Name = "closeTopBtn";
@@ -329,7 +330,7 @@
             this._sensorsMenuBtn.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(60)))), ((int)(((byte)(60)))), ((int)(((byte)(60)))));
             this._sensorsMenuBtn.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(50)))), ((int)(((byte)(50)))), ((int)(((byte)(50)))));
             this._sensorsMenuBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this._sensorsMenuBtn.Font = new System.Drawing.Font("Bunken Tech Sans Pro Bold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this._sensorsMenuBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this._sensorsMenuBtn.ForeColor = System.Drawing.Color.WhiteSmoke;
             this._sensorsMenuBtn.Location = new System.Drawing.Point(3, 146);
             this._sensorsMenuBtn.Name = "_sensorsMenuBtn";
@@ -349,7 +350,7 @@
             this._detailsMenuBtn.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(60)))), ((int)(((byte)(60)))), ((int)(((byte)(60)))));
             this._detailsMenuBtn.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(50)))), ((int)(((byte)(50)))), ((int)(((byte)(50)))));
             this._detailsMenuBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this._detailsMenuBtn.Font = new System.Drawing.Font("Bunken Tech Sans Pro Bold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this._detailsMenuBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this._detailsMenuBtn.ForeColor = System.Drawing.Color.WhiteSmoke;
             this._detailsMenuBtn.Location = new System.Drawing.Point(3, 101);
             this._detailsMenuBtn.Name = "_detailsMenuBtn";
@@ -365,7 +366,7 @@
             // menuTitle
             // 
             this.menuTitle.Dock = System.Windows.Forms.DockStyle.Top;
-            this.menuTitle.Font = new System.Drawing.Font("Bunken Tech Sans Pro Bold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.menuTitle.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.menuTitle.ForeColor = System.Drawing.Color.Gray;
             this.menuTitle.Location = new System.Drawing.Point(3, 70);
             this.menuTitle.Name = "menuTitle";
@@ -377,7 +378,7 @@
             // iconLabel
             // 
             this.iconLabel.Dock = System.Windows.Forms.DockStyle.Top;
-            this.iconLabel.Font = new System.Drawing.Font("Bunken Tech Sans Pro Bold", 26.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.iconLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 26.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.iconLabel.ForeColor = System.Drawing.Color.WhiteSmoke;
             this.iconLabel.Location = new System.Drawing.Point(3, 0);
             this.iconLabel.Name = "iconLabel";
@@ -409,8 +410,9 @@
             this.CancelButton = this._closeBtn;
             this.ClientSize = new System.Drawing.Size(760, 520);
             this.Controls.Add(this.outerBorder);
-            this.Font = new System.Drawing.Font("Bunken Tech Sans Pro Book", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.KeyPreview = true;
             this.MinimumSize = new System.Drawing.Size(640, 440);
             this.Name = "HardwareDetailsDialog";
