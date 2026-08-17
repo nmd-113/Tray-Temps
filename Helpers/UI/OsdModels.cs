@@ -49,7 +49,7 @@ namespace TrayTemps
 
     public sealed class OsdConfiguration
     {
-        private int _labelValueSpacing = 14;
+        private int _labelValueSpacing = 15;
         private bool _hasExplicitLabelValueSpacing;
 
         public bool Enabled { get; set; }
@@ -91,6 +91,10 @@ namespace TrayTemps
                 _hasExplicitLabelValueSpacing = true;
             }
         }
+
+        public int RowsSpacing { get; set; } = 5;
+        public int ColumnsSpacing { get; set; } = 20;
+
         // Nullable legacy properties allow existing settings to migrate to the universal value.
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? CpuTemperatureSpacing { get; set; }

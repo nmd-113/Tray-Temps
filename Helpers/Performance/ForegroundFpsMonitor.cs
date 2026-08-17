@@ -13,6 +13,7 @@ namespace TrayTemps
         private const uint EventControlCodeDisableProvider = 0;
         private const uint EventControlCodeEnableProvider = 1;
         private const uint EventTraceControlStop = 1;
+        private const uint EventTraceControlFlush = 3;
         private const uint EventTraceRealTimeMode = 0x00000100;
         private const uint ProcessTraceModeRealTime = 0x00000100;
         private const uint ProcessTraceModeRawTimestamp = 0x00001000;
@@ -24,6 +25,12 @@ namespace TrayTemps
         private const ulong PresentKeyword = 0x8000000000000002;
         private const ushort DxgiPresentStartEventId = 0x002a;
         private const ushort D3d9PresentStartEventId = 0x0001;
+        private const ushort EventHeaderFlag32Bit = 0x0020;
+        private const uint DxgiPresentTest = 0x00000001;
+        private const byte DxgiPresentProvider = 1;
+        private const byte D3d9PresentProvider = 2;
+        private const int EventRecordUserDataLengthOffsetX64 = 86;
+        private const int EventRecordUserDataOffsetX64 = 96;
         private const ulong InvalidProcessTraceHandle = ulong.MaxValue;
         private const int EventTracePropertiesSizeX64 = 120;
         private const int EventTraceLogFileSizeX64 = 448;
@@ -36,6 +43,7 @@ namespace TrayTemps
         private readonly long _qpcFrequency;
         private readonly long _calculationWindowTicks;
         private readonly long _staleValueTicks;
+        private readonly long _streamStaleTicks;
         private EventRecordCallback _eventRecordCallback;
         private Thread _consumerThread;
         private IntPtr _propertiesBuffer;
@@ -47,10 +55,15 @@ namespace TrayTemps
         private int _targetGeneration;
         private int _missingForegroundSamples;
         private int _observedGeneration;
+        private byte _selectedPresentProvider;
+        private ulong _selectedSwapChain;
+        private int _selectedPresentThreadId;
+        private long _selectedStreamTimestamp;
         private long _windowStartTimestamp;
         private int _presentIntervals;
         private int _latestFps = -1;
         private long _lastPresentTimestamp;
+        private long _lastFlushTimestamp;
         private bool _running;
         private bool _disposed;
 
@@ -62,6 +75,7 @@ namespace TrayTemps
 
             _calculationWindowTicks = Math.Max(1L, _qpcFrequency / 4L);
             _staleValueTicks = Math.Max(1L, _qpcFrequency * 3L);
+            _streamStaleTicks = Math.Max(1L, _qpcFrequency / 2L);
         }
 
         internal bool Start()
@@ -114,6 +128,7 @@ namespace TrayTemps
                 };
                 consumerThread.Start();
                 _consumerThread = consumerThread;
+                Volatile.Write(ref _lastFlushTimestamp, 0L);
                 _running = true;
                 return true;
             }
@@ -217,6 +232,28 @@ namespace TrayTemps
             return value >= 0 ? (int?)value : null;
         }
 
+        internal void FlushIfNeeded(int intervalMilliseconds)
+        {
+            if (!_running || _sessionHandle == 0 || intervalMilliseconds <= 0)
+                return;
+
+            QueryPerformanceCounter(out long now);
+            long intervalTicks = Math.Max(1L, _qpcFrequency * intervalMilliseconds / 1000L);
+            long previous = Volatile.Read(ref _lastFlushTimestamp);
+
+            if (previous > 0 && now >= previous && now - previous < intervalTicks)
+                return;
+
+            if (Interlocked.CompareExchange(ref _lastFlushTimestamp, now, previous) != previous)
+                return;
+
+            ControlTraceW(
+                _sessionHandle,
+                _sessionName,
+                _propertiesBuffer,
+                EventTraceControlFlush);
+        }
+
         public void Dispose()
         {
             if (_disposed)
@@ -228,6 +265,7 @@ namespace TrayTemps
 
         internal void Stop()
         {
+            Volatile.Write(ref _lastFlushTimestamp, 0L);
             _missingForegroundSamples = 0;
             Interlocked.Exchange(ref _targetProcessId, 0);
             Interlocked.Increment(ref _targetGeneration);
@@ -379,17 +417,31 @@ namespace TrayTemps
 
             int generation = Volatile.Read(ref _targetGeneration);
             long timestamp = *(long*)(header + 16);
+            byte provider = isDxgiPresent ? DxgiPresentProvider : D3d9PresentProvider;
+            int threadId = *(int*)(header + 8);
+            ulong swapChain;
+            uint presentFlags;
+            ReadPresentData(header, out swapChain, out presentFlags);
+            if (isDxgiPresent && (presentFlags & DxgiPresentTest) != 0)
+                return;
+
             if (_observedGeneration != generation)
             {
                 _observedGeneration = generation;
+                SelectPresentStream(provider, swapChain, threadId, timestamp);
                 _windowStartTimestamp = timestamp;
                 _presentIntervals = 0;
                 return;
             }
 
+            if (!IsSelectedPresentStream(provider, swapChain, threadId, timestamp))
+                return;
+
             long lastPresentTimestamp = Volatile.Read(ref _lastPresentTimestamp);
-            if (timestamp > lastPresentTimestamp)
-                Volatile.Write(ref _lastPresentTimestamp, timestamp);
+            if (timestamp <= lastPresentTimestamp)
+                return;
+
+            Volatile.Write(ref _lastPresentTimestamp, timestamp);
             if (_windowStartTimestamp <= 0)
             {
                 _windowStartTimestamp = timestamp;
@@ -410,6 +462,86 @@ namespace TrayTemps
             Volatile.Write(ref _latestFps, Math.Max(0, Math.Min(9999, fps)));
             _windowStartTimestamp = timestamp;
             _presentIntervals = 0;
+        }
+
+        private static unsafe void ReadPresentData(
+            byte* eventHeader,
+            out ulong swapChain,
+            out uint presentFlags)
+        {
+            swapChain = 0;
+            presentFlags = 0;
+
+            ushort userDataLength = *(ushort*)(eventHeader + EventRecordUserDataLengthOffsetX64);
+            byte* userData = *(byte**)(eventHeader + EventRecordUserDataOffsetX64);
+            if (userData == null)
+                return;
+
+            bool is32Bit = (*(ushort*)(eventHeader + 4) & EventHeaderFlag32Bit) != 0;
+            if (is32Bit)
+            {
+                if (userDataLength < sizeof(uint))
+                    return;
+
+                swapChain = *(uint*)userData;
+                if (userDataLength >= sizeof(uint) + sizeof(uint))
+                    presentFlags = *(uint*)(userData + sizeof(uint));
+                return;
+            }
+
+            if (userDataLength < sizeof(ulong))
+                return;
+
+            swapChain = *(ulong*)userData;
+            if (userDataLength >= sizeof(ulong) + sizeof(uint))
+                presentFlags = *(uint*)(userData + sizeof(ulong));
+        }
+
+        private bool IsSelectedPresentStream(
+            byte provider,
+            ulong swapChain,
+            int threadId,
+            long timestamp)
+        {
+            // A process can present multiple swap chains (including overlays).
+            // Count one stream instead of incorrectly summing them as one FPS value.
+            bool hasSwapChainIdentity = swapChain != 0 || _selectedSwapChain != 0;
+            bool matches = provider == _selectedPresentProvider &&
+                (hasSwapChainIdentity
+                    ? swapChain != 0 && swapChain == _selectedSwapChain
+                    : threadId == _selectedPresentThreadId);
+
+            if (matches)
+            {
+                if (timestamp > _selectedStreamTimestamp)
+                    _selectedStreamTimestamp = timestamp;
+                return true;
+            }
+
+            if (timestamp <= _selectedStreamTimestamp ||
+                timestamp - _selectedStreamTimestamp <= _streamStaleTicks)
+            {
+                return false;
+            }
+
+            SelectPresentStream(provider, swapChain, threadId, timestamp);
+            _windowStartTimestamp = timestamp;
+            _presentIntervals = 0;
+            Volatile.Write(ref _latestFps, -1);
+            Volatile.Write(ref _lastPresentTimestamp, 0L);
+            return false;
+        }
+
+        private void SelectPresentStream(
+            byte provider,
+            ulong swapChain,
+            int threadId,
+            long timestamp)
+        {
+            _selectedPresentProvider = provider;
+            _selectedSwapChain = swapChain;
+            _selectedPresentThreadId = threadId;
+            _selectedStreamTimestamp = timestamp;
         }
 
         private void StopSession()

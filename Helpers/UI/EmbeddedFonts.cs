@@ -61,6 +61,12 @@ namespace TrayTemps
             Initialize();
             ApplyFont(root);
 
+            // NumericUpDown owns native editor/spinner child controls. Applying the
+            // embedded font to those children bypasses the parent control's DPI-aware
+            // preferred-height calculation and can clip them at non-default scaling.
+            if (root is NumericUpDown)
+                return;
+
             foreach (Control child in root.Controls)
                 ApplyTo(child);
 
@@ -137,6 +143,12 @@ namespace TrayTemps
 
         private static bool IsSystemSpecialCase(Control control)
         {
+            // NumericUpDown calculates the height of its native editor/spinner from
+            // the assigned font. Keep its Designer system font so Windows can choose
+            // the correct preferred height for the current monitor DPI.
+            if (control is NumericUpDown)
+                return true;
+
             if (control is RichTextBox || control is TextBoxBase)
             {
                 string name = control.Font?.FontFamily?.Name ?? string.Empty;

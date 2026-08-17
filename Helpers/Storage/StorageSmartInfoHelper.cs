@@ -52,10 +52,9 @@ namespace TrayTemps
                     continue;
 
                 byte current = data[offset + 3];
-                byte worst = data[offset + 4];
                 ulong raw = ReadSmartRawValue(data, offset + 5);
 
-                attributes[id] = new SmartAttributeInfo(id, current, worst, raw);
+                attributes[id] = new SmartAttributeInfo(current, raw);
             }
 
             if (TryBuildSmartLifeInfo(instanceName, attributes, 0xE7, "SMART E7 SSD Life Left", false, true, out SmartLifeInfo info))
@@ -64,13 +63,20 @@ namespace TrayTemps
             if (TryBuildSmartLifeInfo(instanceName, attributes, 0xE9, "SMART E9 Media Wearout Indicator", false, false, out info))
                 return info;
 
-            if (TryBuildSmartLifeInfo(instanceName, attributes, 0xCA, "SMART CA Percentage Lifetime Used", true, true, out info))
+            if (TryBuildRawUsedPercentSmartLifeInfo(instanceName, attributes, 0xCA, "SMART CA Percentage Lifetime Used", out info))
                 return info;
 
             // B1 is vendor-specific. Samsung SATA SSDs commonly expose its normalized
             // value as the remaining wear life, but it must not be interpreted for other vendors.
             if (IsSamsungStorageInstance(instanceName) &&
                 TryBuildSmartLifeInfo(instanceName, attributes, 0xB1, "Samsung SMART B1 Wear Leveling Count", false, false, out info))
+                return info;
+
+            // E8 is vendor-specific. SanDisk/Western Digital SSDs may expose its
+            // normalized value as endurance remaining; its raw value is not a percentage.
+            // Keep this conservative fallback after all existing life attributes.
+            if (IsSanDiskOrWesternDigitalStorageInstance(instanceName) &&
+                TryBuildNormalizedSmartLifeInfo(instanceName, attributes, 0xE8, "SanDisk/WDC SMART E8 Endurance Remaining", out info))
                 return info;
 
             return null;
@@ -80,6 +86,33 @@ namespace TrayTemps
         {
             return !string.IsNullOrWhiteSpace(instanceName) &&
                    instanceName.IndexOf("SAMSUNG", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static bool IsSanDiskOrWesternDigitalStorageInstance(string instanceName)
+        {
+            if (string.IsNullOrWhiteSpace(instanceName))
+                return false;
+
+            return instanceName.IndexOf("SANDISK", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   instanceName.IndexOf("WDC", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   instanceName.IndexOf("WESTERN DIGITAL", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   instanceName.IndexOf("WESTERN_DIGITAL", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static bool TryBuildNormalizedSmartLifeInfo(
+            string instanceName,
+            Dictionary<byte, SmartAttributeInfo> attributes,
+            byte id,
+            string source,
+            out SmartLifeInfo info)
+        {
+            info = null;
+
+            if (!attributes.TryGetValue(id, out SmartAttributeInfo attribute) || attribute.Current > 100)
+                return false;
+
+            info = new SmartLifeInfo(instanceName, attribute.Current, null, source);
+            return true;
         }
 
         private static bool TryBuildSmartLifeInfo(
@@ -106,6 +139,23 @@ namespace TrayTemps
             float? used = valueIsUsedPercent ? percent : (float?)null;
 
             info = new SmartLifeInfo(instanceName, remaining, used, source);
+            return true;
+        }
+
+        private static bool TryBuildRawUsedPercentSmartLifeInfo(
+            string instanceName,
+            Dictionary<byte, SmartAttributeInfo> attributes,
+            byte id,
+            string source,
+            out SmartLifeInfo info)
+        {
+            info = null;
+
+            if (!attributes.TryGetValue(id, out SmartAttributeInfo attribute) || attribute.Raw > 100)
+                return false;
+
+            float used = attribute.Raw;
+            info = new SmartLifeInfo(instanceName, 100 - used, used, source);
             return true;
         }
 
@@ -210,17 +260,13 @@ namespace TrayTemps
 
     internal struct SmartAttributeInfo
     {
-        public SmartAttributeInfo(byte id, byte current, byte worst, ulong raw)
+        public SmartAttributeInfo(byte current, ulong raw)
         {
-            Id = id;
             Current = current;
-            Worst = worst;
             Raw = raw;
         }
 
-        public byte Id { get; }
         public byte Current { get; }
-        public byte Worst { get; }
         public ulong Raw { get; }
     }
 }

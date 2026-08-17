@@ -117,30 +117,32 @@ namespace TrayTemps
             if (disk == null || storageHardwares == null || storageHardwares.Count == 0)
                 return null;
 
-            string diskPnpId = HardwareReportFormatHelper.NormalizeStorageText(HardwareReportFormatHelper.Safe(disk["PNPDeviceID"]));
-            string diskModel = HardwareReportFormatHelper.NormalizeStorageText(HardwareReportFormatHelper.Safe(disk["Model"]));
-            string diskSerial = HardwareReportFormatHelper.NormalizeStorageText(HardwareReportFormatHelper.Safe(disk["SerialNumber"]));
+            string diskPnpId = NormalizeMatchValue(disk["PNPDeviceID"]);
+            string diskModel = NormalizeMatchValue(disk["Model"]);
+            string diskSerial = NormalizeMatchValue(disk["SerialNumber"]);
 
             foreach (var drive in storageHardwares)
             {
                 if (drive == null)
                     continue;
 
-                string driveIdentifier = HardwareReportFormatHelper.NormalizeStorageText(HardwareReportFormatHelper.Safe(drive.Identifier));
-                string driveName = HardwareReportFormatHelper.NormalizeStorageText(HardwareReportFormatHelper.Safe(drive.Name));
+                string driveIdentifier = NormalizeMatchValue(drive.Identifier);
 
                 if (!string.IsNullOrWhiteSpace(diskPnpId) &&
-                    ((!string.IsNullOrWhiteSpace(driveIdentifier) && driveIdentifier.Contains(diskPnpId)) ||
-                     (!string.IsNullOrWhiteSpace(diskPnpId) && diskPnpId.Contains(driveIdentifier))))
+                    !string.IsNullOrWhiteSpace(driveIdentifier) &&
+                    (driveIdentifier.Contains(diskPnpId) || diskPnpId.Contains(driveIdentifier)))
                 {
                     return drive;
                 }
+            }
 
-                if (!string.IsNullOrWhiteSpace(diskModel) &&
-                    (driveName.Contains(diskModel) || driveIdentifier.Contains(diskModel)))
-                {
-                    return drive;
-                }
+            foreach (var drive in storageHardwares)
+            {
+                if (drive == null)
+                    continue;
+
+                string driveIdentifier = NormalizeMatchValue(drive.Identifier);
+                string driveName = NormalizeMatchValue(drive.Name);
 
                 if (!string.IsNullOrWhiteSpace(diskSerial) &&
                     (driveIdentifier.Contains(diskSerial) || driveName.Contains(diskSerial)))
@@ -149,7 +151,27 @@ namespace TrayTemps
                 }
             }
 
-            return null;
+            IHardware modelMatch = null;
+
+            foreach (var drive in storageHardwares)
+            {
+                if (drive == null)
+                    continue;
+
+                string driveIdentifier = NormalizeMatchValue(drive.Identifier);
+                string driveName = NormalizeMatchValue(drive.Name);
+
+                if (string.IsNullOrWhiteSpace(diskModel) ||
+                    (!driveName.Contains(diskModel) && !driveIdentifier.Contains(diskModel)))
+                    continue;
+
+                if (modelMatch != null)
+                    return null;
+
+                modelMatch = drive;
+            }
+
+            return modelMatch;
         }
 
         internal static void AppendStorageHealthSummary(StringBuilder sb, IHardware drive, SmartLifeInfo smartLifeInfo)
@@ -162,14 +184,18 @@ namespace TrayTemps
                 .ToList();
 
             string remainingLife = HardwareReportFormatHelper.GetRemainingLifeText(sensors);
+            bool usedSmartLifeFallback = false;
 
             if (string.IsNullOrWhiteSpace(remainingLife) && smartLifeInfo != null)
+            {
                 remainingLife = HardwareReportFormatHelper.FormatSmartLifeInfo(smartLifeInfo.RemainingPercent, smartLifeInfo.UsedPercent);
+                usedSmartLifeFallback = true;
+            }
 
             if (!string.IsNullOrWhiteSpace(remainingLife))
                 sb.AppendLine(HardwareReportFormatHelper.Label("Life Remaining", remainingLife));
 
-            if (smartLifeInfo != null)
+            if (usedSmartLifeFallback)
                 sb.AppendLine(HardwareReportFormatHelper.Label("Life Source", smartLifeInfo.Source));
 
             var healthSensors = sensors

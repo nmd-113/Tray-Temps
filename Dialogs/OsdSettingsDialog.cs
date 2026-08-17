@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using System.Globalization;
 using System.Linq;
 using System.Windows.Forms;
 
@@ -109,6 +110,12 @@ namespace TrayTemps
                 "Bottom left", "Bottom center", "Bottom right"
             });
             fontFamilyValue.Items.AddRange(OsdFontHelper.GetAvailableFamilyNames());
+            PopulateNumericOptions(fontSizeValue, 8m, 48m, 0.5m);
+            PopulateNumericOptions(screenMarginValue, 0m, 100m, 1m);
+            PopulateNumericOptions(labelValueSpacing, 0m, 100m, 1m);
+            PopulateNumericOptions(rowsSpacing, 0m, 100m, 1m);
+            PopulateNumericOptions(columnsSpacing, 0m, 100m, 1m);
+            PopulateNumericOptions(columnsValue, 1m, 4m, 1m);
 
             foreach (OsdItemKind item in OsdItemOrderHelper.Parse(_configuration.ItemOrder))
                 itemOrder.Items.Add(new OsdItemOption(item));
@@ -119,8 +126,8 @@ namespace TrayTemps
             positionValue.SelectedIndex = ValueHelper.ClampInt((int)_configuration.Position, 0, 8);
             customLabelsEnabled.Checked = _configuration.LabelMode == OsdLabelMode.Custom;
             opacityValue.Value = ValueHelper.ClampInt(_configuration.OpacityPercent, opacityValue.Minimum, opacityValue.Maximum);
-            screenMarginValue.Value = ValueHelper.ClampInt(_configuration.ScreenMargin, (int)screenMarginValue.Minimum, (int)screenMarginValue.Maximum);
-            columnsValue.Value = ValueHelper.ClampInt(_configuration.Columns, (int)columnsValue.Minimum, (int)columnsValue.Maximum);
+            SelectNumericOption(screenMarginValue, ValueHelper.ClampInt(_configuration.ScreenMargin, 0, 100));
+            SelectNumericOption(columnsValue, ValueHelper.ClampInt(_configuration.Columns, 1, 4));
             showCpuUsage.Checked = _configuration.ShowCpuUsage;
             showGpuUsage.Checked = _configuration.ShowGpuUsage;
             showRamUsage.Checked = _configuration.ShowRamUsage;
@@ -152,14 +159,18 @@ namespace TrayTemps
             customRamLabel.Text = NormalizeCustomLabel(_configuration.CustomRamLabel, "RAM Use");
             customVramLabel.Text = NormalizeCustomLabel(_configuration.CustomVramLabel, "VRAM Use");
             customFpsLabel.Text = NormalizeCustomLabel(_configuration.CustomFpsLabel, "FPS");
-            labelValueSpacing.Value = ValueHelper.ClampInt(
-                _configuration.LabelValueSpacing,
-                (int)labelValueSpacing.Minimum,
-                (int)labelValueSpacing.Maximum);
-            fontSizeValue.Value = ValueHelper.ClampDecimal(
-                (decimal)_configuration.FontSize,
-                fontSizeValue.Minimum,
-                fontSizeValue.Maximum);
+            SelectNumericOption(
+                labelValueSpacing,
+                ValueHelper.ClampInt(_configuration.LabelValueSpacing, 0, 100));
+            SelectNumericOption(
+                rowsSpacing,
+                ValueHelper.ClampInt(_configuration.RowsSpacing, 0, 100));
+            SelectNumericOption(
+                columnsSpacing,
+                ValueHelper.ClampInt(_configuration.ColumnsSpacing, 0, 100));
+            SelectNumericOption(
+                fontSizeValue,
+                ValueHelper.ClampDecimal((decimal)_configuration.FontSize, 8m, 48m));
             _hotkeyModifiers = (OsdHotkeyModifiers)_configuration.HotkeyModifiers;
             _hotkeyKey = (Keys)_configuration.HotkeyKey;
             if (!OsdHotkeyHelper.IsValid(_hotkeyModifiers, _hotkeyKey))
@@ -221,7 +232,7 @@ namespace TrayTemps
                 ShowCpu = showCpu.Checked,
                 ShowGpu = showGpu.Checked,
                 FontFamily = fontFamilyValue.Text,
-                FontSize = (float)fontSizeValue.Value,
+                FontSize = (float)GetNumericOptionValue(fontSizeValue, 16m),
                 CpuFontColor = cpuFontColor.BackColor.ToArgb(),
                 GpuFontColor = gpuFontColor.BackColor.ToArgb(),
                 RamFontColor = ramFontColor.BackColor.ToArgb(),
@@ -249,9 +260,11 @@ namespace TrayTemps
                 CustomRamLabel = NormalizeCustomLabel(customRamLabel.Text, "RAM Use"),
                 CustomVramLabel = NormalizeCustomLabel(customVramLabel.Text, "VRAM Use"),
                 CustomFpsLabel = NormalizeCustomLabel(customFpsLabel.Text, "FPS"),
-                LabelValueSpacing = (int)labelValueSpacing.Value,
-                ScreenMargin = (int)screenMarginValue.Value,
-                Columns = (int)columnsValue.Value,
+                LabelValueSpacing = (int)GetNumericOptionValue(labelValueSpacing, 14m),
+                RowsSpacing = (int)GetNumericOptionValue(rowsSpacing, 0m),
+                ColumnsSpacing = (int)GetNumericOptionValue(columnsSpacing, 0m),
+                ScreenMargin = (int)GetNumericOptionValue(screenMarginValue, 12m),
+                Columns = (int)GetNumericOptionValue(columnsValue, 1m),
                 ItemOrder = OsdItemOrderHelper.Serialize(orderedItems),
                 HotkeyEnabled = hotkeyEnabled.Checked,
                 HotkeyModifiers = (int)_hotkeyModifiers,
@@ -289,6 +302,49 @@ namespace TrayTemps
 
             fontFamilyValue.Items.Add(requested);
             fontFamilyValue.SelectedIndex = fontFamilyValue.Items.Count - 1;
+        }
+
+        private static void PopulateNumericOptions(
+            ComboBox input,
+            decimal minimum,
+            decimal maximum,
+            decimal increment)
+        {
+            for (decimal value = minimum; value <= maximum; value += increment)
+                input.Items.Add(new OsdNumericOption(value));
+        }
+
+        private static void SelectNumericOption(ComboBox input, decimal value)
+        {
+            int insertIndex = input.Items.Count;
+
+            for (int index = 0; index < input.Items.Count; index++)
+            {
+                if (!(input.Items[index] is OsdNumericOption option))
+                    continue;
+
+                if (option.Value == value)
+                {
+                    input.SelectedIndex = index;
+                    return;
+                }
+
+                if (option.Value > value)
+                {
+                    insertIndex = index;
+                    break;
+                }
+            }
+
+            input.Items.Insert(insertIndex, new OsdNumericOption(value));
+            input.SelectedIndex = insertIndex;
+        }
+
+        private static decimal GetNumericOptionValue(ComboBox input, decimal fallback)
+        {
+            return input.SelectedItem is OsdNumericOption option
+                ? option.Value
+                : fallback;
         }
 
         private static string NormalizeCustomLabel(string value, string fallback)
@@ -507,11 +563,18 @@ namespace TrayTemps
                 label.ForeColor = text;
             }
 
+            fontColorsLayout.BackColor = surfaceBack;
+            foreach (Label label in fontColorsLayout.Controls.OfType<Label>())
+            {
+                label.BackColor = surfaceBack;
+                label.ForeColor = text;
+            }
+
             foreach (Control input in new Control[]
             {
                 positionValue, fontFamilyValue,
                 customCpuLabel, customGpuLabel, customCpuUsageLabel, customGpuUsageLabel,
-                customRamLabel, customVramLabel, customFpsLabel, labelValueSpacing,
+                customRamLabel, customVramLabel, customFpsLabel, labelValueSpacing, rowsSpacing, columnsSpacing,
                 columnsValue, fontSizeValue, screenMarginValue, itemOrder, hotkeyValue
             })
             {
@@ -605,6 +668,21 @@ namespace TrayTemps
             public override string ToString()
             {
                 return OsdItemOrderHelper.GetDisplayName(Kind);
+            }
+        }
+
+        private sealed class OsdNumericOption
+        {
+            internal OsdNumericOption(decimal value)
+            {
+                Value = value;
+            }
+
+            internal decimal Value { get; }
+
+            public override string ToString()
+            {
+                return Value.ToString("0.#", CultureInfo.CurrentCulture);
             }
         }
     }

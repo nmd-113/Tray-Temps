@@ -83,12 +83,12 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="System.Collections.Immutable">
-      <HintPath>$(NuGetPackageRoot)system.collections.immutable\10.0.0\lib\net462\System.Collections.Immutable.dll</HintPath>
+      <HintPath>$(NuGetPackageRoot)system.collections.immutable\10.0.8\lib\net462\System.Collections.Immutable.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System.Core" />
     <Reference Include="System.Formats.Nrbf">
-      <HintPath>$(NuGetPackageRoot)system.formats.nrbf\10.0.0\lib\net462\System.Formats.Nrbf.dll</HintPath>
+      <HintPath>$(NuGetPackageRoot)system.formats.nrbf\10.0.8\lib\net462\System.Formats.Nrbf.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System.IO.Pipelines">
@@ -101,7 +101,7 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="System.Resources.Extensions">
-      <HintPath>$(NuGetPackageRoot)system.resources.extensions\10.0.0\lib\net462\System.Resources.Extensions.dll</HintPath>
+      <HintPath>$(NuGetPackageRoot)system.resources.extensions\10.0.8\lib\net462\System.Resources.Extensions.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System.Runtime.CompilerServices.Unsafe">

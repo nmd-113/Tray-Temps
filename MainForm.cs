@@ -4041,6 +4041,8 @@ namespace TrayTemps
             }
             result.ScreenMargin = ValueHelper.ClampInt(result.ScreenMargin, 0, 100);
             result.Columns = ValueHelper.ClampInt(result.Columns, 1, 4);
+            result.RowsSpacing = ValueHelper.ClampInt(result.RowsSpacing, 0, 100);
+            result.ColumnsSpacing = ValueHelper.ClampInt(result.ColumnsSpacing, 0, 100);
             result.CustomCpuLabel = NormalizeOsdLabel(result.CustomCpuLabel, "CPU Temp");
             result.CustomGpuLabel = NormalizeOsdLabel(result.CustomGpuLabel, "GPU Temp");
             result.CustomCpuUsageLabel = NormalizeOsdLabel(result.CustomCpuUsageLabel, "CPU Load");
@@ -4056,7 +4058,7 @@ namespace TrayTemps
                   result.GpuUsageSpacing ??
                   result.RamUsageSpacing ??
                   result.VramUsageSpacing ??
-                  result.FpsSpacing ?? 14;
+                  result.FpsSpacing ?? 15;
             result.LabelValueSpacing = ValueHelper.ClampInt(labelValueSpacing, 0, 100);
             result.CpuTemperatureSpacing = null;
             result.GpuTemperatureSpacing = null;
@@ -4415,11 +4417,18 @@ namespace TrayTemps
 
             if (_fpsMonitor == null)
             {
-                _fpsMonitor = new ForegroundFpsMonitor();
-                _fpsMonitor.Start();
+                var monitor = new ForegroundFpsMonitor();
+                if (!monitor.Start())
+                {
+                    monitor.Dispose();
+                    return;
+                }
+
+                _fpsMonitor = monitor;
             }
 
             _fpsMonitor.UpdateForegroundProcess();
+            _fpsMonitor.FlushIfNeeded(_tempTimer.Interval);
         }
 
         private void StopFpsMonitoring()
@@ -5704,6 +5713,9 @@ namespace TrayTemps
 
         private void CreateShortcutOnDesktop(string targetPath)
         {
+            object shell = null;
+            object shortcut = null;
+
             try
             {
                 if (string.IsNullOrWhiteSpace(targetPath) || !File.Exists(targetPath))
@@ -5717,17 +5729,39 @@ namespace TrayTemps
                 if (shellType == null)
                     return;
 
-                dynamic shell = Activator.CreateInstance(shellType);
-                dynamic shortcut = shell.CreateShortcut(shortcutPath);
+                shell = Activator.CreateInstance(shellType);
+                shortcut = ((dynamic)shell).CreateShortcut(shortcutPath);
 
-                shortcut.TargetPath = targetPath;
-                shortcut.WorkingDirectory = Path.GetDirectoryName(targetPath);
-                shortcut.Description = "Launch TrayTemps";
-                shortcut.Save();
+                ((dynamic)shortcut).TargetPath = targetPath;
+                ((dynamic)shortcut).WorkingDirectory = Path.GetDirectoryName(targetPath);
+                ((dynamic)shortcut).Description = "Launch TrayTemps";
+                ((dynamic)shortcut).Save();
             }
             catch (Exception ex)
             {
                 Debug.WriteLine("Could not create shortcut: " + ex.Message);
+            }
+            finally
+            {
+                try
+                {
+                    if (shortcut != null && Marshal.IsComObject(shortcut))
+                        Marshal.FinalReleaseComObject(shortcut);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine("Could not release shortcut COM object: " + ex.Message);
+                }
+
+                try
+                {
+                    if (shell != null && Marshal.IsComObject(shell))
+                        Marshal.FinalReleaseComObject(shell);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine("Could not release WScript.Shell COM object: " + ex.Message);
+                }
             }
         }
 
@@ -6372,7 +6406,7 @@ namespace TrayTemps
             }
         }
 
-        private Task<bool> InstallAndRestartAsync()
+        private async Task<bool> InstallAndRestartAsync()
         {
             using (var fbd = new FolderBrowserDialog())
             {
@@ -6385,7 +6419,7 @@ namespace TrayTemps
                     fbd.SelectedPath = programFiles;
 
                 if (fbd.ShowDialog(this) != DialogResult.OK || string.IsNullOrWhiteSpace(fbd.SelectedPath))
-                    return Task.FromResult(false);
+                    return false;
 
                 InstallPath = Path.Combine(fbd.SelectedPath, AppName);
 
@@ -6406,16 +6440,16 @@ namespace TrayTemps
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Warning);
 
-                    return Task.FromResult(false);
+                    return false;
                 }
             }
 
             string currentExePath = Application.ExecutablePath;
             string destExe = Path.Combine(InstallPath, $"{AppName}.exe");
 
-            return Task.Run(() =>
+            try
             {
-                try
+                await Task.Run(() =>
                 {
                     Directory.CreateDirectory(InstallPath);
 
@@ -6425,56 +6459,51 @@ namespace TrayTemps
                         throw new Exception("Could not create startup task:\n" + error);
 
                     CreateShortcutOnDesktop(destExe);
-                    SaveSettings();
-
-                    if (IsHandleCreated && !IsDisposed)
-                    {
-                        Invoke(new Action(() =>
-                        {
-                            MessageBox.Show(
-                                this,
-                                "TrayTemps has been installed successfully.\nIt will now restart from the installed location.",
-                                "Installation Complete",
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Information);
-
-                            if (RestartFromInstalledPath(destExe, out string restartError))
-                            {
-                                ExecuteShutdownSequence();
-                                Close();
-                            }
-                            else
-                            {
-                                MessageBox.Show(
-                                    this,
-                                    "TrayTemps was installed, but the installed copy could not be started.\n\n" + restartError,
-                                    "Installation Error",
-                                    MessageBoxButtons.OK,
-                                    MessageBoxIcon.Error);
-                            }
-                        }));
-                    }
-
-                    return true;
-                }
-                catch (Exception ex)
+                });
+            }
+            catch (Exception ex)
+            {
+                if (IsHandleCreated && !IsDisposed)
                 {
-                    if (IsHandleCreated && !IsDisposed)
-                    {
-                        Invoke(new Action(() =>
-                        {
-                            MessageBox.Show(
-                                this,
-                                ex.Message,
-                                "Installation Error",
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Error);
-                        }));
-                    }
-
-                    return false;
+                    MessageBox.Show(
+                        this,
+                        ex.Message,
+                        "Installation Error",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
                 }
-            });
+
+                return false;
+            }
+
+            if (!IsHandleCreated || IsDisposed)
+                return true;
+
+            SaveSettings();
+
+            MessageBox.Show(
+                this,
+                "TrayTemps has been installed successfully.\nIt will now restart from the installed location.",
+                "Installation Complete",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+
+            if (RestartFromInstalledPath(destExe, out string restartError))
+            {
+                ExecuteShutdownSequence();
+                Close();
+            }
+            else
+            {
+                MessageBox.Show(
+                    this,
+                    "TrayTemps was installed, but the installed copy could not be started.\n\n" + restartError,
+                    "Installation Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+
+            return true;
         }
 
         private bool RestartFromInstalledPath(string installedExePath, out string error)

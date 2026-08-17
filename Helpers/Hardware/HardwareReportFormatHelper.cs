@@ -486,8 +486,13 @@ namespace TrayTemps
                 if (name.IndexOf("percentage used", StringComparison.OrdinalIgnoreCase) >= 0 &&
                     sensor.Value.HasValue)
                 {
-                    float remaining = Math.Max(0, 100 - sensor.Value.Value);
-                    return $"{remaining:0.0} % ({sensor.Value.Value:0.0} % used)";
+                    float used = sensor.Value.Value;
+
+                    if (float.IsNaN(used) || float.IsInfinity(used) || used < 0)
+                        continue;
+
+                    float remaining = Math.Max(0, 100 - used);
+                    return $"{remaining:0.0} % ({used:0.0} % used)";
                 }
             }
 

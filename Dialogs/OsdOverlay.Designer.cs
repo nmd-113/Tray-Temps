@@ -25,7 +25,7 @@ namespace TrayTemps
             // OsdOverlay
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
             this.BackColor = System.Drawing.Color.FromArgb(24, 24, 24);
             this.ClientSize = new System.Drawing.Size(220, 86);
             this.ControlBox = false;
