@@ -66,7 +66,12 @@ namespace TrayTemps
             try
             {
                 string finalComponentName = HardwareDialogTextHelper.GetFinalComponentName(componentName, categoryName, liveHardware);
-                Func<Task<string>> liveFactory = BuildLiveTextFactory(liveTextFactory, liveHardware, hardwareUpdateLock, updateHardwareRecursive);
+                Func<Task<string>> liveFactory = BuildLiveTextFactory(
+                    liveTextFactory,
+                    liveHardware,
+                    hardwareUpdateLock,
+                    updateHardwareRecursive,
+                    isShutdownInitiated);
 
                 var dlg = new HardwareDetailsDialog(
                     finalComponentName,
@@ -116,7 +121,8 @@ namespace TrayTemps
             Func<Task<string>> liveTextFactory,
             IHardware liveHardware,
             object hardwareUpdateLock,
-            Action<IHardware> updateHardwareRecursive)
+            Action<IHardware> updateHardwareRecursive,
+            Func<bool> isShutdownInitiated)
         {
             Func<Task<string>> liveFactory = liveTextFactory;
 
@@ -126,6 +132,9 @@ namespace TrayTemps
                 {
                     lock (hardwareUpdateLock)
                     {
+                        if (isShutdownInitiated != null && isShutdownInitiated())
+                            return string.Empty;
+
                         updateHardwareRecursive(liveHardware);
                         return HardwareLiveSensorsTextHelper.BuildLiveSensorsText(liveHardware);
                     }

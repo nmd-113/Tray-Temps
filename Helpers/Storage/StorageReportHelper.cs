@@ -93,7 +93,7 @@ namespace TrayTemps
             if (value == null || string.IsNullOrWhiteSpace(value.ToString()))
                 return string.Empty;
 
-            return HardwareReportFormatHelper.NormalizeStorageText(value.ToString());
+            return HardwareReportFormatHelper.NormalizeHardwareText(value.ToString());
         }
 
         internal static void AppendUnmatchedSmartLifeInfosSection(StringBuilder sb, List<SmartLifeInfo> unmatchedSmartLifeInfos)
@@ -183,6 +183,15 @@ namespace TrayTemps
                 .Where(s => s.Value.HasValue)
                 .ToList();
 
+            bool unavailableLhmNvmeHealthSensors =
+                HardwareReportFormatHelper.HasUnavailableLhmNvmeHealthSensors(sensors);
+            if (unavailableLhmNvmeHealthSensors)
+            {
+                sensors = sensors
+                    .Where(s => !HardwareReportFormatHelper.IsUnavailableLhmNvmeHealthSensor(s))
+                    .ToList();
+            }
+
             string remainingLife = HardwareReportFormatHelper.GetRemainingLifeText(sensors);
             bool usedSmartLifeFallback = false;
 
@@ -194,6 +203,8 @@ namespace TrayTemps
 
             if (!string.IsNullOrWhiteSpace(remainingLife))
                 sb.AppendLine(HardwareReportFormatHelper.Label("Life Remaining", remainingLife));
+            else if (unavailableLhmNvmeHealthSensors)
+                sb.AppendLine(HardwareReportFormatHelper.Label("Life Remaining", "N/A"));
 
             if (usedSmartLifeFallback)
                 sb.AppendLine(HardwareReportFormatHelper.Label("Life Source", smartLifeInfo.Source));
@@ -220,7 +231,7 @@ namespace TrayTemps
             sb.AppendLine(HardwareReportFormatHelper.Label("Health Sensors", $"{healthSensors.Count} available"));
 
             foreach (var sensor in healthSensors)
-                sb.AppendLine(HardwareReportFormatHelper.Label($"  {(sensor.Name == "Available Spare Threshold" ? "Spare Threshold" : sensor.Name)}", HardwareReportFormatHelper.FormatSensorValue(sensor)));
+                sb.AppendLine(HardwareReportFormatHelper.Label($"  {(sensor.Name == "Available Spare Threshold" ? "Spare Threshold" : sensor.Name)}", HardwareReportFormatHelper.FormatStorageSensorValue(sensor, sensors)));
         }
 
         internal static void AppendSmartLifeInfo(StringBuilder sb, SmartLifeInfo smartLifeInfo)
@@ -232,67 +243,83 @@ namespace TrayTemps
             sb.AppendLine(HardwareReportFormatHelper.Label("Life Source", smartLifeInfo.Source));
         }
 
+        internal static StorageNativeData QueryNativeStorageData(
+            Func<string, List<ManagementObject>> wmiQuery,
+            Func<string, string, List<ManagementObject>> scopedWmiQuery)
+        {
+            List<ManagementObject> disks = null;
+            List<ManagementObject> physicalDisks = null;
+
+            try
+            {
+                disks = wmiQuery("SELECT Model, InterfaceType, MediaType, Size, SerialNumber, " +
+                                 "FirmwareRevision, Partitions, PNPDeviceID, Index FROM Win32_DiskDrive");
+                physicalDisks = scopedWmiQuery(
+                    @"root\Microsoft\Windows\Storage",
+                    "SELECT DeviceId, SerialNumber, BusType FROM MSFT_PhysicalDisk");
+                List<SmartLifeInfo> smartLifeInfos = StorageSmartInfoHelper.GetSmartLifeInfos(scopedWmiQuery);
+
+                return new StorageNativeData(disks, physicalDisks, smartLifeInfos);
+            }
+            catch
+            {
+                WmiQueryHelper.DisposeAll(disks);
+                WmiQueryHelper.DisposeAll(physicalDisks);
+                throw;
+            }
+        }
+
         internal static HardwareDiscoveryResult GetStorageInfo(
             IEnumerable<IHardware> storageHardwares,
             Action<IHardware> updateHardwareRecursive,
-            Func<string, List<ManagementObject>> wmiQuery)
+            StorageNativeData nativeData)
         {
             var sb = new StringBuilder();
             var displayNames = new List<string>();
             sb.Append(HardwareReportFormatHelper.Section("STORAGE"));
 
-            var disks = wmiQuery("SELECT * FROM Win32_DiskDrive");
-            var physicalDisks = WmiQueryHelper.WmiQuery(
-                @"root\Microsoft\Windows\Storage",
-                "SELECT DeviceId, SerialNumber, BusType FROM MSFT_PhysicalDisk");
-            var smartLifeInfos = StorageSmartInfoHelper.GetSmartLifeInfos(WmiQueryHelper.WmiQuery);
+            List<ManagementObject> disks = nativeData?.Disks ?? new List<ManagementObject>();
+            List<ManagementObject> physicalDisks = nativeData?.PhysicalDisks ?? new List<ManagementObject>();
+            List<SmartLifeInfo> smartLifeInfos = nativeData?.SmartLifeInfos ?? new List<SmartLifeInfo>();
             var unmatchedSmartLifeInfos = new List<SmartLifeInfo>(smartLifeInfos);
             var unmatchedStorageHardwares = storageHardwares == null
                 ? new List<IHardware>()
                 : storageHardwares.Where(d => d != null).ToList();
 
-            try
+            if (disks.Count == 0)
             {
-                if (disks.Count == 0)
-                {
-                    sb.AppendLine();
-                    sb.AppendLine("  No storage information found.");
-
-                    AppendUnmatchedStorageHardwaresSection(sb, unmatchedStorageHardwares, disks, smartLifeInfos, unmatchedSmartLifeInfos, updateHardwareRecursive);
-                    AppendUnmatchedSmartLifeInfosSection(sb, unmatchedSmartLifeInfos);
-
-                    return new HardwareDiscoveryResult("Unknown Storage", sb.ToString(), displayNames, 0);
-                }
-
-                foreach (var disk in disks)
-                {
-                    string diskDisplayName = HardwareReportFormatHelper.GetDiskDisplayTitle(disk["Model"], disk["SerialNumber"]);
-                    if (!string.IsNullOrWhiteSpace(diskDisplayName))
-                        displayNames.Add(diskDisplayName);
-
-                    sb.Append(HardwareReportFormatHelper.Group(diskDisplayName));
-                    AppendStorageStaticDiskFields(sb, disk, physicalDisks);
-
-                    IHardware matchedDrive = FindStorageHardwareForDisk(disk, unmatchedStorageHardwares);
-                    SmartLifeInfo smartLifeInfo = StorageSmartInfoHelper.FindSmartLifeInfoForDisk(disk, smartLifeInfos);
-
-                    if (matchedDrive != null || smartLifeInfo != null)
-                        AppendStorageHealthSectionForDisk(sb, matchedDrive, smartLifeInfo, unmatchedStorageHardwares, unmatchedSmartLifeInfos, updateHardwareRecursive);
-                }
+                sb.AppendLine();
+                sb.AppendLine("  No storage information found.");
 
                 AppendUnmatchedStorageHardwaresSection(sb, unmatchedStorageHardwares, disks, smartLifeInfos, unmatchedSmartLifeInfos, updateHardwareRecursive);
                 AppendUnmatchedSmartLifeInfosSection(sb, unmatchedSmartLifeInfos);
 
-                string summary = displayNames.Count == 1
-                    ? displayNames[0]
-                    : displayNames.Count > 1 ? "Storage" : "Unknown Storage";
-                return new HardwareDiscoveryResult(summary, sb.ToString(), displayNames, disks.Count);
+                return new HardwareDiscoveryResult("Unknown Storage", sb.ToString(), displayNames, 0);
             }
-            finally
+
+            foreach (var disk in disks)
             {
-                WmiQueryHelper.DisposeAll(disks);
-                WmiQueryHelper.DisposeAll(physicalDisks);
+                string diskDisplayName = HardwareReportFormatHelper.GetDiskDisplayTitle(disk["Model"], disk["SerialNumber"]);
+                if (!string.IsNullOrWhiteSpace(diskDisplayName))
+                    displayNames.Add(diskDisplayName);
+
+                sb.Append(HardwareReportFormatHelper.Group(diskDisplayName));
+                AppendStorageStaticDiskFields(sb, disk, physicalDisks);
+
+                IHardware matchedDrive = FindStorageHardwareForDisk(disk, unmatchedStorageHardwares);
+                SmartLifeInfo smartLifeInfo = StorageSmartInfoHelper.FindSmartLifeInfoForDisk(disk, smartLifeInfos);
+
+                if (matchedDrive != null || smartLifeInfo != null)
+                    AppendStorageHealthSectionForDisk(sb, matchedDrive, smartLifeInfo, unmatchedStorageHardwares, unmatchedSmartLifeInfos, updateHardwareRecursive);
             }
+
+            AppendUnmatchedStorageHardwaresSection(sb, unmatchedStorageHardwares, disks, smartLifeInfos, unmatchedSmartLifeInfos, updateHardwareRecursive);
+            AppendUnmatchedSmartLifeInfosSection(sb, unmatchedSmartLifeInfos);
+
+            string summary = displayNames.Count == 1
+                ? displayNames[0]
+                : displayNames.Count > 1 ? "Storage" : "Unknown Storage";
+            return new HardwareDiscoveryResult(summary, sb.ToString(), displayNames, disks.Count);
         }
 
         internal static void AppendStorageHealthSectionForDisk(
@@ -370,6 +397,29 @@ namespace TrayTemps
 
                 sb.AppendLine();
             }
+        }
+    }
+
+    internal sealed class StorageNativeData : IDisposable
+    {
+        internal StorageNativeData(
+            List<ManagementObject> disks,
+            List<ManagementObject> physicalDisks,
+            List<SmartLifeInfo> smartLifeInfos)
+        {
+            Disks = disks ?? new List<ManagementObject>();
+            PhysicalDisks = physicalDisks ?? new List<ManagementObject>();
+            SmartLifeInfos = smartLifeInfos ?? new List<SmartLifeInfo>();
+        }
+
+        internal List<ManagementObject> Disks { get; }
+        internal List<ManagementObject> PhysicalDisks { get; }
+        internal List<SmartLifeInfo> SmartLifeInfos { get; }
+
+        public void Dispose()
+        {
+            WmiQueryHelper.DisposeAll(Disks);
+            WmiQueryHelper.DisposeAll(PhysicalDisks);
         }
     }
 }

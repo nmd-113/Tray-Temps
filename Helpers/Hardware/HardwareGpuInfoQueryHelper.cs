@@ -17,7 +17,10 @@ namespace TrayTemps
             sb.Append(HardwareReportFormatHelper.Section("GPU"));
             var displayNames = new List<string>();
 
-            var gpus = wmiQuery("SELECT * FROM Win32_VideoController");
+            var gpus = wmiQuery(
+                "SELECT Name, DriverVersion, DriverDate, VideoProcessor, AdapterRAM, PNPDeviceID, " +
+                "CurrentHorizontalResolution, CurrentVerticalResolution, CurrentRefreshRate " +
+                "FROM Win32_VideoController");
             try
             {
                 if (gpus.Count == 0)
@@ -342,9 +345,9 @@ namespace TrayTemps
             string providerName = HardwareReportFormatHelper.RegistryValueToString(adapterKey.GetValue("ProviderName"));
 
             string registryText = $"{adapterString} {chipType} {matchingDeviceId} {deviceDescription} {providerName}";
-            string regNorm = HardwareReportFormatHelper.NormalizeGpuText(registryText);
-            string nameNorm = HardwareReportFormatHelper.NormalizeGpuText(gpuName);
-            string pnpNorm = HardwareReportFormatHelper.NormalizeGpuText(pnpId);
+            string regNorm = HardwareReportFormatHelper.NormalizeHardwareText(registryText);
+            string nameNorm = HardwareReportFormatHelper.NormalizeHardwareText(gpuName);
+            string pnpNorm = HardwareReportFormatHelper.NormalizeHardwareText(pnpId);
 
             if (!string.IsNullOrWhiteSpace(nameNorm) && regNorm.Contains(nameNorm))
                 return true;

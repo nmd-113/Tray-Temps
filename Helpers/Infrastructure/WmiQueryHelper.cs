@@ -10,7 +10,13 @@ namespace TrayTemps
     {
         internal static List<ManagementObject> WmiQuery(string query)
         {
-            var list = new List<ManagementObject>();
+            TryWmiQuery(query, out List<ManagementObject> list);
+            return list;
+        }
+
+        internal static bool TryWmiQuery(string query, out List<ManagementObject> list)
+        {
+            list = new List<ManagementObject>();
 
             try
             {
@@ -20,13 +26,14 @@ namespace TrayTemps
                     foreach (ManagementObject obj in results.Cast<ManagementObject>())
                         list.Add(obj);
                 }
+
+                return true;
             }
             catch (Exception ex)
             {
                 Debug.WriteLine("WmiQuery failed: " + ex);
+                return false;
             }
-
-            return list;
         }
 
         internal static List<ManagementObject> WmiQuery(string scopePath, string query)

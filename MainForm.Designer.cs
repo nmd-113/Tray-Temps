@@ -145,7 +145,7 @@
             this.githubLink = new System.Windows.Forms.Label();
             this.donatePic = new System.Windows.Forms.PictureBox();
             this.panelWrapper = new System.Windows.Forms.Panel();
-            this.resizeGrip = new TrayTemps.MainForm.ResizeGripPanel();
+            this.resizeGrip = new TrayTemps.WindowResizeGripPanel();
             this.cpuTrayIcon = new System.Windows.Forms.NotifyIcon(this.components);
             this.contextMenuStrip = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.ShowForm = new System.Windows.Forms.ToolStripMenuItem();
@@ -2065,14 +2065,12 @@
             this.resizeGrip.Name = "resizeGrip";
             this.resizeGrip.Size = new System.Drawing.Size(20, 20);
             this.resizeGrip.TabIndex = 1;
-            this.resizeGrip.Paint += new System.Windows.Forms.PaintEventHandler(this.ResizeGrip_Paint);
-            this.resizeGrip.MouseDown += new System.Windows.Forms.MouseEventHandler(this.ResizeGrip_MouseDown);
             // 
             // cpuTrayIcon
             // 
             this.cpuTrayIcon.ContextMenuStrip = this.contextMenuStrip;
             this.cpuTrayIcon.Text = "CPU Temp";
-            this.cpuTrayIcon.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.CpuTrayIcon_MouseDoubleClick);
+            this.cpuTrayIcon.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.NotifyIcon_MouseDoubleClick);
             // 
             // contextMenuStrip
             // 
@@ -2205,7 +2203,7 @@
             // 
             this.gpuTrayIcon.ContextMenuStrip = this.contextMenuStrip;
             this.gpuTrayIcon.Text = "GPU Temp";
-            this.gpuTrayIcon.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.GpuTrayIcon_MouseDoubleClick);
+            this.gpuTrayIcon.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.NotifyIcon_MouseDoubleClick);
             // 
             // NotifyIcon
             // 
@@ -2298,7 +2296,7 @@
         private System.Windows.Forms.Button minimizeBtn;
         private System.Windows.Forms.TabControl mainTabControl;
         private System.Windows.Forms.Panel panelWrapper;
-        private ResizeGripPanel resizeGrip;
+        private WindowResizeGripPanel resizeGrip;
         private System.Windows.Forms.TabPage homePage;
         private System.Windows.Forms.TabPage settingsPage;
         private System.Windows.Forms.TabPage aboutPage;

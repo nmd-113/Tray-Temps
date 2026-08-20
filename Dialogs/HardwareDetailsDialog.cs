@@ -109,6 +109,13 @@ public partial class HardwareDetailsDialog : Form
     {
         base.OnHandleCreated(e);
         TrayTemps.WindowCornerHelper.ApplyRoundedCorners(Handle);
+        resizeGrip?.UpdateDpiSize();
+    }
+
+    protected override void OnResize(EventArgs e)
+    {
+        base.OnResize(e);
+        resizeGrip?.UpdateDpiSize();
     }
 
     private void HardwareDetailsDialog_Shown(object sender, EventArgs e)
@@ -244,6 +251,12 @@ public partial class HardwareDetailsDialog : Form
         _menuText = text;
         _disabledText = light ? Color.FromArgb(148, 163, 184) : Color.FromArgb(100, 100, 100);
 
+        if (resizeGrip != null && !resizeGrip.IsDisposed)
+        {
+            resizeGrip.LightTheme = light;
+            resizeGrip.BackColor = barBack;
+        }
+
         BackColor = windowBack;
         outerBorder.BackColor = border;
         mainPanel.BackColor = pageBack;
@@ -313,7 +326,14 @@ public partial class HardwareDetailsDialog : Form
 
         if (InvokeRequired)
         {
-            BeginInvoke((Action<string>)SetDetailsText, detailsText);
+            try
+            {
+                BeginInvoke((Action<string>)SetDetailsText, detailsText);
+            }
+            catch (InvalidOperationException)
+            {
+                // The dialog closed after the initial disposal check.
+            }
             return;
         }
 
@@ -330,7 +350,14 @@ public partial class HardwareDetailsDialog : Form
 
         if (InvokeRequired)
         {
-            BeginInvoke((Action<Func<Task<string>>>)SetLiveTextFactory, liveTextFactory);
+            try
+            {
+                BeginInvoke((Action<Func<Task<string>>>)SetLiveTextFactory, liveTextFactory);
+            }
+            catch (InvalidOperationException)
+            {
+                // The dialog closed after the initial disposal check.
+            }
             return;
         }
 
@@ -368,13 +395,14 @@ public partial class HardwareDetailsDialog : Form
             redrawDisabled = true;
 
             int oldSelectionStart = _liveBox.SelectionStart;
-            Point oldScrollPosition = GetScrollPosition(_liveBox);
+            Point oldScrollPosition = Point.Empty;
+            SendMessage(_liveBox.Handle, EM_GETSCROLLPOS, IntPtr.Zero, ref oldScrollPosition);
 
             _liveBox.Text = string.IsNullOrWhiteSpace(text) ? "No sensors detected." : text;
 
             _liveBox.SelectionStart = Math.Min(oldSelectionStart, _liveBox.TextLength);
             _liveBox.SelectionLength = 0;
-            SetScrollPosition(_liveBox, oldScrollPosition);
+            SendMessage(_liveBox.Handle, EM_SETSCROLLPOS, IntPtr.Zero, ref oldScrollPosition);
         }
         catch
         {
@@ -385,7 +413,7 @@ public partial class HardwareDetailsDialog : Form
         finally
         {
             // Ensure redraw is always re-enabled if it was disabled.
-            if (redrawDisabled)
+            if (redrawDisabled && !IsDisposed && _liveBox.IsHandleCreated)
             {
                 SendMessage(_liveBox.Handle, WM_SETREDRAW, new IntPtr(1), IntPtr.Zero);
                 _liveBox.Invalidate();
@@ -414,18 +442,6 @@ public partial class HardwareDetailsDialog : Form
         if (box == null) return;
         box.SelectionStart = 0;
         box.SelectionLength = 0;
-    }
-
-    private static Point GetScrollPosition(RichTextBox box)
-    {
-        Point position = Point.Empty;
-        SendMessage(box.Handle, EM_GETSCROLLPOS, IntPtr.Zero, ref position);
-        return position;
-    }
-
-    private static void SetScrollPosition(RichTextBox box, Point position)
-    {
-        SendMessage(box.Handle, EM_SETSCROLLPOS, IntPtr.Zero, ref position);
     }
 
     private static void CopyToClipboard(string text)

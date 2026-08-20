@@ -18,6 +18,7 @@
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(HardwareDetailsDialog));
             this.outerBorder = new System.Windows.Forms.Panel();
+            this.resizeGrip = new TrayTemps.WindowResizeGripPanel();
             this.mainPanel = new System.Windows.Forms.Panel();
             this.contentArea = new System.Windows.Forms.Panel();
             this.cardDetails = new System.Windows.Forms.Panel();
@@ -56,6 +57,7 @@
             // outerBorder
             // 
             this.outerBorder.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(60)))), ((int)(((byte)(60)))), ((int)(((byte)(60)))));
+            this.outerBorder.Controls.Add(this.resizeGrip);
             this.outerBorder.Controls.Add(this.mainPanel);
             this.outerBorder.Controls.Add(this.leftMenu);
             this.outerBorder.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -65,6 +67,17 @@
             this.outerBorder.Padding = new System.Windows.Forms.Padding(1);
             this.outerBorder.Size = new System.Drawing.Size(760, 520);
             this.outerBorder.TabIndex = 0;
+            //
+            // resizeGrip
+            //
+            this.resizeGrip.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.resizeGrip.BackColor = System.Drawing.Color.Transparent;
+            this.resizeGrip.Cursor = System.Windows.Forms.Cursors.SizeNWSE;
+            this.resizeGrip.Location = new System.Drawing.Point(739, 499);
+            this.resizeGrip.Margin = new System.Windows.Forms.Padding(0);
+            this.resizeGrip.Name = "resizeGrip";
+            this.resizeGrip.Size = new System.Drawing.Size(20, 20);
+            this.resizeGrip.TabIndex = 2;
             // 
             // mainPanel
             // 
@@ -175,7 +188,7 @@
             this.bottomBar.Dock = System.Windows.Forms.DockStyle.Bottom;
             this.bottomBar.Location = new System.Drawing.Point(0, 468);
             this.bottomBar.Name = "bottomBar";
-            this.bottomBar.Padding = new System.Windows.Forms.Padding(15, 10, 15, 10);
+            this.bottomBar.Padding = new System.Windows.Forms.Padding(15, 10, 30, 10);
             this.bottomBar.Size = new System.Drawing.Size(638, 50);
             this.bottomBar.TabIndex = 1;
             // 
@@ -439,6 +452,7 @@
     #endregion
 
     private System.Windows.Forms.Panel outerBorder;
+    private TrayTemps.WindowResizeGripPanel resizeGrip;
     private System.Windows.Forms.Panel mainPanel;
     private System.Windows.Forms.Panel contentArea;
     private System.Windows.Forms.Panel cardDetails;

@@ -16,11 +16,16 @@ namespace TrayTemps
         private const int WsExLayered = 0x00080000;
         private const int WsExNoActivate = 0x08000000;
         private const int WmNcHitTest = 0x0084;
+        private const int SwpNoSize = 0x0001;
+        private const int SwpNoMove = 0x0002;
+        private const int SwpNoActivate = 0x0010;
+        private const int SwpNoOwnerZOrder = 0x0200;
         private const int UlwAlpha = 0x00000002;
         private const byte AcSrcOver = 0x00;
         private const byte AcSrcAlpha = 0x01;
         private const int TextStrokeAlpha = 220;
         private static readonly IntPtr HtTransparent = new IntPtr(-1);
+        private static readonly IntPtr HwndTopMost = new IntPtr(-1);
         private readonly List<OsdMetric> _metrics = new List<OsdMetric>();
         private readonly Dictionary<string, int> _valueTemplateWidthCache =
             new Dictionary<string, int>(StringComparer.Ordinal);
@@ -96,20 +101,16 @@ namespace TrayTemps
             _metrics.Clear();
             _metrics.AddRange(metrics ?? Enumerable.Empty<OsdMetric>());
 
-            MoveToTargetMonitorForMeasurement();
+            if (_workingArea.Width > 0 && _workingArea.Height > 0 &&
+                (!IsHandleCreated || Screen.FromControl(this).WorkingArea != _workingArea))
+            {
+                Location = _workingArea.Location;
+            }
+
             ApplyVisualSettings();
             ResizeForContent();
             ApplyConfiguredPosition();
             PresentLayeredWindow();
-        }
-
-        private void MoveToTargetMonitorForMeasurement()
-        {
-            if (_workingArea.Width <= 0 || _workingArea.Height <= 0)
-                return;
-
-            if (!IsHandleCreated || Screen.FromControl(this).WorkingArea != _workingArea)
-                Location = _workingArea.Location;
         }
 
         private void ApplyVisualSettings()
@@ -139,6 +140,9 @@ namespace TrayTemps
 
         private void ResizeForContent()
         {
+            if (_displayFont == null)
+                ApplyVisualSettings();
+
             int itemCount = Math.Max(1, _metrics.Count);
             int columns = Math.Max(1, Math.Min(_configuration.Columns, itemCount));
             int rows = (int)Math.Ceiling(itemCount / (double)columns);
@@ -147,9 +151,8 @@ namespace TrayTemps
             int columnGap = GetColumnsSpacing();
             int rowSpacing = rows > 1 ? rowGap * (rows - 1) : 0;
             int columnSpacing = columns > 1 ? columnGap * (columns - 1) : 0;
-            int combinedValueGap = ScaleLogical(12);
-            int[] labelSectionWidths = new int[columns];
-            int[] valueBlockWidths = new int[columns];
+            int combinedValueGap = GetCombinedValueGap();
+            int[] columnContentWidths = new int[columns];
             int[] rowHeights;
 
             using (var measurementBitmap = new Bitmap(1, 1, PixelFormat.Format32bppPArgb))
@@ -165,20 +168,19 @@ namespace TrayTemps
                         _trailingValueSlotDpi = DeviceDpi;
                     }
 
-                    MeasureColumnWidths(
+                    MeasureColumnContentWidths(
                         graphics,
                         columns,
                         ScaleLogical(Math.Max(0, _configuration.LabelValueSpacing)),
                         combinedValueGap,
-                        labelSectionWidths,
-                        valueBlockWidths);
+                        columnContentWidths);
                     rowHeights = MeasureRowHeights(graphics, columns, rows);
                 }
             }
 
             int contentWidth = 0;
             for (int column = 0; column < columns; column++)
-                contentWidth += labelSectionWidths[column] + valueBlockWidths[column];
+                contentWidth += columnContentWidths[column];
 
             int width = padding * 2 + contentWidth + columnSpacing;
             int contentHeight = rowHeights.Sum();
@@ -211,22 +213,20 @@ namespace TrayTemps
             int rowGap = GetRowsSpacing();
             int columnGap = GetColumnsSpacing();
             int columnSpacing = columns > 1 ? columnGap * (columns - 1) : 0;
-            int combinedValueGap = ScaleLogical(12);
+            int combinedValueGap = GetCombinedValueGap();
             int labelGap = ScaleLogical(Math.Max(0, _configuration.LabelValueSpacing));
-            int[] labelSectionWidths = new int[columns];
-            int[] valueBlockWidths = new int[columns];
+            int[] naturalColumnWidths = new int[columns];
             int[] columnWidths = new int[columns];
             int[] columnLefts = new int[columns];
             int[] rowHeights;
             int[] rowTops = new int[rows];
 
-            MeasureColumnWidths(
+            MeasureColumnContentWidths(
                 graphics,
                 columns,
                 labelGap,
                 combinedValueGap,
-                labelSectionWidths,
-                valueBlockWidths);
+                naturalColumnWidths);
             rowHeights = MeasureRowHeights(graphics, columns, rows);
             int rowTop = padding;
             for (int row = 0; row < rows; row++)
@@ -239,7 +239,7 @@ namespace TrayTemps
 
             int naturalContentWidth = 0;
             for (int column = 0; column < columns; column++)
-                naturalContentWidth += labelSectionWidths[column] + valueBlockWidths[column];
+                naturalContentWidth += naturalColumnWidths[column];
 
             int availableContentWidth = Math.Max(
                 1,
@@ -251,7 +251,7 @@ namespace TrayTemps
                 columnLefts[column] = columnLeft;
                 columnWidths[column] = constrained
                     ? availableContentWidth / columns + (column < availableContentWidth % columns ? 1 : 0)
-                    : labelSectionWidths[column] + valueBlockWidths[column];
+                    : naturalColumnWidths[column];
                 columnLeft += columnWidths[column];
                 if (column < columns - 1)
                     columnLeft += columnGap;
@@ -271,7 +271,9 @@ namespace TrayTemps
                     Color textColor = metric.TextColor ?? _textColor;
                     int x = columnLefts[column];
                     int y = rowTops[row];
-                    int valueBlockWidth = Math.Min(valueBlockWidths[column], columnWidths[column]);
+                    int valueBlockWidth = Math.Min(
+                        GetValueBlockWidth(graphics, metric, combinedValueGap),
+                        columnWidths[column]);
                     int valueBlockX = x + Math.Max(0, columnWidths[column] - valueBlockWidth);
                     int trailingValueWidth = metric.TrailingValue != null
                         ? Math.Min(_trailingValueSlotWidth, valueBlockWidth)
@@ -339,31 +341,30 @@ namespace TrayTemps
             return width;
         }
 
-        private void MeasureColumnWidths(
+        private void MeasureColumnContentWidths(
             Graphics graphics,
             int columns,
             int labelGap,
             int combinedValueGap,
-            int[] labelSectionWidths,
-            int[] valueBlockWidths)
+            int[] columnContentWidths)
         {
             for (int index = 0; index < _metrics.Count; index++)
             {
                 int column = index % columns;
                 OsdMetric metric = _metrics[index];
-                labelSectionWidths[column] = Math.Max(
-                    labelSectionWidths[column],
-                    MeasureDisplayTextWidth(graphics, metric.Label) + labelGap);
-                valueBlockWidths[column] = Math.Max(
-                    valueBlockWidths[column],
-                    GetValueBlockWidth(graphics, metric, combinedValueGap));
+                int rowWidth = MeasureDisplayTextWidth(graphics, metric.Label) +
+                    labelGap +
+                    GetValueBlockWidth(graphics, metric, combinedValueGap);
+                columnContentWidths[column] = Math.Max(columnContentWidths[column], rowWidth);
             }
         }
 
         private int[] MeasureRowHeights(Graphics graphics, int columns, int rows)
         {
             var rowHeights = new int[rows];
-            int sharedRowHeight = 1;
+            int sharedRowHeight = MeasureOutlinedTextHeight(
+                graphics,
+                "N/A 100% 999\u00B0C 999\u00B0F 999.99G 9999");
             for (int index = 0; index < _metrics.Count; index++)
             {
                 int row = index / columns;
@@ -377,10 +378,8 @@ namespace TrayTemps
                 sharedRowHeight = Math.Max(sharedRowHeight, rowHeights[row]);
             }
 
-            for (int row = 0; row < rowHeights.Length - 1; row++)
+            for (int row = 0; row < rowHeights.Length; row++)
                 rowHeights[row] = sharedRowHeight;
-
-            rowHeights[rowHeights.Length - 1] = Math.Max(1, rowHeights[rowHeights.Length - 1]);
 
             return rowHeights;
         }
@@ -452,13 +451,6 @@ namespace TrayTemps
             }
         }
 
-        private int MeasureOutlinedTextWidth(Graphics graphics, string text)
-        {
-            return Math.Max(
-                1,
-                (int)Math.Ceiling(MeasureTextPathWidth(graphics, text) + GetStrokeWidth()));
-        }
-
         private int MeasureOutlinedTextHeight(Graphics graphics, string text)
         {
             using (GraphicsPath path = CreateTextPath(graphics, text))
@@ -467,7 +459,9 @@ namespace TrayTemps
 
         private int MeasureDisplayTextWidth(Graphics graphics, string text)
         {
-            return MeasureOutlinedTextWidth(graphics, text);
+            return Math.Max(
+                1,
+                (int)Math.Ceiling(MeasureTextPathWidth(graphics, text) + GetStrokeWidth()));
         }
 
         private int MeasureStablePercentSlotWidth(Graphics graphics)
@@ -557,6 +551,12 @@ namespace TrayTemps
             return Math.Max(0.85f, DeviceDpi / 96f);
         }
 
+        private int GetCombinedValueGap()
+        {
+            // Keep a small DPI-scaled gap between the two stable value slots.
+            return Math.Max(ScaleLogical(8), (int)Math.Ceiling(GetStrokeWidth()));
+        }
+
         private void PresentLayeredWindow()
         {
             if (IsDisposed || !IsHandleCreated || ClientSize.Width <= 0 || ClientSize.Height <= 0)
@@ -624,6 +624,14 @@ namespace TrayTemps
                         0,
                         ref blend,
                         UlwAlpha);
+                    SetWindowPos(
+                        Handle,
+                        HwndTopMost,
+                        0,
+                        0,
+                        0,
+                        0,
+                        SwpNoSize | SwpNoMove | SwpNoActivate | SwpNoOwnerZOrder);
                 }
                 finally
                 {
@@ -745,6 +753,16 @@ namespace TrayTemps
             ref NativePoint source,
             int colorKey,
             ref BlendFunction blend,
+            int flags);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool SetWindowPos(
+            IntPtr windowHandle,
+            IntPtr windowHandleInsertAfter,
+            int x,
+            int y,
+            int width,
+            int height,
             int flags);
 
         [DllImport("user32.dll")]

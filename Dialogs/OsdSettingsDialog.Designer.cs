@@ -365,7 +365,7 @@ namespace TrayTemps
             // customLabelsEnabled
             // 
             this.customLabelsEnabled.AutoSize = true;
-            this.customLabelsEnabled.Location = new System.Drawing.Point(18, 46);
+            this.customLabelsEnabled.Location = new System.Drawing.Point(18, 41);
             this.customLabelsEnabled.Margin = new System.Windows.Forms.Padding(2);
             this.customLabelsEnabled.Name = "customLabelsEnabled";
             this.customLabelsEnabled.Size = new System.Drawing.Size(111, 20);
@@ -404,7 +404,7 @@ namespace TrayTemps
             this.customLabelsLayout.Controls.Add(this.customVramLabel, 3, 2);
             this.customLabelsLayout.Controls.Add(this.customFpsLabelCaption, 0, 3);
             this.customLabelsLayout.Controls.Add(this.customFpsLabel, 1, 3);
-            this.customLabelsLayout.Location = new System.Drawing.Point(16, 70);
+            this.customLabelsLayout.Location = new System.Drawing.Point(16, 65);
             this.customLabelsLayout.Margin = new System.Windows.Forms.Padding(2);
             this.customLabelsLayout.Name = "customLabelsLayout";
             this.customLabelsLayout.RowCount = 5;
@@ -413,7 +413,7 @@ namespace TrayTemps
             this.customLabelsLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 20F));
             this.customLabelsLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 20F));
             this.customLabelsLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 20F));
-            this.customLabelsLayout.Size = new System.Drawing.Size(400, 138);
+            this.customLabelsLayout.Size = new System.Drawing.Size(400, 143);
             this.customLabelsLayout.TabIndex = 3;
             // 
             // columnsGapHeader
@@ -421,10 +421,10 @@ namespace TrayTemps
             this.columnsGapHeader.AutoSize = true;
             this.columnsGapHeader.Dock = System.Windows.Forms.DockStyle.Fill;
             this.columnsGapHeader.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.columnsGapHeader.Location = new System.Drawing.Point(202, 110);
+            this.columnsGapHeader.Location = new System.Drawing.Point(202, 114);
             this.columnsGapHeader.Margin = new System.Windows.Forms.Padding(2);
             this.columnsGapHeader.Name = "columnsGapHeader";
-            this.columnsGapHeader.Size = new System.Drawing.Size(76, 26);
+            this.columnsGapHeader.Size = new System.Drawing.Size(76, 27);
             this.columnsGapHeader.TabIndex = 22;
             this.columnsGapHeader.Text = "Columns Gap";
             this.columnsGapHeader.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -434,10 +434,10 @@ namespace TrayTemps
             this.rowsGapHeader.AutoSize = true;
             this.rowsGapHeader.Dock = System.Windows.Forms.DockStyle.Fill;
             this.rowsGapHeader.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.rowsGapHeader.Location = new System.Drawing.Point(202, 83);
+            this.rowsGapHeader.Location = new System.Drawing.Point(202, 86);
             this.rowsGapHeader.Margin = new System.Windows.Forms.Padding(2);
             this.rowsGapHeader.Name = "rowsGapHeader";
-            this.rowsGapHeader.Size = new System.Drawing.Size(76, 23);
+            this.rowsGapHeader.Size = new System.Drawing.Size(76, 24);
             this.rowsGapHeader.TabIndex = 21;
             this.rowsGapHeader.Text = "Rows Gap";
             this.rowsGapHeader.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -447,10 +447,10 @@ namespace TrayTemps
             this.spacingHeader.AutoSize = true;
             this.spacingHeader.Dock = System.Windows.Forms.DockStyle.Fill;
             this.spacingHeader.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.spacingHeader.Location = new System.Drawing.Point(2, 110);
+            this.spacingHeader.Location = new System.Drawing.Point(2, 114);
             this.spacingHeader.Margin = new System.Windows.Forms.Padding(2);
             this.spacingHeader.Name = "spacingHeader";
-            this.spacingHeader.Size = new System.Drawing.Size(76, 26);
+            this.spacingHeader.Size = new System.Drawing.Size(76, 27);
             this.spacingHeader.TabIndex = 19;
             this.spacingHeader.Text = "Inner Gap";
             this.spacingHeader.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -462,7 +462,7 @@ namespace TrayTemps
             this.customCpuLabelCaption.Location = new System.Drawing.Point(2, 2);
             this.customCpuLabelCaption.Margin = new System.Windows.Forms.Padding(2);
             this.customCpuLabelCaption.Name = "customCpuLabelCaption";
-            this.customCpuLabelCaption.Size = new System.Drawing.Size(76, 23);
+            this.customCpuLabelCaption.Size = new System.Drawing.Size(76, 24);
             this.customCpuLabelCaption.TabIndex = 0;
             this.customCpuLabelCaption.Text = "CPU Temp";
             this.customCpuLabelCaption.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -474,7 +474,7 @@ namespace TrayTemps
             this.columnsSpacing.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.columnsSpacing.FormattingEnabled = true;
             this.columnsSpacing.IntegralHeight = false;
-            this.columnsSpacing.Location = new System.Drawing.Point(282, 110);
+            this.columnsSpacing.Location = new System.Drawing.Point(282, 114);
             this.columnsSpacing.Margin = new System.Windows.Forms.Padding(2);
             this.columnsSpacing.Name = "columnsSpacing";
             this.columnsSpacing.Size = new System.Drawing.Size(54, 24);
@@ -488,7 +488,7 @@ namespace TrayTemps
             this.rowsSpacing.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.rowsSpacing.FormattingEnabled = true;
             this.rowsSpacing.IntegralHeight = false;
-            this.rowsSpacing.Location = new System.Drawing.Point(282, 83);
+            this.rowsSpacing.Location = new System.Drawing.Point(282, 86);
             this.rowsSpacing.Margin = new System.Windows.Forms.Padding(2);
             this.rowsSpacing.Name = "rowsSpacing";
             this.rowsSpacing.Size = new System.Drawing.Size(54, 24);
@@ -502,7 +502,7 @@ namespace TrayTemps
             this.labelValueSpacing.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.labelValueSpacing.FormattingEnabled = true;
             this.labelValueSpacing.IntegralHeight = false;
-            this.labelValueSpacing.Location = new System.Drawing.Point(82, 110);
+            this.labelValueSpacing.Location = new System.Drawing.Point(82, 114);
             this.labelValueSpacing.Margin = new System.Windows.Forms.Padding(2);
             this.labelValueSpacing.Name = "labelValueSpacing";
             this.labelValueSpacing.Size = new System.Drawing.Size(54, 24);
@@ -513,7 +513,7 @@ namespace TrayTemps
             // 
             this.customCpuLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.customCpuLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.customCpuLabel.Location = new System.Drawing.Point(82, 3);
+            this.customCpuLabel.Location = new System.Drawing.Point(82, 4);
             this.customCpuLabel.Margin = new System.Windows.Forms.Padding(2);
             this.customCpuLabel.MaxLength = 40;
             this.customCpuLabel.Name = "customCpuLabel";
@@ -528,7 +528,7 @@ namespace TrayTemps
             this.customGpuLabelCaption.Location = new System.Drawing.Point(202, 2);
             this.customGpuLabelCaption.Margin = new System.Windows.Forms.Padding(2);
             this.customGpuLabelCaption.Name = "customGpuLabelCaption";
-            this.customGpuLabelCaption.Size = new System.Drawing.Size(76, 23);
+            this.customGpuLabelCaption.Size = new System.Drawing.Size(76, 24);
             this.customGpuLabelCaption.TabIndex = 3;
             this.customGpuLabelCaption.Text = "GPU Temp";
             this.customGpuLabelCaption.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -537,7 +537,7 @@ namespace TrayTemps
             // 
             this.customGpuLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.customGpuLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.customGpuLabel.Location = new System.Drawing.Point(282, 3);
+            this.customGpuLabel.Location = new System.Drawing.Point(282, 4);
             this.customGpuLabel.Margin = new System.Windows.Forms.Padding(2);
             this.customGpuLabel.MaxLength = 40;
             this.customGpuLabel.Name = "customGpuLabel";
@@ -549,10 +549,10 @@ namespace TrayTemps
             // 
             this.customCpuUsageLabelCaption.Dock = System.Windows.Forms.DockStyle.Fill;
             this.customCpuUsageLabelCaption.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.customCpuUsageLabelCaption.Location = new System.Drawing.Point(2, 29);
+            this.customCpuUsageLabelCaption.Location = new System.Drawing.Point(2, 30);
             this.customCpuUsageLabelCaption.Margin = new System.Windows.Forms.Padding(2);
             this.customCpuUsageLabelCaption.Name = "customCpuUsageLabelCaption";
-            this.customCpuUsageLabelCaption.Size = new System.Drawing.Size(76, 23);
+            this.customCpuUsageLabelCaption.Size = new System.Drawing.Size(76, 24);
             this.customCpuUsageLabelCaption.TabIndex = 6;
             this.customCpuUsageLabelCaption.Text = "CPU Load";
             this.customCpuUsageLabelCaption.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -561,7 +561,7 @@ namespace TrayTemps
             // 
             this.customCpuUsageLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.customCpuUsageLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.customCpuUsageLabel.Location = new System.Drawing.Point(82, 30);
+            this.customCpuUsageLabel.Location = new System.Drawing.Point(82, 32);
             this.customCpuUsageLabel.Margin = new System.Windows.Forms.Padding(2);
             this.customCpuUsageLabel.MaxLength = 40;
             this.customCpuUsageLabel.Name = "customCpuUsageLabel";
@@ -573,10 +573,10 @@ namespace TrayTemps
             // 
             this.customGpuUsageLabelCaption.Dock = System.Windows.Forms.DockStyle.Fill;
             this.customGpuUsageLabelCaption.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.customGpuUsageLabelCaption.Location = new System.Drawing.Point(202, 29);
+            this.customGpuUsageLabelCaption.Location = new System.Drawing.Point(202, 30);
             this.customGpuUsageLabelCaption.Margin = new System.Windows.Forms.Padding(2);
             this.customGpuUsageLabelCaption.Name = "customGpuUsageLabelCaption";
-            this.customGpuUsageLabelCaption.Size = new System.Drawing.Size(76, 23);
+            this.customGpuUsageLabelCaption.Size = new System.Drawing.Size(76, 24);
             this.customGpuUsageLabelCaption.TabIndex = 9;
             this.customGpuUsageLabelCaption.Text = "GPU Load";
             this.customGpuUsageLabelCaption.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -585,7 +585,7 @@ namespace TrayTemps
             // 
             this.customGpuUsageLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.customGpuUsageLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.customGpuUsageLabel.Location = new System.Drawing.Point(282, 30);
+            this.customGpuUsageLabel.Location = new System.Drawing.Point(282, 32);
             this.customGpuUsageLabel.Margin = new System.Windows.Forms.Padding(2);
             this.customGpuUsageLabel.MaxLength = 40;
             this.customGpuUsageLabel.Name = "customGpuUsageLabel";
@@ -597,10 +597,10 @@ namespace TrayTemps
             // 
             this.customRamLabelCaption.Dock = System.Windows.Forms.DockStyle.Fill;
             this.customRamLabelCaption.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.customRamLabelCaption.Location = new System.Drawing.Point(2, 56);
+            this.customRamLabelCaption.Location = new System.Drawing.Point(2, 58);
             this.customRamLabelCaption.Margin = new System.Windows.Forms.Padding(2);
             this.customRamLabelCaption.Name = "customRamLabelCaption";
-            this.customRamLabelCaption.Size = new System.Drawing.Size(76, 23);
+            this.customRamLabelCaption.Size = new System.Drawing.Size(76, 24);
             this.customRamLabelCaption.TabIndex = 12;
             this.customRamLabelCaption.Text = "RAM Use";
             this.customRamLabelCaption.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -609,7 +609,7 @@ namespace TrayTemps
             // 
             this.customRamLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.customRamLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.customRamLabel.Location = new System.Drawing.Point(82, 57);
+            this.customRamLabel.Location = new System.Drawing.Point(82, 60);
             this.customRamLabel.Margin = new System.Windows.Forms.Padding(2);
             this.customRamLabel.MaxLength = 40;
             this.customRamLabel.Name = "customRamLabel";
@@ -621,10 +621,10 @@ namespace TrayTemps
             // 
             this.customVramLabelCaption.Dock = System.Windows.Forms.DockStyle.Fill;
             this.customVramLabelCaption.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.customVramLabelCaption.Location = new System.Drawing.Point(202, 56);
+            this.customVramLabelCaption.Location = new System.Drawing.Point(202, 58);
             this.customVramLabelCaption.Margin = new System.Windows.Forms.Padding(2);
             this.customVramLabelCaption.Name = "customVramLabelCaption";
-            this.customVramLabelCaption.Size = new System.Drawing.Size(76, 23);
+            this.customVramLabelCaption.Size = new System.Drawing.Size(76, 24);
             this.customVramLabelCaption.TabIndex = 15;
             this.customVramLabelCaption.Text = "VRAM Use";
             this.customVramLabelCaption.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -633,7 +633,7 @@ namespace TrayTemps
             // 
             this.customVramLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.customVramLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.customVramLabel.Location = new System.Drawing.Point(282, 57);
+            this.customVramLabel.Location = new System.Drawing.Point(282, 60);
             this.customVramLabel.Margin = new System.Windows.Forms.Padding(2);
             this.customVramLabel.MaxLength = 40;
             this.customVramLabel.Name = "customVramLabel";
@@ -645,10 +645,10 @@ namespace TrayTemps
             // 
             this.customFpsLabelCaption.Dock = System.Windows.Forms.DockStyle.Fill;
             this.customFpsLabelCaption.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.customFpsLabelCaption.Location = new System.Drawing.Point(2, 83);
+            this.customFpsLabelCaption.Location = new System.Drawing.Point(2, 86);
             this.customFpsLabelCaption.Margin = new System.Windows.Forms.Padding(2);
             this.customFpsLabelCaption.Name = "customFpsLabelCaption";
-            this.customFpsLabelCaption.Size = new System.Drawing.Size(76, 23);
+            this.customFpsLabelCaption.Size = new System.Drawing.Size(76, 24);
             this.customFpsLabelCaption.TabIndex = 18;
             this.customFpsLabelCaption.Text = "FPS";
             this.customFpsLabelCaption.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -657,7 +657,7 @@ namespace TrayTemps
             // 
             this.customFpsLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.customFpsLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.customFpsLabel.Location = new System.Drawing.Point(82, 84);
+            this.customFpsLabel.Location = new System.Drawing.Point(82, 88);
             this.customFpsLabel.Margin = new System.Windows.Forms.Padding(2);
             this.customFpsLabel.MaxLength = 40;
             this.customFpsLabel.Name = "customFpsLabel";

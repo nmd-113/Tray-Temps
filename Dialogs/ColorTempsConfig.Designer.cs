@@ -217,7 +217,7 @@
             this.hotTempColor.TabIndex = 2;
             this.hotTempColor.Text = "Hot";
             this.hotTempColor.UseVisualStyleBackColor = false;
-            this.hotTempColor.Click += new System.EventHandler(this.HotTempColor_Click);
+            this.hotTempColor.Click += new System.EventHandler(this.TemperatureColor_Click);
             // 
             // warmTempColor
             // 
@@ -232,7 +232,7 @@
             this.warmTempColor.TabIndex = 1;
             this.warmTempColor.Text = "Warm";
             this.warmTempColor.UseVisualStyleBackColor = false;
-            this.warmTempColor.Click += new System.EventHandler(this.WarmTempColor_Click);
+            this.warmTempColor.Click += new System.EventHandler(this.TemperatureColor_Click);
             // 
             // normalTempColor
             // 
@@ -247,7 +247,7 @@
             this.normalTempColor.TabIndex = 0;
             this.normalTempColor.Text = "Normal";
             this.normalTempColor.UseVisualStyleBackColor = false;
-            this.normalTempColor.Click += new System.EventHandler(this.MinTempColor_Click);
+            this.normalTempColor.Click += new System.EventHandler(this.TemperatureColor_Click);
             // 
             // formTitle
             // 

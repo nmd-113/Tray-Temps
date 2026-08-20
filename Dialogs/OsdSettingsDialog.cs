@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
 using System.Linq;
@@ -19,6 +20,7 @@ namespace TrayTemps
         private bool _themeSubscribed;
         private bool _configurationLoaded;
         private bool _hasCustomBackgroundColor;
+        private List<OsdItemKind> _separateItemOrder;
 
         public OsdSettingsDialog()
         {
@@ -119,6 +121,11 @@ namespace TrayTemps
 
             foreach (OsdItemKind item in OsdItemOrderHelper.Parse(_configuration.ItemOrder))
                 itemOrder.Items.Add(new OsdItemOption(item));
+
+            _separateItemOrder = itemOrder.Items
+                .Cast<OsdItemOption>()
+                .Select(option => option.Kind)
+                .ToList();
         }
 
         private void LoadConfiguration()
@@ -224,7 +231,6 @@ namespace TrayTemps
 
         private OsdConfiguration CreateConfigurationFromControls()
         {
-            var orderedItems = itemOrder.Items.Cast<OsdItemOption>().Select(option => option.Kind);
             return new OsdConfiguration
             {
                 Enabled = _configuration.Enabled,
@@ -260,12 +266,12 @@ namespace TrayTemps
                 CustomRamLabel = NormalizeCustomLabel(customRamLabel.Text, "RAM Use"),
                 CustomVramLabel = NormalizeCustomLabel(customVramLabel.Text, "VRAM Use"),
                 CustomFpsLabel = NormalizeCustomLabel(customFpsLabel.Text, "FPS"),
-                LabelValueSpacing = (int)GetNumericOptionValue(labelValueSpacing, 14m),
-                RowsSpacing = (int)GetNumericOptionValue(rowsSpacing, 0m),
-                ColumnsSpacing = (int)GetNumericOptionValue(columnsSpacing, 0m),
+                LabelValueSpacing = (int)GetNumericOptionValue(labelValueSpacing, 15m),
+                RowsSpacing = (int)GetNumericOptionValue(rowsSpacing, 5m),
+                ColumnsSpacing = (int)GetNumericOptionValue(columnsSpacing, 20m),
                 ScreenMargin = (int)GetNumericOptionValue(screenMarginValue, 12m),
                 Columns = (int)GetNumericOptionValue(columnsValue, 1m),
-                ItemOrder = OsdItemOrderHelper.Serialize(orderedItems),
+                ItemOrder = OsdItemOrderHelper.Serialize(_separateItemOrder),
                 HotkeyEnabled = hotkeyEnabled.Checked,
                 HotkeyModifiers = (int)_hotkeyModifiers,
                 HotkeyKey = (int)_hotkeyKey
@@ -452,7 +458,120 @@ namespace TrayTemps
         {
             UpdateHardwareVisibility();
             UpdateCustomLabelAvailability();
+            UpdateItemOrderForCombinedMode();
             PreviewVisualSettings();
+        }
+
+        private void UpdateItemOrderForCombinedMode()
+        {
+            OsdItemOption selectedItem = itemOrder.SelectedItem as OsdItemOption;
+            OsdItemKind? selectedKind = selectedItem?.Kind;
+            bool selectedCombined = selectedItem != null && selectedItem.IsCombinedTemperatureUsage;
+            var updatedItems = new List<OsdItemOption>();
+            bool cpuAdded = false;
+            bool gpuAdded = false;
+            bool combineCpu = combineTemperatureAndUsage.Checked && showCpu.Checked && showCpuUsage.Checked;
+            bool combineGpu = combineTemperatureAndUsage.Checked && showGpu.Checked && showGpuUsage.Checked;
+
+            foreach (OsdItemKind item in _separateItemOrder)
+            {
+                if (combineCpu && IsCpuTemperatureOrUsage(item))
+                {
+                    if (!cpuAdded)
+                    {
+                        updatedItems.Add(new OsdItemOption(
+                            OsdItemKind.CpuTemperature,
+                            isCombinedTemperatureUsage: true));
+                        cpuAdded = true;
+                    }
+                    continue;
+                }
+
+                if (combineGpu && IsGpuTemperatureOrUsage(item))
+                {
+                    if (!gpuAdded)
+                    {
+                        updatedItems.Add(new OsdItemOption(
+                            OsdItemKind.GpuTemperature,
+                            isCombinedTemperatureUsage: true));
+                        gpuAdded = true;
+                    }
+                    continue;
+                }
+
+                updatedItems.Add(new OsdItemOption(item));
+            }
+
+            if (ItemOrderMatches(updatedItems))
+                return;
+
+            itemOrder.BeginUpdate();
+            try
+            {
+                itemOrder.Items.Clear();
+                itemOrder.Items.AddRange(updatedItems.Cast<object>().ToArray());
+                SelectUpdatedOrderItem(selectedKind, selectedCombined);
+            }
+            finally
+            {
+                itemOrder.EndUpdate();
+            }
+        }
+
+        private static bool IsCpuTemperatureOrUsage(OsdItemKind item)
+        {
+            return item == OsdItemKind.CpuTemperature || item == OsdItemKind.CpuUsage;
+        }
+
+        private static bool IsGpuTemperatureOrUsage(OsdItemKind item)
+        {
+            return item == OsdItemKind.GpuTemperature || item == OsdItemKind.GpuUsage;
+        }
+
+        private bool ItemOrderMatches(
+            IList<OsdItemOption> updatedItems)
+        {
+            if (itemOrder.Items.Count != updatedItems.Count)
+                return false;
+
+            for (int index = 0; index < updatedItems.Count; index++)
+            {
+                var current = itemOrder.Items[index] as OsdItemOption;
+                OsdItemOption updated = updatedItems[index];
+                if (current == null || current.Kind != updated.Kind ||
+                    current.IsCombinedTemperatureUsage != updated.IsCombinedTemperatureUsage)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private void SelectUpdatedOrderItem(OsdItemKind? selectedKind, bool selectedCombined)
+        {
+            if (!selectedKind.HasValue || itemOrder.Items.Count == 0)
+                return;
+
+            for (int index = 0; index < itemOrder.Items.Count; index++)
+            {
+                var option = itemOrder.Items[index] as OsdItemOption;
+                if (option == null)
+                    continue;
+
+                bool sameMetricGroup = option.Kind == selectedKind.Value ||
+                    (IsCpuTemperatureOrUsage(option.Kind) && IsCpuTemperatureOrUsage(selectedKind.Value)) ||
+                    (IsGpuTemperatureOrUsage(option.Kind) && IsGpuTemperatureOrUsage(selectedKind.Value));
+                if (sameMetricGroup &&
+                    (option.IsCombinedTemperatureUsage == selectedCombined ||
+                     option.IsCombinedTemperatureUsage == combineTemperatureAndUsage.Checked))
+                {
+                    itemOrder.SelectedIndex = index;
+                    return;
+                }
+            }
+
+            itemOrder.SelectedIndex = 0;
         }
 
         private void UpdateHardwareVisibility()
@@ -506,7 +625,30 @@ namespace TrayTemps
             itemOrder.Items.RemoveAt(oldIndex);
             itemOrder.Items.Insert(newIndex, item);
             itemOrder.SelectedIndex = newIndex;
+            UpdateSeparateItemOrderFromDisplayedItems();
             PreviewVisualSettings();
+        }
+
+        private void UpdateSeparateItemOrderFromDisplayedItems()
+        {
+            var updatedOrder = new List<OsdItemKind>();
+
+            foreach (OsdItemOption option in itemOrder.Items.Cast<OsdItemOption>())
+            {
+                if (option.IsCombinedTemperatureUsage)
+                {
+                    updatedOrder.Add(option.Kind);
+                    updatedOrder.Add(option.Kind == OsdItemKind.CpuTemperature
+                        ? OsdItemKind.CpuUsage
+                        : OsdItemKind.GpuUsage);
+                }
+                else
+                {
+                    updatedOrder.Add(option.Kind);
+                }
+            }
+
+            _separateItemOrder = updatedOrder;
         }
 
         private void MainForm_ThemeChanged(object sender, EventArgs e)
@@ -658,15 +800,26 @@ namespace TrayTemps
 
         private sealed class OsdItemOption
         {
-            internal OsdItemOption(OsdItemKind kind)
+            internal OsdItemOption(
+                OsdItemKind kind,
+                bool isCombinedTemperatureUsage = false)
             {
                 Kind = kind;
+                IsCombinedTemperatureUsage = isCombinedTemperatureUsage;
             }
 
             internal OsdItemKind Kind { get; }
+            internal bool IsCombinedTemperatureUsage { get; }
 
             public override string ToString()
             {
+                if (IsCombinedTemperatureUsage)
+                {
+                    return Kind == OsdItemKind.CpuTemperature
+                        ? "CPU + Usage"
+                        : "GPU + Usage";
+                }
+
                 return OsdItemOrderHelper.GetDisplayName(Kind);
             }
         }

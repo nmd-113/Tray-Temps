@@ -13,7 +13,10 @@ namespace TrayTemps
             sb.Append(HardwareReportFormatHelper.Section("CPU"));
             var displayNames = new List<string>();
 
-            var cpus = wmiQuery("SELECT * FROM Win32_Processor");
+            var cpus = wmiQuery(
+                "SELECT Name, Manufacturer, NumberOfCores, NumberOfLogicalProcessors, " +
+                "MaxClockSpeed, SocketDesignation, ProcessorId, L2CacheSize, L3CacheSize, Architecture " +
+                "FROM Win32_Processor");
             try
             {
                 if (cpus.Count == 0)

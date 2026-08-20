@@ -69,6 +69,10 @@
       <HintPath>$(NuGetPackageRoot)hidsharp\2.6.4\lib\net35\HidSharp.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="DiskInfoToolkit">
+      <HintPath>$(NuGetPackageRoot)diskinfotoolkit\2.1.3\lib\net472\DiskInfoToolkit.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="LibreHardwareMonitorLib">
       <HintPath>$(PkgLibreHardwareMonitorLib)\runtimes\win-x64\lib\net472\LibreHardwareMonitorLib.dll</HintPath>
       <Private>True</Private>
@@ -106,6 +110,10 @@
     </Reference>
     <Reference Include="System.Runtime.CompilerServices.Unsafe">
       <HintPath>$(NuGetPackageRoot)system.runtime.compilerservices.unsafe\6.1.2\lib\net462\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="RAMSPDToolkit-NDD">
+      <HintPath>$(NuGetPackageRoot)ramspdtoolkit-ndd\1.6.0\lib\net472\RAMSPDToolkit-NDD.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System.Text.Encodings.Web">
@@ -176,16 +184,22 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Helpers\UI\MainFormShadowHelper.cs" />
+    <Compile Include="Helpers\UI\WindowResizeGripPanel.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="Helpers\UI\OsdModels.cs" />
     <Compile Include="Helpers\Storage\StorageReportHelper.cs" />
     <Compile Include="Helpers\Storage\StorageLiveSensorFallbackHelper.cs" />
     <Compile Include="Helpers\Storage\StorageSmartInfoHelper.cs" />
     <Compile Include="Helpers\Infrastructure\WmiQueryHelper.cs" />
     <Compile Include="Helpers\Infrastructure\PawnIoSetupHelper.cs" />
+    <Compile Include="Helpers\Infrastructure\UpdateCheckHelper.cs" />
+    <Compile Include="Helpers\Infrastructure\SettingsFileHelper.cs" />
     <Compile Include="MainForm.Designer.cs">
       <DependentUpon>MainForm.cs</DependentUpon>
     </Compile>
     <Compile Include="Helpers\Hardware\HardwareDialogTextHelper.cs" />
+    <Compile Include="Helpers\Hardware\ComponentDisplayNameHelper.cs" />
     <Compile Include="Helpers\Hardware\HardwareDiscoveryResult.cs" />
     <Compile Include="Helpers\Hardware\HardwareReportFormatHelper.cs" />
     <Compile Include="Helpers\Tray\TrayIconCacheKeyHelper.cs" />
@@ -262,11 +276,11 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="LibreHardwareMonitorLib">
-      <Version>0.9.6</Version>
+      <Version>0.9.7-pre722</Version>
       <GeneratePathProperty>true</GeneratePathProperty>
     </PackageReference>
     <PackageReference Include="System.Management">
-      <Version>10.0.8</Version>
+      <Version>10.0.10</Version>
     </PackageReference>
     <PackageReference Include="System.Text.Json">
       <Version>10.0.8</Version>

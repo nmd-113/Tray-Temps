@@ -32,6 +32,7 @@
     public int WindowHeight { get; set; } = 0;
     public int WindowX { get; set; } = -1;
     public int WindowY { get; set; } = -1;
+    public float ScaleFactor { get; set; } = 0f;
     public int HardwareDialogWidth { get; set; } = 0;
     public int HardwareDialogHeight { get; set; } = 0;
     public int HardwareDialogX { get; set; } = -1;

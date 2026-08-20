@@ -202,11 +202,11 @@ namespace TrayTemps
             if (drive == null || disks == null || smartLifeInfos == null)
                 return null;
 
-            string driveName = HardwareReportFormatHelper.NormalizeStorageText(drive.Name);
+            string driveName = HardwareReportFormatHelper.NormalizeHardwareText(drive.Name);
 
             foreach (var disk in disks)
             {
-                string model = HardwareReportFormatHelper.NormalizeStorageText(HardwareReportFormatHelper.Safe(disk["Model"]));
+                string model = HardwareReportFormatHelper.NormalizeHardwareText(HardwareReportFormatHelper.Safe(disk["Model"]));
 
                 if (string.IsNullOrWhiteSpace(model) || string.IsNullOrWhiteSpace(driveName))
                     continue;
@@ -223,12 +223,12 @@ namespace TrayTemps
             if (disk == null || smartLifeInfos == null)
                 return null;
 
-            string pnpId = HardwareReportFormatHelper.NormalizeStorageText(HardwareReportFormatHelper.Safe(disk["PNPDeviceID"]));
-            string model = HardwareReportFormatHelper.NormalizeStorageText(HardwareReportFormatHelper.Safe(disk["Model"]));
+            string pnpId = HardwareReportFormatHelper.NormalizeHardwareText(HardwareReportFormatHelper.Safe(disk["PNPDeviceID"]));
+            string model = HardwareReportFormatHelper.NormalizeHardwareText(HardwareReportFormatHelper.Safe(disk["Model"]));
 
             foreach (var info in smartLifeInfos)
             {
-                string instance = HardwareReportFormatHelper.NormalizeStorageText(info.InstanceName);
+                string instance = HardwareReportFormatHelper.NormalizeHardwareText(info.InstanceName);
 
                 if (!string.IsNullOrWhiteSpace(pnpId) &&
                     (instance.Contains(pnpId) || pnpId.Contains(instance)))

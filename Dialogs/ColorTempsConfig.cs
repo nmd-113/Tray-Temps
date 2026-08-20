@@ -78,20 +78,11 @@ namespace TrayTemps
             ApplyTheme();
         }
 
-        private void ApplyColor(Button target)
+        private void TemperatureColor_Click(object sender, EventArgs e)
         {
-            if (colorDialog.ShowDialog() == DialogResult.OK)
-                target.BackColor = colorDialog.Color;
+            if (sender is Button button && colorDialog.ShowDialog() == DialogResult.OK)
+                button.BackColor = colorDialog.Color;
         }
-
-        private void MinTempColor_Click(object sender, EventArgs e)
-            => ApplyColor(normalTempColor);
-
-        private void WarmTempColor_Click(object sender, EventArgs e)
-            => ApplyColor(warmTempColor);
-
-        private void HotTempColor_Click(object sender, EventArgs e)
-            => ApplyColor(hotTempColor);
 
         private void NumericRange_ValueChanged(object sender, EventArgs e)
         {

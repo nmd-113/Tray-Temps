@@ -87,7 +87,7 @@ namespace TrayTemps
                     Debug.WriteLine("UpdateHardwareRecursive(drive) failed: " + ex);
                 }
 
-                // LHM 0.9.6 can expose storage sensors before their first value is
+                // LHM 0.9.7-pre722 can expose storage sensors before their first value is
                 // available. Keep those sensors visible as N/A instead of leaving
                 // an otherwise valid drive section empty.
                 StorageLiveFallbackDevice fallbackDevice = FindFallbackDevice(
@@ -133,7 +133,7 @@ namespace TrayTemps
                     return indexMatch;
             }
 
-            string driveName = HardwareReportFormatHelper.NormalizeStorageText(
+            string driveName = HardwareReportFormatHelper.NormalizeHardwareText(
                 HardwareReportFormatHelper.Safe(drive?.Name));
 
             if (string.IsNullOrEmpty(driveName))
@@ -144,7 +144,7 @@ namespace TrayTemps
                 if (alreadyMatched.Contains(device))
                     return false;
 
-                string fallbackName = HardwareReportFormatHelper.NormalizeStorageText(device.Name);
+                string fallbackName = HardwareReportFormatHelper.NormalizeHardwareText(device.Name);
                 return !string.IsNullOrEmpty(fallbackName) &&
                     (string.Equals(driveName, fallbackName, StringComparison.OrdinalIgnoreCase) ||
                      driveName.Contains(fallbackName) ||
@@ -187,6 +187,19 @@ namespace TrayTemps
                 .OrderBy(s => s.SensorType.ToString())
                 .ThenBy(s => s.Name, HardwareReportFormatHelper.NaturalTextComparer)
                 .ToList();
+            bool unavailableLhmNvmeHealthSensors =
+                HardwareReportFormatHelper.HasUnavailableLhmNvmeHealthSensors(sensors);
+            if (unavailableLhmNvmeHealthSensors)
+            {
+                sensors = sensors
+                    .Where(s => !HardwareReportFormatHelper.IsUnavailableLhmNvmeHealthSensor(s))
+                    .ToList();
+            }
+
+            string normalizedNvmeLife = sensors.Any(HardwareReportFormatHelper.IsLhmNvmePercentageUsedSensor)
+                ? HardwareReportFormatHelper.GetRemainingLifeText(sensors)
+                : null;
+            bool hasLhmNvmeLifeSensor = sensors.Any(HardwareReportFormatHelper.IsLhmNvmeLifeSensor);
             List<StorageLiveFallbackSensor> fallbackList = fallbackSensors?
                 .Where(sensor => sensor != null)
                 .OrderBy(sensor => sensor.SensorType.ToString())
@@ -201,6 +214,14 @@ namespace TrayTemps
             }
             else
             {
+                // Prefer LHM's actual NVMe Life sensor below.  Use the validated
+                // normalized Percentage Used interpretation only if Life is absent.
+                if (!hasLhmNvmeLifeSensor && !string.IsNullOrWhiteSpace(normalizedNvmeLife))
+                {
+                    sb.AppendLine(
+                        $"{indent}{SensorType.Level,-13} {"Life Remaining",-36} {normalizedNvmeLife}");
+                }
+
                 foreach (var sensor in sensors)
                 {
                     string sensorKey = GetStorageSensorMergeKey(sensor.Name);
@@ -210,14 +231,18 @@ namespace TrayTemps
                             sensorKey,
                             StringComparison.OrdinalIgnoreCase));
                     string formattedValue = sensor.Value.HasValue || fallbackSensor == null
-                        ? HardwareReportFormatHelper.FormatSensorValue(sensor)
+                        ? HardwareReportFormatHelper.FormatStorageSensorValue(sensor, sensors)
                         : fallbackSensor.FormattedValue;
 
                     if (fallbackSensor != null)
                         usedFallbackKeys.Add(sensorKey);
 
+                    string sensorName = HardwareReportFormatHelper.IsLhmNvmeLifeSensor(sensor)
+                        ? "Life Remaining"
+                        : HardwareReportFormatHelper.Safe(sensor.Name);
+
                     sb.AppendLine(
-                        $"{indent}{sensor.SensorType,-13} {HardwareReportFormatHelper.Safe(sensor.Name),-36} {formattedValue}");
+                        $"{indent}{sensor.SensorType,-13} {sensorName,-36} {formattedValue}");
                 }
 
                 foreach (StorageLiveFallbackSensor fallbackSensor in fallbackList)
@@ -273,7 +298,7 @@ namespace TrayTemps
 
         private static string GetStorageSensorMergeKey(string sensorName)
         {
-            string normalized = HardwareReportFormatHelper.NormalizeStorageText(
+            string normalized = HardwareReportFormatHelper.NormalizeHardwareText(
                 HardwareReportFormatHelper.Safe(sensorName));
 
             if (normalized == "LIFE" ||

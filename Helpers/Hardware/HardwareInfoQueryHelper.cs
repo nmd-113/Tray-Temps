@@ -19,7 +19,9 @@ namespace TrayTemps
 
             sb.Append(HardwareReportFormatHelper.Section("RAM"));
 
-            var ram = wmiQuery("SELECT * FROM Win32_PhysicalMemory");
+            var ram = wmiQuery(
+                "SELECT Manufacturer, Capacity, SMBIOSMemoryType, Speed, ConfiguredClockSpeed, " +
+                "PartNumber, SerialNumber, BankLabel, DeviceLocator FROM Win32_PhysicalMemory");
             try
             {
                 if (ram.Count == 0)
@@ -41,8 +43,11 @@ namespace TrayTemps
                         if (capacityObj != null)
                         {
                             long capacity = Convert.ToInt64(capacityObj);
-                            totalBytes += capacity;
-                            individualCapacities.Add(capacity);
+                            if (capacity > 0)
+                            {
+                                totalBytes += capacity;
+                                individualCapacities.Add(capacity);
+                            }
                         }
                     }
                     catch (Exception ex)
@@ -59,14 +64,20 @@ namespace TrayTemps
                         speed = HardwareReportFormatHelper.ToUInt(mem["ConfiguredClockSpeed"]);
                 }
 
-                sb.AppendLine(HardwareReportFormatHelper.Label("Total", HardwareReportFormatHelper.SizeHuman(totalBytes)));
+                sb.AppendLine(HardwareReportFormatHelper.Label(
+                    "Total",
+                    individualCapacities.Count > 0
+                        ? HardwareReportFormatHelper.SizeHuman(totalBytes)
+                        : "Unknown"));
                 sb.Append(modules);
 
-                long totalCapacityGb = totalBytes / (1024L * 1024L * 1024L);
+                string capacityText = individualCapacities.Count > 0
+                    ? (totalBytes / (1024L * 1024L * 1024L)) + "GB"
+                    : string.Empty;
                 string configuration = HardwareReportFormatHelper.FormatRamConfiguration(individualCapacities);
                 string type = HardwareReportFormatHelper.GetMemoryTypeString(memoryType);
                 string speedText = speed == 0 ? string.Empty : " " + speed + "MHz";
-                string summary = $"{totalCapacityGb}GB {configuration} {type}{speedText}".Trim();
+                string summary = $"{capacityText} {configuration} {type}{speedText}".Trim();
 
                 return new HardwareDiscoveryResult(summary, sb.ToString(), new List<string>(), ram.Count);
             }
@@ -82,7 +93,7 @@ namespace TrayTemps
             object configuredSpeed = mem["ConfiguredClockSpeed"];
 
             sb.AppendLine(HardwareReportFormatHelper.Label("Manufacturer", HardwareReportFormatHelper.NormalizeUnknownValue(mem["Manufacturer"])));
-            sb.AppendLine(HardwareReportFormatHelper.Label("Capacity", capacityObj == null ? "Unknown" : HardwareReportFormatHelper.SizeHuman(capacityObj)));
+            sb.AppendLine(HardwareReportFormatHelper.Label("Capacity", FormatRamCapacity(capacityObj)));
             sb.AppendLine(HardwareReportFormatHelper.Label("Type", HardwareReportFormatHelper.GetMemoryTypeString(HardwareReportFormatHelper.ToUInt(mem["SMBIOSMemoryType"]))));
             sb.AppendLine(HardwareReportFormatHelper.Label("Speed", FormatRamSpeed(speed)));
 
@@ -99,6 +110,20 @@ namespace TrayTemps
         {
             string text = HardwareReportFormatHelper.NormalizeUnknownValue(value);
             return text == "Unknown" ? text : text + " MHz";
+        }
+
+        private static string FormatRamCapacity(object value)
+        {
+            try
+            {
+                return value != null && Convert.ToInt64(value) > 0
+                    ? HardwareReportFormatHelper.SizeHuman(value)
+                    : "Unknown";
+            }
+            catch
+            {
+                return "Unknown";
+            }
         }
 
         private static bool AreEquivalentRamSpeeds(object speed, object configuredSpeed)
@@ -126,7 +151,8 @@ namespace TrayTemps
 
             sb.Append(HardwareReportFormatHelper.Section("MOTHERBOARD"));
 
-            var boards = wmiQuery("SELECT * FROM Win32_BaseBoard");
+            var boards = wmiQuery(
+                "SELECT Manufacturer, Product, Version, SerialNumber FROM Win32_BaseBoard");
             try
             {
                 if (boards.Count == 0)
@@ -157,7 +183,8 @@ namespace TrayTemps
             sb.AppendLine();
             sb.Append(HardwareReportFormatHelper.Section("BIOS"));
 
-            var biosList = wmiQuery("SELECT * FROM Win32_BIOS");
+            var biosList = wmiQuery(
+                "SELECT Manufacturer, SMBIOSBIOSVersion, ReleaseDate, SerialNumber FROM Win32_BIOS");
             try
             {
                 if (biosList.Count == 0)

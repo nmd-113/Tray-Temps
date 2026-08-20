@@ -262,9 +262,9 @@ namespace TrayTemps
             string diskModel = Safe(modelValue);
             string diskSerial = Safe(serialValue);
 
-            return !string.IsNullOrWhiteSpace(diskModel)
+            return !diskModel.Equals("N/A", StringComparison.OrdinalIgnoreCase)
                 ? diskModel
-                : (!string.IsNullOrWhiteSpace(diskSerial) ? diskSerial : "Unknown Disk");
+                : (!diskSerial.Equals("N/A", StringComparison.OrdinalIgnoreCase) ? diskSerial : "Unknown Disk");
         }
 
         internal static bool IsStorageHealthSensor(ISensor sensor)
@@ -307,6 +307,72 @@ namespace TrayTemps
                    (name.IndexOf("life", StringComparison.OrdinalIgnoreCase) >= 0 &&
                     (name.IndexOf("remaining", StringComparison.OrdinalIgnoreCase) >= 0 ||
                      name.IndexOf("left", StringComparison.OrdinalIgnoreCase) >= 0));
+        }
+
+        // LHM 0.9.7-pre722 exposes the NVMe E4 SMART attribute through a sensor
+        // named "Percentage Used", but its value is DiskInfoToolkit's normalized
+        // health value (100 - the raw NVMe percentage-used byte).  Keep that
+        // library-specific detail out of the generic percentage-used fallback.
+        internal static bool IsLhmNvmePercentageUsedSensor(ISensor sensor)
+        {
+            return IsLhmNvmeHealthSensor(sensor, "Percentage Used", 27);
+        }
+
+        internal static bool IsLhmNvmeLifeSensor(ISensor sensor)
+        {
+            return IsLhmNvmeHealthSensor(sensor, "Life", 20);
+        }
+
+        internal static bool HasUnavailableLhmNvmeHealthSensors(IEnumerable<ISensor> sensors)
+        {
+            if (sensors == null)
+                return false;
+
+            ISensor availableSpare = null;
+            ISensor spareThreshold = null;
+            ISensor percentageUsed = null;
+
+            foreach (ISensor sensor in sensors)
+            {
+                if (IsLhmNvmeHealthSensor(sensor, "Available Spare", 25))
+                    availableSpare = sensor;
+                else if (IsLhmNvmeHealthSensor(sensor, "Available Spare Threshold", 26))
+                    spareThreshold = sensor;
+                else if (IsLhmNvmePercentageUsedSensor(sensor))
+                    percentageUsed = sensor;
+            }
+
+            return IsZeroLevelValue(availableSpare) &&
+                   IsZeroLevelValue(spareThreshold) &&
+                   IsZeroLevelValue(percentageUsed);
+        }
+
+        internal static bool IsUnavailableLhmNvmeHealthSensor(ISensor sensor)
+        {
+            if (sensor == null)
+                return false;
+
+            return IsLhmNvmeHealthSensor(sensor, "Available Spare", 25) ||
+                   IsLhmNvmeHealthSensor(sensor, "Available Spare Threshold", 26) ||
+                   IsLhmNvmePercentageUsedSensor(sensor) ||
+                   (IsLhmNvmeLifeSensor(sensor) && IsZeroLevelValue(sensor));
+        }
+
+        internal static string FormatStorageSensorValue(ISensor sensor, IEnumerable<ISensor> driveSensors)
+        {
+            if (IsLhmNvmePercentageUsedSensor(sensor) &&
+                !HasUnavailableLhmNvmeHealthSensors(driveSensors) &&
+                sensor.Value.HasValue)
+            {
+                // See the note above: this is the inverse of LHM's normalized
+                // value, not the generic percentage-used conversion.
+                float used = 100 - sensor.Value.Value;
+
+                if (!float.IsNaN(used) && !float.IsInfinity(used) && used >= 0 && used <= 100)
+                    return $"{used:0.0} %";
+            }
+
+            return FormatSensorValue(sensor);
         }
 
         internal static IEnumerable<ISensor> DistinctSensors(IEnumerable<ISensor> sensors)
@@ -417,25 +483,7 @@ namespace TrayTemps
             return $"{value:0.0} {suffixes[index]}";
         }
 
-        internal static string NormalizeGpuText(string text)
-        {
-            if (string.IsNullOrWhiteSpace(text))
-                return string.Empty;
-
-            text = text.ToUpperInvariant();
-
-            var sb = new StringBuilder(text.Length);
-
-            foreach (char c in text)
-            {
-                if (char.IsLetterOrDigit(c))
-                    sb.Append(c);
-            }
-
-            return sb.ToString();
-        }
-
-        internal static string NormalizeStorageText(string text)
+        internal static string NormalizeHardwareText(string text)
         {
             if (string.IsNullOrWhiteSpace(text))
                 return string.Empty;
@@ -484,7 +532,8 @@ namespace TrayTemps
                 string name = Safe(sensor.Name);
 
                 if (name.IndexOf("percentage used", StringComparison.OrdinalIgnoreCase) >= 0 &&
-                    sensor.Value.HasValue)
+                    sensor.Value.HasValue &&
+                    !IsLhmNvmePercentageUsedSensor(sensor))
                 {
                     float used = sensor.Value.Value;
 
@@ -496,7 +545,47 @@ namespace TrayTemps
                 }
             }
 
+            // LHM 0.9.7-pre722 reports the NVMe E4 value as normalized remaining
+            // life even though the sensor is named "Percentage Used". Reuse that
+            // validated interpretation for the canonical Life Remaining field.
+            foreach (var sensor in sensors)
+            {
+                if (!IsLhmNvmePercentageUsedSensor(sensor) ||
+                    HasUnavailableLhmNvmeHealthSensors(sensors) ||
+                    !sensor.Value.HasValue)
+                {
+                    continue;
+                }
+
+                float remaining = sensor.Value.Value;
+                if (!float.IsNaN(remaining) && !float.IsInfinity(remaining) &&
+                    remaining >= 0 && remaining <= 100)
+                {
+                    return $"{remaining:0.0} %";
+                }
+            }
+
             return null;
+        }
+
+        private static bool IsLhmNvmeHealthSensor(ISensor sensor, string name, int index)
+        {
+            if (sensor == null || sensor.SensorType != SensorType.Level ||
+                !Safe(sensor.Name).Equals(name, StringComparison.OrdinalIgnoreCase) ||
+                sensor.Index != index)
+            {
+                return false;
+            }
+
+            string identifier = sensor.Identifier.ToString();
+            return identifier.StartsWith("/nvme/", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsZeroLevelValue(ISensor sensor)
+        {
+            return sensor != null && sensor.Value.HasValue &&
+                   !float.IsNaN(sensor.Value.Value) && !float.IsInfinity(sensor.Value.Value) &&
+                   Math.Abs(sensor.Value.Value) < 0.001f;
         }
 
         private static int CompareNaturalText(string left, string right)

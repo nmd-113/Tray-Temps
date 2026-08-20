@@ -9,6 +9,7 @@ using System.Drawing.Text;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Management;
 using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
@@ -29,7 +30,6 @@ namespace TrayTemps
         private const int SmCxSmallIcon = 49;
         private const int CsDropShadow = 0x00020000;
         private const int MainMenuShadowWidth = 10;
-        private const int ResizeGripLogicalPixels = 8;
         private const decimal MinimumRefreshIntervalSeconds = 0.25M;
         private const decimal DefaultRefreshIntervalSeconds = 0.50M;
         private const decimal MaximumRefreshIntervalSeconds = 10M;
@@ -39,11 +39,14 @@ namespace TrayTemps
         private const int StartupTaskQueryTimeoutMs = 2000;
         private const int OsdHotkeyId = 0x5453;
         private const int OsdHotkeyTestId = 0x5454;
+        private const float SingleTrayTextPadding = 0.25f;
+        private const float SingleTrayOutlineWidth = 0.55f;
+        private const float CombinedTrayTextPadding = 0.35f;
+        private const float CombinedTrayOutlineWidth = 0.45f;
+        private const float CombinedTraySlotAdvanceFactor = 1.02f;
+        private const float CombinedTrayTextOccupancy = 1f;
         private static readonly TimeSpan TemperatureAlertCooldown = TimeSpan.FromSeconds(5);
-        private const string GitHubTagsApiUrl = "https://api.github.com/repos/nmd-113/Tray-Temps/tags?per_page=100";
-        private const string GitHubReleasePageUrl = "https://github.com/nmd-113/Tray-Temps/releases/tag/";
         private static readonly Size HardwareDialogMinimumSize = new Size(640, 440);
-        private static readonly HttpClient UpdateCheckClient = CreateUpdateCheckClient();
 
         private Computer _computer;
         private readonly Timer _tempTimer = new Timer();
@@ -75,6 +78,7 @@ namespace TrayTemps
         private Task<HardwareDiscoveryResult> _ramInfoTask;
         private Task<HardwareDiscoveryResult> _storageInfoTask;
         private Task<HardwareDiscoveryResult> _motherboardInfoTask;
+        private bool _storageFallbackDiskQuerySucceeded;
         private OsdConfiguration _osdConfiguration = new OsdConfiguration();
         private OsdConfiguration _osdPreviewConfiguration;
         private OsdOverlay _osdOverlay;
@@ -97,8 +101,6 @@ namespace TrayTemps
         public Color CriticalColor;
         public bool TemperatureAlertsEnabled { get; set; }
 
-        public FontFamily BunkenBold;
-        public FontFamily BunkenRegular;
         public bool IsLightModeEnabled => lightModeSwitch != null && lightModeSwitch.Checked;
         public bool UsesFahrenheit => tempsFahrenheit != null && tempsFahrenheit.Checked;
         private bool _showTemperatureColorCorners = true;
@@ -172,6 +174,7 @@ namespace TrayTemps
         private string _trayFontFamily;
         private int _lastTrayIconPixelSize;
         private float _dpiScale = 1f;
+        private float? _windowBoundsScaleFactorOverride;
         private bool _dpiMonitoringReady;
         private bool _dpiRestartPending;
         private bool _windowMoveResizeActive;
@@ -249,20 +252,7 @@ namespace TrayTemps
 
         #endregion
 
-        #region [ Custom Controls ]
-
-        private sealed class ResizeGripPanel : Panel
-        {
-            public ResizeGripPanel()
-            {
-                SetStyle(
-                    ControlStyles.UserPaint |
-                    ControlStyles.AllPaintingInWmPaint |
-                    ControlStyles.OptimizedDoubleBuffer |
-                    ControlStyles.SupportsTransparentBackColor,
-                    true);
-            }
-        }
+        #region [ Form Lifecycle ]
 
         protected override void OnHandleCreated(EventArgs e)
         {
@@ -270,6 +260,12 @@ namespace TrayTemps
 
             if (!_dpiMonitoringReady)
                 RefreshCurrentDpiScale();
+
+            if (resizeGrip != null && !resizeGrip.IsDisposed)
+            {
+                resizeGrip.LightTheme = IsLightModeEnabled;
+                resizeGrip.UpdateDpiSize();
+            }
 
             WindowCornerHelper.ApplyRoundedCorners(Handle);
 
@@ -301,15 +297,19 @@ namespace TrayTemps
             bool forceVisibleOnStartup = false,
             bool suppressStartupElevationPrompt = false,
             bool requireStartupElevationConsent = false,
-            bool deferPawnIoPrompt = false)
+            bool deferPawnIoPrompt = false,
+            int initialPageIndex = 0)
         {
             _startHiddenFromCommandLine = startHiddenFromCommandLine;
             _forceVisibleOnStartup = forceVisibleOnStartup;
             _requireStartupElevationConsent = requireStartupElevationConsent;
             _deferPawnIoPrompt = deferPawnIoPrompt;
             _sensorElevationPromptShown = suppressStartupElevationPrompt;
-            LoadFonts();
+            EmbeddedFonts.Initialize();
             InitializeComponent();
+
+            if (initialPageIndex >= 0 && initialPageIndex < mainTabControl.TabCount)
+                mainTabControl.SelectedIndex = initialPageIndex;
 
             _darkPanelBackColor = panelWrapper.BackColor;
             _darkWindowBackColor = Color.FromArgb(21, 21, 21);
@@ -395,12 +395,20 @@ namespace TrayTemps
                     UpdateTrayIcons();
                 }
 
+                // The form can be closed while the initial hardware task is still
+                // unwinding. Shutdown owns and disposes the timer in that case.
+                if (_isShutdownInitiated || _resourcesDisposed || IsDisposed || !IsHandleCreated)
+                    return;
+
                 SetupTimer();
                 _backgroundExpansionReady.TrySetResult(true);
                 StartBackgroundHardwareDiscovery();
             }
             catch (Exception ex)
             {
+                if (_isShutdownInitiated || _resourcesDisposed || IsDisposed)
+                    return;
+
                 Debug.WriteLine("Unhandled exception in MainForm_Load: " + ex);
                 RestoreInitialWindowDisplay();
                 try { MessageBox.Show(this, $"An unexpected error occurred:\n{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error); } catch { Debug.WriteLine("Failed to show error MessageBox in MainForm_Load."); }
@@ -450,9 +458,7 @@ namespace TrayTemps
             BeginInvoke((MethodInvoker)delegate
             {
                 if (IsDisposed || _isShutdownInitiated || _resourcesDisposed)
-                {
                     return;
-                }
 
                 bool startHidden = ShouldDpiRestartHidden;
 
@@ -467,7 +473,11 @@ namespace TrayTemps
                     _lastNormalWindowBounds = ScaleWindowBounds(request.NormalBounds.Value, scaleFactor);
                 }
 
-                if (!Program.RequestDpiRestart(startHidden))
+                int selectedPageIndex = mainTabControl != null
+                    ? mainTabControl.SelectedIndex
+                    : 0;
+
+                if (!Program.RequestDpiRestart(startHidden, _deferPawnIoPrompt, selectedPageIndex))
                 {
                     _dpiRestartPending = false;
                     _dpiScale = request.NewDpi / 96f;
@@ -485,6 +495,7 @@ namespace TrayTemps
                     return;
                 }
 
+                _windowBoundsScaleFactorOverride = request.NewDpi / 96f;
                 Hide();
                 Close();
             });
@@ -602,7 +613,7 @@ namespace TrayTemps
 
         private int GetResizeGripSize()
         {
-            return Math.Max(6, (int)Math.Round(ResizeGripLogicalPixels * _dpiScale));
+            return Math.Max(6, (int)Math.Round(8d * _dpiScale));
         }
 
         private void UpdateResizeGripSize()
@@ -610,52 +621,7 @@ namespace TrayTemps
             if (resizeGrip == null || resizeGrip.IsDisposed)
                 return;
 
-            int size = GetResizeGripSize() * 2 + 4;
-            Size desiredSize = new Size(size, size);
-
-            if (resizeGrip.Size != desiredSize)
-                resizeGrip.Size = desiredSize;
-
-            resizeGrip.Location = new Point(
-                Math.Max(0, panelWrapper.ClientSize.Width - size),
-                Math.Max(0, panelWrapper.ClientSize.Height - size));
-        }
-
-        private void ResizeGrip_Paint(object sender, PaintEventArgs e)
-        {
-            if (!(sender is Control grip))
-                return;
-
-            float dpiScale = _dpiScale;
-            int inset = Math.Max(3, (int)Math.Round(3f * dpiScale));
-            int spacing = Math.Max(3, (int)Math.Round(3f * dpiScale));
-            int length = Math.Max(5, (int)Math.Round(5f * dpiScale));
-            Color color = IsLightModeEnabled
-                ? Color.FromArgb(125, 75, 75, 75)
-                : Color.FromArgb(65, 170, 170, 170);
-
-            using (var pen = new Pen(color, Math.Max(1f, dpiScale)))
-            {
-                for (int i = 0; i < 3; i++)
-                {
-                    int offset = i * spacing;
-                    e.Graphics.DrawLine(
-                        pen,
-                        grip.Width - inset - length - offset,
-                        grip.Height - inset,
-                        grip.Width - inset,
-                        grip.Height - inset - length - offset);
-                }
-            }
-        }
-
-        private void ResizeGrip_MouseDown(object sender, MouseEventArgs e)
-        {
-            if (e.Button != MouseButtons.Left || WindowState == FormWindowState.Maximized)
-                return;
-
-            ReleaseCapture();
-            SendMessage(Handle, WM_NCLBUTTONDOWN, HTBOTTOMRIGHT, 0);
+            resizeGrip.UpdateDpiSize();
         }
 
         private void MainForm_MouseDown(object sender, MouseEventArgs e)
@@ -778,7 +744,7 @@ namespace TrayTemps
 
                         UpdateHardwareBrandImages();
 
-                        PromptForElevationIfCriticalSensorsAreMissing(storageDiscoveryCompleted: false);
+                        PromptForElevationIfCriticalSensorsAreMissing();
                     });
                 }
                 catch (Exception ex)
@@ -880,13 +846,12 @@ namespace TrayTemps
 
                     try
                     {
+                        // Storage is deliberately initialized after the first CPU/GPU
+                        // tray update so its discovery cannot delay temperature icons.
                         if (!computer.IsStorageEnabled)
                             computer.IsStorageEnabled = true;
-                        if (!computer.IsMotherboardEnabled)
-                            computer.IsMotherboardEnabled = true;
 
                         _storageHardwares = GetStorageHardwares(computer);
-
                         foreach (IHardware storageHardware in _storageHardwares)
                         {
                             try
@@ -895,14 +860,32 @@ namespace TrayTemps
                             }
                             catch (Exception ex)
                             {
-                                Debug.WriteLine("Initial background storage sensor update failed: " + ex);
+                                // A single problematic device must not prevent later
+                                // NVMe/SATA devices from receiving their first update.
+                                Debug.WriteLine(
+                                    "Initial background storage sensor update failed for " +
+                                    HardwareReportFormatHelper.Safe(storageHardware?.Name) + ": " + ex);
                             }
                         }
                     }
                     catch (Exception ex)
                     {
-                        Debug.WriteLine("Background LibreHardwareMonitor component discovery failed: " + ex);
-                        _storageHardwares = new List<IHardware>();
+                        Debug.WriteLine("Background LibreHardwareMonitor storage discovery failed: " + ex);
+                    }
+
+                    // A storage-provider failure must not prevent an otherwise valid
+                    // motherboard/Super I/O tree from being expanded for its dialog.
+                    try
+                    {
+                        if (!computer.IsMotherboardEnabled)
+                            computer.IsMotherboardEnabled = true;
+
+                        if (!computer.IsControllerEnabled)
+                            computer.IsControllerEnabled = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine("Background LibreHardwareMonitor motherboard discovery failed: " + ex);
                     }
                 }
             }).ConfigureAwait(false);
@@ -910,18 +893,45 @@ namespace TrayTemps
 
         private async Task<HardwareDiscoveryResult> LoadStorageInfoAsync(Task componentDiscoveryTask)
         {
-            await componentDiscoveryTask.ConfigureAwait(false);
-
-            return await StartHardwareInfoTask(
+            bool diskQuerySucceeded = false;
+            HardwareDiscoveryResult result = await StartHardwareInfoTask(
                 "storage",
-                () => StorageReportHelper.GetStorageInfo(
-                    _storageHardwares,
-                    NoOpHardwareUpdate,
-                    WmiQueryHelper.WmiQuery)).ConfigureAwait(false);
-        }
+                () =>
+                {
+                    StorageNativeData nativeData = StorageReportHelper.QueryNativeStorageData(
+                        query =>
+                        {
+                            List<ManagementObject> disks;
+                            diskQuerySucceeded = WmiQueryHelper.TryWmiQuery(query, out disks);
+                            return disks;
+                        },
+                        WmiQueryHelper.WmiQuery);
 
-        private static void NoOpHardwareUpdate(IHardware hardware)
-        {
+                    using (nativeData)
+                    {
+                        componentDiscoveryTask.GetAwaiter().GetResult();
+
+                        lock (_hardwareUpdateLock)
+                        {
+                            if (_isShutdownInitiated || _resourcesDisposed)
+                            {
+                                return new HardwareDiscoveryResult(
+                                    "Unknown Storage",
+                                    "Detailed storage information is unavailable.",
+                                    new List<string>(),
+                                    0);
+                            }
+
+                            return StorageReportHelper.GetStorageInfo(
+                                _storageHardwares,
+                                UpdateHardwareRecursive,
+                                nativeData);
+                        }
+                    }
+                }).ConfigureAwait(false);
+
+            _storageFallbackDiskQuerySucceeded = diskQuerySucceeded;
+            return result;
         }
 
         private async Task<IHardware> DiscoverMemoryHardwareAsync()
@@ -975,7 +985,7 @@ namespace TrayTemps
             Task applyComponentsTask = ApplyBackgroundResultAsync(componentDiscoveryTask, () =>
             {
                 UpdateStorageDetailsText();
-                PromptForElevationIfCriticalSensorsAreMissing(storageDiscoveryCompleted: true);
+                PromptForElevationIfCriticalSensorsAreMissing();
             });
 
             Task applyMemoryTask = ApplyBackgroundResultAsync(memoryHardwareTask, () =>
@@ -1013,10 +1023,13 @@ namespace TrayTemps
 
             Task applyStorageTask = ApplyBackgroundResultAsync(storageInfoTask, info =>
             {
-                _wmiStorageDisplayNames = MergeStorageDisplayNames(
+                _wmiStorageDisplayNames = ComponentDisplayNameHelper.MergeStorageDisplayNames(
                     info.DisplayNames,
-                    GetLhmStorageDisplayNames());
+                    ComponentDisplayNameHelper.GetLhmDisplayNames(_storageHardwares));
                 UpdateStorageDetailsText();
+                PromptForElevationIfCriticalSensorsAreMissing(
+                    storageFallbackDiscoveryCompleted: _storageFallbackDiskQuerySucceeded,
+                    storageFallbackAvailable: info.Count > 0);
             });
 
             Task applyMotherboardTask = ApplyBackgroundResultAsync(motherboardInfoTask, info =>
@@ -1664,7 +1677,7 @@ namespace TrayTemps
             string referenceText)
         {
             int size = GetTrayIconPixelSize();
-            float occupancy = GetTrayTextOccupancy();
+            float occupancy = Math.Max(0.3f, Math.Min(1f, GetSelectedIconSize() / 100f));
             var texts = new List<string>();
 
             if (cpuEnabled)
@@ -1682,8 +1695,8 @@ namespace TrayTemps
                 new RectangleF(0, 0, size, textHeight),
                 size * occupancy,
                 textHeight * occupancy,
-                GetSingleTrayTextPadding(),
-                GetSingleTrayOutlineWidth());
+                SingleTrayTextPadding,
+                SingleTrayOutlineWidth);
         }
 
         private Icon CreateTempIcon(string text, SolidBrush brush, TrayPathTextLayout layout, Color? deviceMarkerColor)
@@ -1770,7 +1783,7 @@ namespace TrayTemps
             using (var combinedFont = CreateCombinedTrayFont(size))
             {
                 g.Clear(Color.Transparent);
-                float occupancy = GetCombinedTrayTextOccupancy();
+                float occupancy = CombinedTrayTextOccupancy;
 
                 g.TextRenderingHint = TextRenderingHint.AntiAlias;
                 g.SmoothingMode = SmoothingMode.AntiAlias;
@@ -1798,9 +1811,9 @@ namespace TrayTemps
                     new RectangleF(0, 0, textWidth, textRowHeight),
                     textWidth * occupancy,
                     textRowHeight * occupancy,
-                    GetCombinedTrayTextPadding(),
-                    GetCombinedTrayOutlineWidth(),
-                    GetCombinedTraySlotAdvanceFactor());
+                    CombinedTrayTextPadding,
+                    CombinedTrayOutlineWidth,
+                    CombinedTraySlotAdvanceFactor);
 
                 DrawStableTrayText(
                     g,
@@ -2232,42 +2245,6 @@ namespace TrayTemps
                 y -= bottom - maxY;
         }
 
-        private static float GetSingleTrayTextPadding()
-        {
-            return 0.25f;
-        }
-
-        private static float GetSingleTrayOutlineWidth()
-        {
-            return 0.55f;
-        }
-
-        private static float GetCombinedTrayTextPadding()
-        {
-            return 0.35f;
-        }
-
-        private static float GetCombinedTrayOutlineWidth()
-        {
-            return 0.45f;
-        }
-
-        private static float GetCombinedTraySlotAdvanceFactor()
-        {
-            return 1.02f;
-        }
-
-        private static float GetCombinedTrayTextOccupancy()
-        {
-            return 1f;
-        }
-
-        private float GetTrayTextOccupancy()
-        {
-            float requested = GetSelectedIconSize() / 100f;
-            return Math.Max(0.3f, Math.Min(1f, requested));
-        }
-
         private void CacheDisplaySettings()
         {
             _trayFontFamily = fontFamilyValue.Text.Trim();
@@ -2393,7 +2370,8 @@ namespace TrayTemps
                     InstallFolder = InstallPath,
                     StartMinimizedToTray = minimizeOnStart.Checked,
                     StartMinimizedWithAdminRights = _startMinimizedWithAdminRights,
-                    Osd = CaptureOsdConfiguration()
+                    Osd = CaptureOsdConfiguration(),
+                    ScaleFactor = _windowBoundsScaleFactorOverride ?? _dpiScale
                 };
 
                 Rectangle? windowBounds = Visible && WindowState == FormWindowState.Normal && IsWindowBoundsVisible(Bounds)
@@ -2418,26 +2396,7 @@ namespace TrayTemps
                     settings.HardwareDialogY = bounds.Y;
                 }
 
-                string directory = Path.GetDirectoryName(SettingsFilePath);
-                if (!Directory.Exists(directory))
-                {
-                    Directory.CreateDirectory(directory);
-                }
-
-                var options = new System.Text.Json.JsonSerializerOptions { WriteIndented = true };
-                string json = System.Text.Json.JsonSerializer.Serialize(settings, options);
-
-                string tempPath = SettingsFilePath + ".tmp";
-
-                using (var fs = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None))
-                using (var sw = new StreamWriter(fs))
-                {
-                    sw.Write(json);
-                    sw.Flush();
-                    fs.Flush(true);
-                }
-
-                ReplaceSettingsFile(tempPath);
+                SettingsFileHelper.WriteSettings(SettingsFilePath, settings);
             }
             catch (Exception ex)
             {
@@ -2449,7 +2408,7 @@ namespace TrayTemps
         {
             try
             {
-                if (!File.Exists(SettingsFilePath) && !File.Exists(SettingsFilePath + ".tmp") && !File.Exists(SettingsFilePath + ".bak"))
+                if (!SettingsFileHelper.HasSettingsFile(SettingsFilePath))
                 {
                     CenterToScreen();
                     SetDefaultControlValues();
@@ -2457,7 +2416,7 @@ namespace TrayTemps
                     return;
                 }
 
-                string json = ReadSettingsJson();
+                string json = SettingsFileHelper.ReadSettingsJson(SettingsFilePath);
                 var settings = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(json);
 
                 if (settings == null)
@@ -2487,70 +2446,49 @@ namespace TrayTemps
             }
         }
 
-        private string ReadSettingsJson()
-        {
-            string[] candidates = { SettingsFilePath, SettingsFilePath + ".tmp", SettingsFilePath + ".bak" };
-
-            foreach (string path in candidates)
-            {
-                if (!File.Exists(path))
-                    continue;
-
-                try
-                {
-                    string json = File.ReadAllText(path);
-                    AppSettings settings = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(json);
-                    if (settings == null)
-                        throw new InvalidDataException("Settings content was empty.");
-                    return json;
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"Ignoring invalid settings candidate '{path}': {ex.Message}");
-                }
-            }
-
-            throw new InvalidDataException("No valid settings file was found.");
-        }
-
-        private void ReplaceSettingsFile(string tempPath)
-        {
-            string backupPath = SettingsFilePath + ".bak";
-
-            try
-            {
-                if (File.Exists(SettingsFilePath))
-                    File.Replace(tempPath, SettingsFilePath, backupPath);
-                else
-                    File.Move(tempPath, SettingsFilePath);
-
-            }
-            catch (PlatformNotSupportedException)
-            {
-                File.Copy(tempPath, SettingsFilePath, true);
-                File.Delete(tempPath);
-            }
-            catch (IOException) when (File.Exists(tempPath))
-            {
-                File.Copy(tempPath, SettingsFilePath, true);
-                File.Delete(tempPath);
-            }
-        }
-
         private void ApplySavedWindowBounds(AppSettings settings)
         {
             if (settings.WindowWidth > 0 && settings.WindowHeight > 0)
             {
-                int width = Math.Max(MinimumSize.Width, settings.WindowWidth);
-                int height = Math.Max(MinimumSize.Height, settings.WindowHeight);
+                Rectangle savedBounds = new Rectangle(
+                    settings.WindowX,
+                    settings.WindowY,
+                    settings.WindowWidth,
+                    settings.WindowHeight);
+                bool restoreSavedLocation = settings.WindowX != -1 && IsWindowBoundsVisible(savedBounds);
 
-                Rectangle savedBounds = new Rectangle(settings.WindowX, settings.WindowY, width, height);
+                if (restoreSavedLocation)
+                {
+                    Location = new Point(settings.WindowX, settings.WindowY);
+                    RefreshCurrentDpiScale();
+                }
+
+                double boundsScale = 1d;
+                if (settings.ScaleFactor > 0f &&
+                    !float.IsNaN(settings.ScaleFactor) &&
+                    !float.IsInfinity(settings.ScaleFactor))
+                {
+                    double detectedScale = _dpiScale / (double)settings.ScaleFactor;
+                    if (detectedScale > 0d &&
+                        !double.IsNaN(detectedScale) &&
+                        !double.IsInfinity(detectedScale))
+                    {
+                        boundsScale = detectedScale;
+                    }
+                }
+
+                int maximumWidth = MaximumSize.Width > 0 ? MaximumSize.Width : int.MaxValue;
+                int maximumHeight = MaximumSize.Height > 0 ? MaximumSize.Height : int.MaxValue;
+                int width = (int)Math.Max(
+                    MinimumSize.Width,
+                    Math.Min(maximumWidth, Math.Round(settings.WindowWidth * boundsScale)));
+                int height = (int)Math.Max(
+                    MinimumSize.Height,
+                    Math.Min(maximumHeight, Math.Round(settings.WindowHeight * boundsScale)));
 
                 Size = new Size(width, height);
 
-                if (settings.WindowX != -1 && IsWindowBoundsVisible(savedBounds))
-                    Location = new Point(settings.WindowX, settings.WindowY);
-                else
+                if (!restoreSavedLocation)
                     CenterToScreen();
             }
             else
@@ -2784,6 +2722,9 @@ namespace TrayTemps
             ApplyThemeToMenus(theme);
             ApplyThemeInvalidation();
             ApplyThemeExitButtonHoverOverrides();
+
+            if (resizeGrip != null && !resizeGrip.IsDisposed)
+                resizeGrip.LightTheme = IsLightModeEnabled;
         }
 
         private void ApplyThemeToMainContainers(ThemePalette theme)
@@ -3292,7 +3233,7 @@ namespace TrayTemps
 
         private async void CheckUpdates_Click(object sender, EventArgs e)
         {
-            if (!TryParseUpdateVersion(Application.ProductVersion, out Version currentVersion))
+            if (!UpdateCheckHelper.TryParseVersion(Application.ProductVersion, out Version currentVersion))
             {
                 MessageBox.Show(this, "The installed app version could not be read.", "Check for Updates", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
@@ -3304,11 +3245,11 @@ namespace TrayTemps
 
             try
             {
-                string tagsJson = await UpdateCheckClient.GetStringAsync(GitHubTagsApiUrl);
+                string tagsJson = await UpdateCheckHelper.GetGitHubTagsAsync();
                 if (IsDisposed || Disposing)
                     return;
 
-                if (!TryGetLatestGitHubTag(tagsJson, out Version latestVersion, out string latestTag))
+                if (!UpdateCheckHelper.TryGetLatestGitHubTag(tagsJson, out Version latestVersion, out string latestTag))
                     throw new InvalidDataException("No version tags were found in the repository.");
 
                 if (latestVersion <= currentVersion)
@@ -3330,7 +3271,7 @@ namespace TrayTemps
                     MessageBoxIcon.Information);
 
                 if (result == DialogResult.Yes)
-                    OpenUrl(GitHubReleasePageUrl + Uri.EscapeDataString(latestTag));
+                    OpenUrl(UpdateCheckHelper.GetReleaseUrl(latestTag));
             }
             catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException || ex is InvalidDataException || ex is System.Text.Json.JsonException)
             {
@@ -3349,55 +3290,6 @@ namespace TrayTemps
                     checkUpdates.Enabled = true;
                 }
             }
-        }
-
-        private static HttpClient CreateUpdateCheckClient()
-        {
-            var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-            client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", AppName + " update checker");
-            return client;
-        }
-
-        private static bool TryGetLatestGitHubTag(string tagsJson, out Version latestVersion, out string latestTag)
-        {
-            latestVersion = null;
-            latestTag = null;
-
-            using (var document = System.Text.Json.JsonDocument.Parse(tagsJson))
-            {
-                if (document.RootElement.ValueKind != System.Text.Json.JsonValueKind.Array)
-                    return false;
-
-                foreach (System.Text.Json.JsonElement tagElement in document.RootElement.EnumerateArray())
-                {
-                    if (!tagElement.TryGetProperty("name", out System.Text.Json.JsonElement nameElement) ||
-                        !TryParseUpdateVersion(nameElement.GetString(), out Version tagVersion))
-                    {
-                        continue;
-                    }
-
-                    if (latestVersion == null || tagVersion > latestVersion)
-                    {
-                        latestVersion = tagVersion;
-                        latestTag = nameElement.GetString();
-                    }
-                }
-            }
-
-            return latestVersion != null;
-        }
-
-        private static bool TryParseUpdateVersion(string value, out Version version)
-        {
-            version = null;
-            if (string.IsNullOrWhiteSpace(value))
-                return false;
-
-            string versionText = value.Trim();
-            if (versionText.StartsWith("v", StringComparison.OrdinalIgnoreCase))
-                versionText = versionText.Substring(1);
-
-            return Version.TryParse(versionText, out version);
         }
 
         private void ContextMenuStrip_Opening(object sender, System.ComponentModel.CancelEventArgs e)
@@ -3466,16 +3358,6 @@ namespace TrayTemps
         }
 
         private void NotifyIcon_MouseDoubleClick(object sender, MouseEventArgs e)
-        {
-            ShowWindow();
-        }
-
-        private void GpuTrayIcon_MouseDoubleClick(object sender, MouseEventArgs e)
-        {
-            ShowWindow();
-        }
-
-        private void CpuTrayIcon_MouseDoubleClick(object sender, MouseEventArgs e)
         {
             ShowWindow();
         }
@@ -3863,7 +3745,7 @@ namespace TrayTemps
         {
             decimal clamped = ValueHelper.ClampDecimal(value, MinimumRefreshIntervalSeconds, MaximumRefreshIntervalSeconds);
             decimal snapped = Math.Round(clamped * 4M, MidpointRounding.AwayFromZero) / 4M;
-            SelectComboBoxText(refreshValue, FormatRefreshInterval(snapped));
+            SelectComboBoxText(refreshValue, snapped.ToString("0.##", CultureInfo.InvariantCulture));
         }
 
         private void SelectIconSize(int value)
@@ -3920,11 +3802,6 @@ namespace TrayTemps
             {
                 comboBox.SelectedIndex = 0;
             }
-        }
-
-        private static string FormatRefreshInterval(decimal value)
-        {
-            return value.ToString("0.##", CultureInfo.InvariantCulture);
         }
 
         private void RefreshDisplaySettingPreview(bool resetCpuTrayCacheText, bool resetGpuTrayCacheText)
@@ -4127,8 +4004,18 @@ namespace TrayTemps
             float? gpuTemp,
             OsdConfiguration configuration)
         {
-            string cpuLabel = GetOsdLabel(configuration, configuration.CustomCpuLabel, "CPU Temp");
-            string gpuLabel = GetOsdLabel(configuration, configuration.CustomGpuLabel, "GPU Temp");
+            bool combineCpu = configuration.CombineTemperatureAndUsage &&
+                configuration.ShowCpu && configuration.ShowCpuUsage;
+            bool combineGpu = configuration.CombineTemperatureAndUsage &&
+                configuration.ShowGpu && configuration.ShowGpuUsage;
+            string cpuLabel = GetOsdLabel(
+                configuration,
+                configuration.CustomCpuLabel,
+                combineCpu ? "CPU" : "CPU Temp");
+            string gpuLabel = GetOsdLabel(
+                configuration,
+                configuration.CustomGpuLabel,
+                combineGpu ? "GPU" : "GPU Temp");
             string cpuUsageLabel = GetOsdLabel(configuration, configuration.CustomCpuUsageLabel, "CPU Load");
             string gpuUsageLabel = GetOsdLabel(configuration, configuration.CustomGpuUsageLabel, "GPU Load");
             string ramLabel = GetOsdLabel(configuration, configuration.CustomRamLabel, "RAM Use");
@@ -4158,13 +4045,13 @@ namespace TrayTemps
                 var metric = new OsdMetric(
                     cpuLabel,
                     cpuTemperature,
-                    configuration.CombineTemperatureAndUsage ? cpuUsage : null,
+                    combineCpu ? cpuUsage : null,
                     cpuDisplayColor)
                 {
                     ValueWidthTemplate = temperatureWidthTemplate
                 };
                 availableMetrics[OsdItemKind.CpuTemperature] = metric;
-                if (configuration.CombineTemperatureAndUsage && cpuUsage != null)
+                if (combineCpu && cpuUsage != null)
                     availableMetrics[OsdItemKind.CpuUsage] = metric;
             }
 
@@ -4173,17 +4060,17 @@ namespace TrayTemps
                 var metric = new OsdMetric(
                     gpuLabel,
                     gpuTemperature,
-                    configuration.CombineTemperatureAndUsage ? gpuUsage : null,
+                    combineGpu ? gpuUsage : null,
                     gpuDisplayColor)
                 {
                     ValueWidthTemplate = temperatureWidthTemplate
                 };
                 availableMetrics[OsdItemKind.GpuTemperature] = metric;
-                if (configuration.CombineTemperatureAndUsage && gpuUsage != null)
+                if (combineGpu && gpuUsage != null)
                     availableMetrics[OsdItemKind.GpuUsage] = metric;
             }
 
-            if (cpuUsage != null && !configuration.CombineTemperatureAndUsage)
+            if (cpuUsage != null && !combineCpu)
                 availableMetrics[OsdItemKind.CpuUsage] = new OsdMetric(
                     cpuUsageLabel,
                     cpuUsage,
@@ -4192,7 +4079,7 @@ namespace TrayTemps
                     ValueWidthTemplate = "###%"
                 };
 
-            if (gpuUsage != null && !configuration.CombineTemperatureAndUsage)
+            if (gpuUsage != null && !combineGpu)
                 availableMetrics[OsdItemKind.GpuUsage] = new OsdMetric(
                     gpuUsageLabel,
                     gpuUsage,
@@ -4319,26 +4206,34 @@ namespace TrayTemps
 
             if (usedGb.HasValue && totalGb.HasValue)
             {
-                widthTemplate = CreateMemoryWidthTemplate(totalGb.Value);
-                return $"{usedGb.Value:0.0} / {totalGb.Value:0.#}G";
+                widthTemplate = CreateMemoryWidthTemplate(Math.Max(usedGb.Value, totalGb.Value));
+                return $"{usedGb.Value:0.##}G";
             }
 
             if (sensorPrefix == "Memory" &&
                 SystemMemoryUsageHelper.TryGetPhysicalMemoryUsage(out double systemUsedGb, out double systemTotalGb))
             {
                 widthTemplate = CreateMemoryWidthTemplate(systemTotalGb);
-                return $"{systemUsedGb:0.0} / {systemTotalGb:0.#}G";
+                return $"{systemUsedGb:0.##}G";
+            }
+
+            // The OSD shows used memory only. A partial but valid GPU-memory
+            // reading is still useful when LHM does not expose total capacity.
+            if (usedGb.HasValue)
+            {
+                widthTemplate = CreateMemoryWidthTemplate(usedGb.Value);
+                return $"{usedGb.Value:0.##}G";
             }
 
             return "N/A";
         }
 
-        private static string CreateMemoryWidthTemplate(double totalGb)
+        private static string CreateMemoryWidthTemplate(double maximumGb)
         {
-            string maximumValue = Math.Max(0d, totalGb).ToString("0.0");
-            string numericTemplate = new string(
-                maximumValue.Select(character => char.IsDigit(character) ? '#' : character).ToArray());
-            return numericTemplate + " / " + numericTemplate + "G";
+            int integerDigits = Math.Max(
+                1,
+                Math.Floor(Math.Max(0d, maximumGb)).ToString(CultureInfo.InvariantCulture).Length);
+            return new string('#', integerDigits) + ".##G";
         }
 
         private static ISensor FindMemorySensor(IEnumerable<ISensor> sensors, string prefix, string valueName)
@@ -4864,19 +4759,7 @@ namespace TrayTemps
                 .Where(s => s.SensorType == SensorType.Temperature)
                 .ToList();
 
-            ISensor rootSensor =
-                tempSensors.FirstOrDefault(s =>
-                    s.Name.IndexOf("Package", StringComparison.OrdinalIgnoreCase) >= 0)
-
-                ?? tempSensors.FirstOrDefault(s =>
-                    s.Name.IndexOf("Tctl", StringComparison.OrdinalIgnoreCase) >= 0)
-
-                ?? tempSensors.FirstOrDefault(s =>
-                    s.Name.IndexOf("Core Max", StringComparison.OrdinalIgnoreCase) >= 0)
-
-                ?? tempSensors
-                    .OrderByDescending(s => s.Value ?? 0)
-                    .FirstOrDefault();
+            ISensor rootSensor = SelectPreferredCpuTemperatureSensorFromCandidates(tempSensors);
 
             if (IsUsableTemperatureSensor(rootSensor))
                 return rootSensor;
@@ -4894,22 +4777,7 @@ namespace TrayTemps
                 .Where(s => s.SensorType == SensorType.Temperature)
                 .ToList();
 
-            ISensor rootSensor =
-                tempSensors.FirstOrDefault(s =>
-                    s.Name.Equals("GPU Core", StringComparison.OrdinalIgnoreCase))
-
-                ?? tempSensors.FirstOrDefault(s =>
-                    s.Name.Equals("GPU", StringComparison.OrdinalIgnoreCase))
-
-                ?? tempSensors.FirstOrDefault(s =>
-                    s.Name.IndexOf("Core", StringComparison.OrdinalIgnoreCase) >= 0)
-
-                ?? tempSensors.FirstOrDefault(s =>
-                    s.Name.IndexOf("Hot Spot", StringComparison.OrdinalIgnoreCase) >= 0)
-
-                ?? tempSensors
-                    .OrderByDescending(s => s.Value ?? 0)
-                    .FirstOrDefault();
+            ISensor rootSensor = SelectPreferredGpuTemperatureSensorFromCandidates(tempSensors);
 
             if (IsUsableTemperatureSensor(rootSensor))
                 return rootSensor;
@@ -5130,253 +4998,29 @@ namespace TrayTemps
         {
             List<string> storageNames = _wmiStorageDisplayNames != null && _wmiStorageDisplayNames.Count > 0
                 ? _wmiStorageDisplayNames
-                : GetLhmStorageDisplayNames();
+                : ComponentDisplayNameHelper.GetLhmDisplayNames(_storageHardwares);
 
-            storageDetails.Text = FormatComponentDisplayNames(storageNames, "No Disk found");
-        }
-
-        private List<string> GetLhmStorageDisplayNames()
-        {
-            return _storageHardwares?
-                .Where(hardware => hardware != null && !string.IsNullOrWhiteSpace(hardware.Name))
-                .GroupBy(
-                    hardware => hardware.Identifier.ToString(),
-                    StringComparer.OrdinalIgnoreCase)
-                .Select(group => HardwareReportFormatHelper.Safe(group.First().Name))
-                .Where(name => name != "N/A")
-                .ToList() ?? new List<string>();
-        }
-
-        private static List<string> MergeStorageDisplayNames(
-            IEnumerable<string> wmiNames,
-            IEnumerable<string> lhmNames)
-        {
-            List<string> reliableWmiNames = wmiNames?
-                .Where(name => !string.IsNullOrWhiteSpace(name))
-                .Select(HardwareReportFormatHelper.SanitizeSingleLineText)
-                .Where(name => !string.IsNullOrWhiteSpace(name))
-                .ToList() ?? new List<string>();
-
-            var mergedNames = new List<string>(reliableWmiNames);
-
-            if (lhmNames == null)
-                return mergedNames;
-
-            foreach (string lhmName in lhmNames.Where(name => !string.IsNullOrWhiteSpace(name)))
-            {
-                string cleanLhmName = HardwareReportFormatHelper.SanitizeSingleLineText(lhmName);
-                string normalizedLhmName = HardwareReportFormatHelper.NormalizeStorageText(cleanLhmName);
-                bool alreadyRepresentedByWmi = reliableWmiNames.Any(wmiName =>
-                    string.Equals(
-                        HardwareReportFormatHelper.NormalizeStorageText(wmiName),
-                        normalizedLhmName,
-                        StringComparison.OrdinalIgnoreCase));
-
-                if (!alreadyRepresentedByWmi)
-                    mergedNames.Add(cleanLhmName);
-            }
-
-            return mergedNames;
+            storageDetails.Text = ComponentDisplayNameHelper.FormatDisplayNames(storageNames, "No Disk found");
         }
 
         private void UpdateCpuModelText()
         {
-            cpuModel.Text = FormatComponentDisplayNames(
-                MergeComponentDisplayNames(_wmiCpuDisplayNames, GetLhmComponentDisplayNames(_cpuHardwares), isCpu: true),
+            cpuModel.Text = ComponentDisplayNameHelper.FormatDisplayNames(
+                ComponentDisplayNameHelper.MergeComponentDisplayNames(
+                    _wmiCpuDisplayNames,
+                    ComponentDisplayNameHelper.GetLhmDisplayNames(_cpuHardwares),
+                    isCpu: true),
                 "No CPU found");
         }
 
         private void UpdateGpuModelText()
         {
-            gpuModel.Text = FormatComponentDisplayNames(
-                MergeComponentDisplayNames(_wmiGpuDisplayNames, GetLhmComponentDisplayNames(_gpuHardwares), isCpu: false),
+            gpuModel.Text = ComponentDisplayNameHelper.FormatDisplayNames(
+                ComponentDisplayNameHelper.MergeComponentDisplayNames(
+                    _wmiGpuDisplayNames,
+                    ComponentDisplayNameHelper.GetLhmDisplayNames(_gpuHardwares),
+                    isCpu: false),
                 "No GPU found");
-        }
-
-        private static List<string> GetLhmComponentDisplayNames(IEnumerable<IHardware> hardwares)
-        {
-            return hardwares?
-                .Where(hardware => hardware != null && !string.IsNullOrWhiteSpace(hardware.Name))
-                .GroupBy(hardware => hardware.Identifier.ToString(), StringComparer.OrdinalIgnoreCase)
-                .Select(group => HardwareReportFormatHelper.Safe(group.First().Name))
-                .Where(name => name != "N/A")
-                .ToList() ?? new List<string>();
-        }
-
-        private static List<string> MergeComponentDisplayNames(
-            IEnumerable<string> wmiNames,
-            IEnumerable<string> lhmNames,
-            bool isCpu)
-        {
-            List<string> cleanWmiNames = CleanComponentDisplayNames(wmiNames);
-            List<string> cleanLhmNames = CleanComponentDisplayNames(lhmNames);
-            var mergedNames = new List<string>(cleanWmiNames);
-            var matchedWmiNames = new bool[cleanWmiNames.Count];
-
-            foreach (string lhmName in cleanLhmNames)
-            {
-                int matchingWmiIndex = -1;
-
-                for (int index = 0; index < cleanWmiNames.Count; index++)
-                {
-                    if (!matchedWmiNames[index] &&
-                        AreSameComponentDisplayName(cleanWmiNames[index], lhmName, isCpu))
-                    {
-                        matchingWmiIndex = index;
-                        break;
-                    }
-                }
-
-                if (matchingWmiIndex >= 0)
-                    matchedWmiNames[matchingWmiIndex] = true;
-                else
-                    mergedNames.Add(lhmName);
-            }
-
-            return mergedNames;
-        }
-
-        private static bool AreSameComponentDisplayName(string firstName, string secondName, bool isCpu)
-        {
-            string first = NormalizeComponentDisplayName(firstName, isCpu);
-            string second = NormalizeComponentDisplayName(secondName, isCpu);
-
-            return !string.IsNullOrEmpty(first) &&
-                string.Equals(first, second, StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static string NormalizeComponentDisplayName(string name, bool isCpu)
-        {
-            string text = HardwareReportFormatHelper.SanitizeSingleLineText(name).ToUpperInvariant();
-            text = text.Replace("(R)", string.Empty)
-                .Replace("(TM)", string.Empty);
-
-            int clockSuffixIndex = text.LastIndexOf(" @ ", StringComparison.Ordinal);
-            bool hasWmiCpuClockSuffix = isCpu && clockSuffixIndex > 0 &&
-                (" " + text.Substring(0, clockSuffixIndex) + " ")
-                    .IndexOf(" CPU ", StringComparison.Ordinal) >= 0 &&
-                IsClockFrequencySuffix(text.Substring(clockSuffixIndex + " @ ".Length));
-
-            if (hasWmiCpuClockSuffix)
-            {
-                text = text.Substring(0, clockSuffixIndex);
-            }
-
-            string tokenText = new string(text
-                .Select(character => char.IsLetterOrDigit(character) ? character : ' ')
-                .ToArray());
-            var tokens = tokenText
-                .Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)
-                .ToList();
-
-            string generationSuffix = isCpu && tokens.Count > 0 && tokens[0].Length > 2
-                ? tokens[0].Substring(tokens[0].Length - 2)
-                : string.Empty;
-            bool hasGenerationPrefix = isCpu && tokens.Count >= 2 && tokens[1] == "GEN" &&
-                (generationSuffix == "ST" || generationSuffix == "ND" ||
-                 generationSuffix == "RD" || generationSuffix == "TH") &&
-                int.TryParse(tokens[0].Substring(0, tokens[0].Length - 2), out _);
-
-            if (hasGenerationPrefix)
-            {
-                tokens.RemoveRange(0, 2);
-            }
-
-            if (isCpu)
-            {
-                tokens.RemoveAll(token => token == "CPU" || token == "PROCESSOR");
-                RemoveAmdIntegratedGraphicsSuffix(tokens);
-            }
-
-            if (!isCpu && tokens.Count > 0 &&
-                (tokens[tokens.Count - 1] == "PROCESSOR" || tokens[tokens.Count - 1] == "GPU"))
-            {
-                tokens.RemoveAt(tokens.Count - 1);
-            }
-
-            if (isCpu && tokens.Count >= 2 && tokens[tokens.Count - 1] == "CORE" &&
-                IsCoreCountToken(tokens[tokens.Count - 2]))
-            {
-                tokens.RemoveRange(tokens.Count - 2, 2);
-            }
-
-            return string.Concat(tokens);
-        }
-
-        private static void RemoveAmdIntegratedGraphicsSuffix(List<string> tokens)
-        {
-            if (tokens.Count < 4 || tokens[0] != "AMD" ||
-                (tokens[tokens.Count - 1] != "GRAPHICS" && tokens[tokens.Count - 1] != "GFX"))
-            {
-                return;
-            }
-
-            for (int index = 2; index + 1 < tokens.Count; index++)
-            {
-                if ((tokens[index] == "WITH" || tokens[index] == "W") &&
-                    tokens[index + 1] == "RADEON")
-                {
-                    tokens.RemoveRange(index, tokens.Count - index);
-                    return;
-                }
-            }
-        }
-
-        private static bool IsCoreCountToken(string token)
-        {
-            if (int.TryParse(token, out _))
-                return true;
-
-            switch (token)
-            {
-                case "SINGLE":
-                case "DUAL":
-                case "TRIPLE":
-                case "QUAD":
-                case "SIX":
-                case "EIGHT":
-                case "TEN":
-                case "TWELVE":
-                case "SIXTEEN":
-                    return true;
-                default:
-                    return false;
-            }
-        }
-
-        private static bool IsClockFrequencySuffix(string suffix)
-        {
-            string compactSuffix = suffix.Replace(" ", string.Empty);
-            string unit = compactSuffix.EndsWith("GHZ", StringComparison.Ordinal)
-                ? "GHZ"
-                : compactSuffix.EndsWith("MHZ", StringComparison.Ordinal) ? "MHZ" : null;
-
-            return unit != null &&
-                double.TryParse(
-                    compactSuffix.Substring(0, compactSuffix.Length - unit.Length),
-                    NumberStyles.AllowDecimalPoint,
-                    CultureInfo.InvariantCulture,
-                    out double clock) &&
-                clock > 0;
-        }
-
-        private static List<string> CleanComponentDisplayNames(IEnumerable<string> names)
-        {
-            return names?
-                .Where(name => !string.IsNullOrWhiteSpace(name))
-                .Select(HardwareReportFormatHelper.SanitizeSingleLineText)
-                .Where(name => !string.IsNullOrWhiteSpace(name) && name != "N/A")
-                .ToList() ?? new List<string>();
-        }
-
-        private static string FormatComponentDisplayNames(IReadOnlyList<string> names, string emptyText)
-        {
-            if (names == null || names.Count == 0)
-                return emptyText;
-
-            return names.Count == 1
-                ? names[0]
-                : string.Join(" | ", names.Select((name, index) => $"{index + 1}.{name}"));
         }
 
         private void ApplyWmiCpuFallbackDisplay()
@@ -5431,9 +5075,9 @@ namespace TrayTemps
 
         public async void CpuModel_Click(object sender, EventArgs e)
         {
-            int cpuCount = MergeComponentDisplayNames(
+            int cpuCount = ComponentDisplayNameHelper.MergeComponentDisplayNames(
                 _wmiCpuDisplayNames,
-                GetLhmComponentDisplayNames(_cpuHardwares),
+                ComponentDisplayNameHelper.GetLhmDisplayNames(_cpuHardwares),
                 isCpu: true).Count;
             string dialogTitle = HardwareDialogTextHelper.GetCategoryDialogTitle(
                 HardwareDialogTextHelper.GetComponentDisplayName(_selectedCpuHardware, cpuModel.Text, "CPU"),
@@ -5467,9 +5111,9 @@ namespace TrayTemps
 
         public async void GpuModel_Click(object sender, EventArgs e)
         {
-            int gpuCount = MergeComponentDisplayNames(
+            int gpuCount = ComponentDisplayNameHelper.MergeComponentDisplayNames(
                 _wmiGpuDisplayNames,
-                GetLhmComponentDisplayNames(_gpuHardwares),
+                ComponentDisplayNameHelper.GetLhmDisplayNames(_gpuHardwares),
                 isCpu: false).Count;
             string specificName = _selectedGpuHardware?.Name ?? _wmiGpuDisplayNames.FirstOrDefault() ?? gpuModel.Text;
             string dialogTitle = HardwareDialogTextHelper.GetCategoryDialogTitle(specificName, "Graphics Adapters", gpuCount);
@@ -5503,6 +5147,7 @@ namespace TrayTemps
             string dialogTitle = HardwareDialogTextHelper.GetCategoryDialogTitle("System Memory", "Memory", _wmiRamModuleCount);
             Task<IHardware> memoryTask = EnsureMemoryHardwareAvailableAsync();
             IHardware memoryHardware = memoryTask.Status == TaskStatus.RanToCompletion ? memoryTask.Result : null;
+            IHardware liveMemoryHardware = HasAvailableSensors(memoryHardware) ? memoryHardware : null;
 
             HardwareDetailsDialog dialog = await HardwareDialogCoordinator.ShowHardwareDialogFromClickAsync(
                 this,
@@ -5517,19 +5162,20 @@ namespace TrayTemps
                 UnregisterHardwareDialog,
                 () => _isShutdownInitiated,
                 IsLightModeEnabled,
-                memoryHardware);
+                liveMemoryHardware);
 
-            if (dialog != null && memoryHardware == null)
+            if (dialog != null && liveMemoryHardware == null)
             {
                 memoryHardware = await memoryTask;
 
-                if (memoryHardware != null && !dialog.IsDisposed)
+                if (!dialog.IsDisposed && HasAvailableSensors(memoryHardware))
                 {
                     dialog.SetLiveTextFactory(HardwareDialogCoordinator.BuildLiveTextFactory(
                         null,
                         memoryHardware,
                         _hardwareUpdateLock,
-                        UpdateHardwareRecursive));
+                        UpdateHardwareRecursive,
+                        () => _isShutdownInitiated));
                 }
             }
         }
@@ -5563,7 +5209,7 @@ namespace TrayTemps
                 "Motherboards / BIOS",
                 _wmiMotherboardCount);
 
-            IHardware motherboardHardware = GetFirstHardware(HardwareType.Motherboard);
+            IHardware motherboardHardware = GetLiveMotherboardHardware(updateSensors: false);
             HardwareDetailsDialog dialog = await HardwareDialogCoordinator.ShowHardwareDialogFromClickAsync(
                 this,
                 "MotherboardDetails_Click",
@@ -5585,7 +5231,11 @@ namespace TrayTemps
                 StartBackgroundHardwareDiscovery();
                 lock (_backgroundDiscoveryLock) { componentTask = _componentSensorDiscoveryTask; }
                 await componentTask;
-                motherboardHardware = GetFirstHardware(HardwareType.Motherboard);
+
+                if (dialog.IsDisposed || _isShutdownInitiated || _resourcesDisposed)
+                    return;
+
+                motherboardHardware = await Task.Run(() => GetLiveMotherboardHardware(updateSensors: true));
 
                 if (motherboardHardware != null && !dialog.IsDisposed)
                 {
@@ -5593,7 +5243,8 @@ namespace TrayTemps
                         null,
                         motherboardHardware,
                         _hardwareUpdateLock,
-                        UpdateHardwareRecursive));
+                        UpdateHardwareRecursive,
+                        () => _isShutdownInitiated));
                 }
             }
         }
@@ -5632,12 +5283,55 @@ namespace TrayTemps
             }
         }
 
-        private IHardware GetFirstHardware(HardwareType hardwareType)
+        private IHardware GetLiveMotherboardHardware(bool updateSensors)
         {
-            if (_computer == null)
-                return null;
+            lock (_hardwareUpdateLock)
+            {
+                if (_computer == null || _isShutdownInitiated || _resourcesDisposed)
+                    return null;
 
-            return _computer.Hardware.FirstOrDefault(h => h.HardwareType == hardwareType);
+                foreach (IHardware hardware in _computer.Hardware.Where(hardware =>
+                    hardware.HardwareType == HardwareType.Motherboard ||
+                    hardware.HardwareType == HardwareType.SuperIO ||
+                    hardware.HardwareType == HardwareType.EmbeddedController))
+                {
+                    if (updateSensors)
+                    {
+                        try
+                        {
+                            UpdateHardwareRecursive(hardware);
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine("Motherboard sensor update failed: " + ex);
+                            continue;
+                        }
+                    }
+
+                    if (HasAvailableSensorsRecursive(hardware))
+                        return hardware;
+                }
+            }
+
+            return null;
+        }
+
+        private bool HasAvailableSensors(IHardware hardware)
+        {
+            lock (_hardwareUpdateLock)
+            {
+                if (_computer == null || _isShutdownInitiated || _resourcesDisposed)
+                    return false;
+
+                return HasAvailableSensorsRecursive(hardware);
+            }
+        }
+
+        private static bool HasAvailableSensorsRecursive(IHardware hardware)
+        {
+            return hardware != null &&
+                   (hardware.Sensors.Any(sensor => sensor != null && sensor.Value.HasValue) ||
+                    hardware.SubHardware.Any(HasAvailableSensorsRecursive));
         }
 
         private Task<IHardware> EnsureMemoryHardwareAvailableAsync()
@@ -5679,11 +5373,10 @@ namespace TrayTemps
 
                 lock (_hardwareUpdateLock)
                 {
-                    // Storage devices can be added by LibreHardwareMonitor after the
-                    // deferred background discovery has completed. Refresh the cached
-                    // list here without reopening or rescanning the monitor.
-                    if (_computer != null && !_isShutdownInitiated && !_resourcesDisposed)
-                        _storageHardwares = GetStorageHardwares(_computer);
+                    if (_isShutdownInitiated || _resourcesDisposed || _computer == null)
+                        return string.Empty;
+
+                    _storageHardwares = GetStorageHardwares(_computer);
 
                     return HardwareLiveSensorsTextHelper.BuildAllStorageSensorsText(
                         _storageHardwares,
@@ -5695,9 +5388,11 @@ namespace TrayTemps
 
         private static List<IHardware> GetStorageHardwares(Computer computer)
         {
-            return computer?.Hardware
-                .Where(hardware => hardware.HardwareType == HardwareType.Storage)
-                .ToList() ?? new List<IHardware>();
+            return computer == null
+                ? new List<IHardware>()
+                : computer.Hardware
+                    .Where(hardware => hardware.HardwareType == HardwareType.Storage)
+                    .ToList();
         }
 
         #endregion
@@ -5876,15 +5571,16 @@ namespace TrayTemps
             return true;
         }
 
-        private void PromptForElevationIfCriticalSensorsAreMissing(bool storageDiscoveryCompleted)
+        private void PromptForElevationIfCriticalSensorsAreMissing(
+            bool storageFallbackDiscoveryCompleted = false,
+            bool storageFallbackAvailable = true)
         {
             if (_sensorElevationPromptShown || IsRunningAsAdministrator() || _isShutdownInitiated || _resourcesDisposed)
                 return;
 
             bool hasCpuHardware = _cpuHardwares != null && _cpuHardwares.Count > 0;
             bool missingCpuTemperature = hasCpuHardware && !IsUsableTemperatureSensor(_cpuTempSensor);
-            bool missingStorage = storageDiscoveryCompleted &&
-                (_storageHardwares == null || _storageHardwares.Count == 0);
+            bool missingStorage = storageFallbackDiscoveryCompleted && !storageFallbackAvailable;
 
             if (!missingCpuTemperature && !missingStorage)
                 return;
@@ -5892,10 +5588,8 @@ namespace TrayTemps
             _sensorElevationPromptShown = true;
 
             var reasons = new List<string>();
-
             if (missingCpuTemperature)
                 reasons.Add("CPU temperature sensor is unavailable");
-
             if (missingStorage)
                 reasons.Add("storage sensors are unavailable");
 
@@ -5943,13 +5637,6 @@ namespace TrayTemps
                 nameLabel.Text = $"No {hardwareType} found";
                 selector.Enabled = false;
             }
-        }
-
-        private void LoadFonts()
-        {
-            EmbeddedFonts.Initialize();
-            BunkenBold = EmbeddedFonts.Bold;
-            BunkenRegular = EmbeddedFonts.Book;
         }
 
         #endregion
@@ -6010,36 +5697,18 @@ namespace TrayTemps
                     _selectedGpuHardware = null;
                     _cpuTempSensor = null;
                     _gpuTempSensor = null;
-                }
-
-                Task<IHardware> memoryTask;
-                Task<HardwareDiscoveryResult> storageInfoTask;
-                lock (_backgroundDiscoveryLock)
-                {
-                    memoryTask = _memoryHardwareTask;
-                    storageInfoTask = _storageInfoTask;
+                    _cpuHardwares = new List<IHardware>();
+                    _gpuHardwares = new List<IHardware>();
+                    _storageHardwares = new List<IHardware>();
                 }
 
                 if (computerToClose == null)
                     return;
 
-                var pendingComputerTasks = new List<Task>();
-
-                if (memoryTask != null && !memoryTask.IsCompleted)
-                    pendingComputerTasks.Add(memoryTask);
-                if (storageInfoTask != null && !storageInfoTask.IsCompleted)
-                    pendingComputerTasks.Add(storageInfoTask);
-
-                if (pendingComputerTasks.Count > 0)
-                {
-                    Task.WhenAll(pendingComputerTasks).ContinueWith(
-                        task => CloseComputerSafely(computerToClose),
-                        TaskScheduler.Default);
-                }
-                else
-                {
-                    CloseComputerSafely(computerToClose);
-                }
+                // Every active LHM update uses _hardwareUpdateLock. Once the lock above
+                // has cleared the shared reference, queued updates observe shutdown and
+                // no current update can still be using this Computer instance.
+                CloseComputerSafely(computerToClose);
             }
             catch (Exception ex)
             {
