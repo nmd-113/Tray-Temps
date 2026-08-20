@@ -32,17 +32,17 @@ It also includes an optional customizable **on-screen display (OSD)** for hardwa
 
 ## Screenshots
 
-### Main Window
+### OSD Settings
 
-![Main Window](https://www.naetech.ro/wp-content/uploads/2024/traytemps/traytemps-dark.png)
+![Main Window](https://www.naetech.ro/wp-content/uploads/2024/traytemps/traytemps-dark.png?v=2.2.0.1)
 
-### Settings
+### Tray Icons
 
-![Settings](https://www.naetech.ro/wp-content/uploads/2024/traytemps/traytemps-light.png)
+![Settings](https://www.naetech.ro/wp-content/uploads/2024/traytemps/traytemps-light.png?v=2.2.0.1)
 
-### CPU & GPU Tray Icons
+### Hardware Information
 
-![CPU & GPU Tray Icons](https://www.naetech.ro/wp-content/uploads/2024/traytemps/traytemps-trayicons.png)
+![CPU & GPU Tray Icons](https://www.naetech.ro/wp-content/uploads/2024/traytemps/traytemps-hardwareinfo.png?v=2.2.0.1)
 
 ---
 
