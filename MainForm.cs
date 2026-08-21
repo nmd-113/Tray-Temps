@@ -85,6 +85,7 @@ namespace TrayTemps
         private OsdOverlay _osdOverlay;
         private OsdSettingsDialog _osdSettingsDialog;
         private ForegroundFpsMonitor _fpsMonitor;
+        private bool _fpsMonitoringStartFailed;
         private bool _osdHotkeyRegistered;
         private OsdHotkeyModifiers _registeredOsdHotkeyModifiers;
         private Keys _registeredOsdHotkeyKey;
@@ -4314,10 +4315,14 @@ namespace TrayTemps
 
             if (_fpsMonitor == null)
             {
+                if (_fpsMonitoringStartFailed)
+                    return;
+
                 var monitor = new ForegroundFpsMonitor();
                 if (!monitor.Start())
                 {
                     monitor.Dispose();
+                    _fpsMonitoringStartFailed = true;
                     return;
                 }
 
@@ -4332,6 +4337,7 @@ namespace TrayTemps
         {
             ForegroundFpsMonitor monitor = _fpsMonitor;
             _fpsMonitor = null;
+            _fpsMonitoringStartFailed = false;
             monitor?.Dispose();
         }
 
