@@ -7,7 +7,7 @@ namespace TrayTemps
 {
     // Shared visual resize affordance for borderless forms that already handle
     // non-client resize hit testing.
-    internal sealed class WindowResizeGripPanel : Panel
+    public sealed class WindowResizeGripPanel : Panel
     {
         private const int LogicalResizeArea = 8;
         private const int WmNcLButtonDown = 0xA1;
@@ -20,7 +20,7 @@ namespace TrayTemps
         [DllImport("user32.dll")]
         private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
 
-        internal WindowResizeGripPanel()
+        public WindowResizeGripPanel()
         {
             SetStyle(
                 ControlStyles.UserPaint |

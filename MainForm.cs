@@ -56,6 +56,7 @@ namespace TrayTemps
         private string _selectedCpuIdentifier;
         private string _savedCpuTemperatureSensorIdentifier;
         private List<string> _wmiCpuDisplayNames = new List<string>();
+        private int _wmiCpuCount;
 
         private List<IHardware> _gpuHardwares;
         private List<string> _wmiGpuDisplayNames = new List<string>();
@@ -715,10 +716,10 @@ namespace TrayTemps
                         {
                             PopulateHardwareSelector(cpuIndexSelect, _cpuHardwares, GetSavedHardwareIndex(_cpuHardwares, _savedCpuIdentifier, _savedCpuIndex), cpuModel, "CPU");
                             PopulateHardwareSelector(gpuIndexSelect, _gpuHardwares, GetSavedHardwareIndex(_gpuHardwares, _savedGpuIdentifier, _savedGpuIndex), gpuModel, "GPU");
-                            cpuConfigButton.Enabled = _cpuHardwares != null && _cpuHardwares.Count > 0;
+                            cpuConfigButton.Enabled = GetCpuMonitoringStatus().SensorConfigurationAvailable;
                             gpuConfigButton.Enabled = _gpuHardwares != null && _gpuHardwares.Count > 0;
 
-                            if (_cpuHardwares.Count == 0 && _wmiCpuDisplayNames.Count > 0)
+                            if (_cpuHardwares.Count == 0 && _wmiCpuCount > 0)
                                 ApplyWmiCpuFallbackDisplay();
 
                             if (_gpuHardwares.Count == 0 && _wmiGpuDisplayNames.Count > 0)
@@ -998,7 +999,8 @@ namespace TrayTemps
             Task applyCpuTask = ApplyBackgroundResultAsync(cpuInfoTask, info =>
             {
                 _wmiCpuDisplayNames = info.DisplayNames;
-                if ((_cpuHardwares == null || _cpuHardwares.Count == 0) && _wmiCpuDisplayNames.Count > 0)
+                _wmiCpuCount = info.Count;
+                if ((_cpuHardwares == null || _cpuHardwares.Count == 0) && _wmiCpuCount > 0)
                     ApplyWmiCpuFallbackDisplay();
                 else
                     UpdateCpuModelText();
@@ -4957,6 +4959,15 @@ namespace TrayTemps
             return TemperatureFormatHelper.IsValidTemp(sensor?.Value);
         }
 
+        private CpuMonitoringStatus GetCpuMonitoringStatus()
+        {
+            return CpuMonitoringStatusHelper.GetStatus(
+                _wmiCpuDisplayNames,
+                _wmiCpuCount,
+                _cpuHardwares?.Count ?? 0,
+                IsUsableTemperatureSensor(_cpuTempSensor));
+        }
+
         private static ISensor SelectPreferredCpuTemperatureSensorFromCandidates(List<ISensor> tempSensors)
         {
             return
@@ -5010,7 +5021,7 @@ namespace TrayTemps
                     _wmiCpuDisplayNames,
                     ComponentDisplayNameHelper.GetLhmDisplayNames(_cpuHardwares),
                     isCpu: true),
-                "No CPU found");
+                _wmiCpuCount > 0 ? "Unknown CPU" : "No CPU found");
         }
 
         private void UpdateGpuModelText()
@@ -5025,11 +5036,15 @@ namespace TrayTemps
 
         private void ApplyWmiCpuFallbackDisplay()
         {
+            CpuMonitoringStatus status = GetCpuMonitoringStatus();
             UpdateCpuModelText();
-            cpuName.Text = _wmiCpuDisplayNames.Count == 1 ? _wmiCpuDisplayNames[0] : "Processors";
+            cpuName.Text = status.WmiDisplayName ?? "No CPU found";
             PopulateTemperatureSensorSelector(cpuTempSensorSelect, null, null);
             _selectedCpuHardware = null;
             _cpuTempSensor = null;
+            cpuConfigButton.Enabled = status.SensorConfigurationAvailable;
+            ResetCpuTemperatureDisplayState();
+            RefreshTemperatureDisplayFromCurrentValues();
         }
 
         private void ApplyWmiGpuFallbackDisplay()
@@ -5578,8 +5593,8 @@ namespace TrayTemps
             if (_sensorElevationPromptShown || IsRunningAsAdministrator() || _isShutdownInitiated || _resourcesDisposed)
                 return;
 
-            bool hasCpuHardware = _cpuHardwares != null && _cpuHardwares.Count > 0;
-            bool missingCpuTemperature = hasCpuHardware && !IsUsableTemperatureSensor(_cpuTempSensor);
+            CpuMonitoringStatus cpuStatus = GetCpuMonitoringStatus();
+            bool missingCpuTemperature = cpuStatus.ElevationMayImproveSensorAccess;
             bool missingStorage = storageFallbackDiscoveryCompleted && !storageFallbackAvailable;
 
             if (!missingCpuTemperature && !missingStorage)

@@ -173,6 +173,7 @@
       <DependentUpon>HardwareDetailsDialog.cs</DependentUpon>
     </Compile>
     <Compile Include="Helpers\Hardware\HardwareCpuInfoQueryHelper.cs" />
+    <Compile Include="Helpers\Hardware\CpuMonitoringStatusHelper.cs" />
     <Compile Include="Helpers\UI\HardwareDialogCoordinator.cs" />
     <Compile Include="Helpers\UI\HardwareDialogStateHelper.cs" />
     <Compile Include="Helpers\Hardware\HardwareGpuInfoQueryHelper.cs" />
