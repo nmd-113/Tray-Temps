@@ -1,8 +1,8 @@
 # TrayTemps
 
-TrayTemps is a lightweight Windows hardware monitoring utility that shows **CPU and GPU temperatures directly in the system tray**.
+TrayTemps is a lightweight Windows hardware monitoring utility that shows **CPU and GPU temperatures directly in the system tray** and provides compact temperature and load cards in its main window.
 
-It also includes an optional customizable **on-screen display (OSD)** for hardware stats and FPS.
+It also includes an optional customizable **on-screen display (OSD)** for hardware statistics and FPS.
 
 ---
 
@@ -12,17 +12,19 @@ It also includes an optional customizable **on-screen display (OSD)** for hardwa
 * Separate or combined tray icons
 * Custom tray colors and temperature-based colors
 * CPU/GPU temperature alerts
-* Selectable temperature sensors
-* Customizable OSD
-* CPU/GPU temperature and load
+* Selectable CPU/GPU devices and temperature sensors
+* Current, minimum, and maximum CPU/GPU temperatures
+* Compact CPU/GPU load indicators with dynamic usage colors
+* Customizable OSD with dedicated Metrics, Appearance, and Layout pages
 * RAM and VRAM usage
 * Built-in FPS counter using Windows ETW
+* Independently configurable FPS display refresh interval
 * Global OSD hotkey
 * Detailed CPU, GPU, RAM, motherboard, BIOS, and storage information
 * SMART and storage health information when supported
 * Windows/WMI hardware fallbacks
 * Optional PawnIO support for additional low-level sensors
-* Light and dark themes
+* Resizable, DPI-aware interface with light and dark themes
 * Start minimized to tray
 * Optional Windows startup
 * Built-in GitHub update checking
@@ -34,15 +36,15 @@ It also includes an optional customizable **on-screen display (OSD)** for hardwa
 
 ### OSD Settings
 
-![Main Window](https://www.naetech.ro/wp-content/uploads/2024/traytemps/traytemps-dark.png?v=2.2.0.1)
+![TrayTemps OSD settings](https://www.naetech.ro/wp-content/uploads/2024/traytemps/traytemps-dark.png?v=2.2.0.1)
 
 ### Tray Icons
 
-![Settings](https://www.naetech.ro/wp-content/uploads/2024/traytemps/traytemps-light.png?v=2.2.0.1)
+![TrayTemps tray icons](https://www.naetech.ro/wp-content/uploads/2024/traytemps/traytemps-light.png?v=2.2.0.1)
 
 ### Hardware Information
 
-![CPU & GPU Tray Icons](https://www.naetech.ro/wp-content/uploads/2024/traytemps/traytemps-hardwareinfo.png?v=2.2.0.1)
+![TrayTemps hardware information](https://www.naetech.ro/wp-content/uploads/2024/traytemps/traytemps-hardwareinfo.png?v=2.2.0.1)
 
 ---
 
@@ -75,7 +77,7 @@ The optional OSD can display:
 * VRAM usage
 * FPS
 
-The OSD supports custom labels, spacing, font, colors, opacity, padding, layout, screen position, and a configurable global hotkey.
+The OSD supports custom labels, fonts, colors, opacity, screen position, configurable columns and display order, row/column and label/value spacing, and a global visibility hotkey. CPU/GPU temperature and usage values can optionally be combined into compact entries.
 
 The overlay is click-through and does not take focus from other applications.
 
@@ -86,6 +88,8 @@ The overlay is click-through and does not take focus from other applications.
 TrayTemps includes a lightweight built-in FPS counter using native Windows **Event Tracing for Windows (ETW)**.
 
 No RTSS, MSI Afterburner, AMD overlay, NVIDIA overlay, or external FPS application is required.
+
+The FPS display refresh interval can be configured independently without increasing CPU/GPU, memory, storage, or temperature sensor polling.
 
 FPS availability may vary depending on the game, rendering method, and anti-cheat software.
 
