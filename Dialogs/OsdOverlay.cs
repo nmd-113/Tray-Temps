@@ -27,6 +27,7 @@ namespace TrayTemps
         private static readonly IntPtr HtTransparent = new IntPtr(-1);
         private static readonly IntPtr HwndTopMost = new IntPtr(-1);
         private readonly List<OsdMetric> _metrics = new List<OsdMetric>();
+        private readonly List<MetricLayout> _metricLayouts = new List<MetricLayout>();
         private readonly Dictionary<string, int> _valueTemplateWidthCache =
             new Dictionary<string, int>(StringComparer.Ordinal);
         private Font _displayFont;
@@ -38,6 +39,7 @@ namespace TrayTemps
         private Color _backgroundColor = Color.FromArgb(24, 24, 24);
         private int _trailingValueSlotWidth;
         private int _trailingValueSlotDpi;
+        private int _layoutDpi;
 
         public OsdOverlay()
         {
@@ -60,8 +62,9 @@ namespace TrayTemps
         {
             base.OnShown(e);
             // A hidden per-monitor-DPI form can receive its final DPI only when shown.
-            // Recalculate once so the layered bitmap matches the text measured at that DPI.
-            ResizeForContent();
+            // Recalculate if that final DPI differs from the cached measurements.
+            if (_layoutDpi != DeviceDpi)
+                RebuildLayout();
             ApplyConfiguredPosition();
             PresentLayeredWindow();
         }
@@ -96,10 +99,28 @@ namespace TrayTemps
             IEnumerable<OsdMetric> metrics,
             Rectangle workingArea)
         {
-            _configuration = configuration?.Clone() ?? new OsdConfiguration();
+            OsdConfiguration nextConfiguration = configuration ?? new OsdConfiguration();
+            IReadOnlyList<OsdMetric> nextMetrics = metrics as IReadOnlyList<OsdMetric> ??
+                (metrics ?? Enumerable.Empty<OsdMetric>()).ToList();
+            if (!HasDisplayChanged(
+                    nextConfiguration,
+                    nextMetrics,
+                    workingArea,
+                    out bool layoutChanged))
+            {
+                EnsureTopMost();
+                return;
+            }
+
+            bool visualSettingsChanged = layoutChanged ||
+                _configuration.BackgroundColor != nextConfiguration.BackgroundColor;
+            bool positionChanged = layoutChanged ||
+                _workingArea != workingArea ||
+                _configuration.Position != nextConfiguration.Position;
+            _configuration = nextConfiguration.Clone();
             _workingArea = workingArea;
             _metrics.Clear();
-            _metrics.AddRange(metrics ?? Enumerable.Empty<OsdMetric>());
+            _metrics.AddRange(nextMetrics);
 
             if (_workingArea.Width > 0 && _workingArea.Height > 0 &&
                 (!IsHandleCreated || Screen.FromControl(this).WorkingArea != _workingArea))
@@ -107,10 +128,64 @@ namespace TrayTemps
                 Location = _workingArea.Location;
             }
 
-            ApplyVisualSettings();
-            ResizeForContent();
-            ApplyConfiguredPosition();
+            if (visualSettingsChanged)
+                ApplyVisualSettings();
+            if (layoutChanged)
+                RebuildLayout();
+            if (positionChanged)
+                ApplyConfiguredPosition();
             PresentLayeredWindow();
+        }
+
+        private bool HasDisplayChanged(
+            OsdConfiguration configuration,
+            IReadOnlyList<OsdMetric> metrics,
+            Rectangle workingArea,
+            out bool layoutChanged)
+        {
+            layoutChanged = _displayFont == null || _layoutDpi != DeviceDpi ||
+                _metricLayouts.Count != metrics.Count ||
+                _workingArea.Size != workingArea.Size ||
+                !string.Equals(
+                    _configuration.FontFamily,
+                    configuration.FontFamily,
+                    StringComparison.OrdinalIgnoreCase) ||
+                Math.Abs(_configuration.FontSize - configuration.FontSize) > 0.01f ||
+                _configuration.Columns != configuration.Columns ||
+                _configuration.ScreenMargin != configuration.ScreenMargin ||
+                _configuration.RowsSpacing != configuration.RowsSpacing ||
+                _configuration.ColumnsSpacing != configuration.ColumnsSpacing ||
+                _configuration.LabelValueSpacing != configuration.LabelValueSpacing;
+
+            bool displayChanged = layoutChanged ||
+                _workingArea != workingArea ||
+                _configuration.Position != configuration.Position ||
+                _configuration.BackgroundColor != configuration.BackgroundColor ||
+                _configuration.BackgroundOpacityPercent != configuration.BackgroundOpacityPercent ||
+                _configuration.OpacityPercent != configuration.OpacityPercent;
+
+            int comparableMetricCount = Math.Min(_metrics.Count, metrics.Count);
+            for (int index = 0; index < comparableMetricCount; index++)
+            {
+                OsdMetric current = _metrics[index];
+                OsdMetric next = metrics[index];
+                bool valueChanged =
+                    !string.Equals(current.Value, next.Value, StringComparison.Ordinal);
+                bool metricLayoutChanged =
+                    !string.Equals(current.Label, next.Label, StringComparison.Ordinal) ||
+                    !string.Equals(current.ValueWidthTemplate, next.ValueWidthTemplate, StringComparison.Ordinal) ||
+                    (current.TrailingValue == null) != (next.TrailingValue == null) ||
+                    (string.IsNullOrEmpty(next.ValueWidthTemplate) && valueChanged);
+                if (metricLayoutChanged)
+                    layoutChanged = true;
+                if (metricLayoutChanged ||
+                    valueChanged ||
+                    !string.Equals(current.TrailingValue, next.TrailingValue, StringComparison.Ordinal) ||
+                    current.TextColor != next.TextColor)
+                    displayChanged = true;
+            }
+
+            return displayChanged;
         }
 
         private void ApplyVisualSettings()
@@ -138,11 +213,12 @@ namespace TrayTemps
             }
         }
 
-        private void ResizeForContent()
+        private void RebuildLayout()
         {
             if (_displayFont == null)
                 ApplyVisualSettings();
 
+            _metricLayouts.Clear();
             int itemCount = Math.Max(1, _metrics.Count);
             int columns = Math.Max(1, Math.Min(_configuration.Columns, itemCount));
             int rows = (int)Math.Ceiling(itemCount / (double)columns);
@@ -152,8 +228,10 @@ namespace TrayTemps
             int rowSpacing = rows > 1 ? rowGap * (rows - 1) : 0;
             int columnSpacing = columns > 1 ? columnGap * (columns - 1) : 0;
             int combinedValueGap = GetCombinedValueGap();
+            int labelGap = ScaleLogical(Math.Max(0, _configuration.LabelValueSpacing));
             int[] columnContentWidths = new int[columns];
-            int[] rowHeights;
+            int[] rowHeights = new int[rows];
+            int[] valueBlockWidths = new int[_metrics.Count];
 
             using (var measurementBitmap = new Bitmap(1, 1, PixelFormat.Format32bppPArgb))
             {
@@ -168,13 +246,14 @@ namespace TrayTemps
                         _trailingValueSlotDpi = DeviceDpi;
                     }
 
-                    MeasureColumnContentWidths(
+                    MeasureLayoutMetrics(
                         graphics,
                         columns,
-                        ScaleLogical(Math.Max(0, _configuration.LabelValueSpacing)),
+                        labelGap,
                         combinedValueGap,
-                        columnContentWidths);
-                    rowHeights = MeasureRowHeights(graphics, columns, rows);
+                        columnContentWidths,
+                        rowHeights,
+                        valueBlockWidths);
                 }
             }
 
@@ -194,6 +273,75 @@ namespace TrayTemps
             ClientSize = new Size(
                 Math.Max(1, Math.Min(maxWidth, width)),
                 Math.Max(1, Math.Min(maxHeight, height)));
+
+            int availableContentWidth = Math.Max(
+                1,
+                ClientSize.Width - padding * 2 - columnSpacing);
+            bool constrained = availableContentWidth < contentWidth;
+            int[] columnWidths = new int[columns];
+            int[] columnLefts = new int[columns];
+            int columnLeft = padding;
+            for (int column = 0; column < columns; column++)
+            {
+                columnLefts[column] = columnLeft;
+                columnWidths[column] = constrained
+                    ? availableContentWidth / columns + (column < availableContentWidth % columns ? 1 : 0)
+                    : columnContentWidths[column];
+                columnLeft += columnWidths[column];
+                if (column < columns - 1)
+                    columnLeft += columnGap;
+            }
+
+            int[] rowTops = new int[rows];
+            int rowTop = padding;
+            for (int row = 0; row < rows; row++)
+            {
+                rowTops[row] = rowTop;
+                rowTop += rowHeights[row];
+                if (row < rows - 1)
+                    rowTop += rowGap;
+            }
+
+            for (int index = 0; index < _metrics.Count; index++)
+            {
+                int column = index % columns;
+                int row = index / columns;
+                OsdMetric metric = _metrics[index];
+                int x = columnLefts[column];
+                int y = rowTops[row];
+                int valueBlockWidth = Math.Min(valueBlockWidths[index], columnWidths[column]);
+                int valueBlockX = x + Math.Max(0, columnWidths[column] - valueBlockWidth);
+                int trailingValueWidth = metric.TrailingValue != null
+                    ? Math.Min(_trailingValueSlotWidth, valueBlockWidth)
+                    : 0;
+                int combinedGap = trailingValueWidth > 0
+                    ? Math.Min(combinedValueGap, valueBlockWidth - trailingValueWidth)
+                    : 0;
+                int primaryValueRight = valueBlockX + valueBlockWidth;
+                if (metric.TrailingValue != null)
+                    primaryValueRight -= combinedGap + trailingValueWidth;
+
+                _metricLayouts.Add(new MetricLayout(
+                    new Rectangle(
+                        x,
+                        y,
+                        Math.Max(0, valueBlockX - x - labelGap),
+                        rowHeights[row]),
+                    new Rectangle(
+                        valueBlockX,
+                        y,
+                        Math.Max(0, primaryValueRight - valueBlockX),
+                        rowHeights[row]),
+                    metric.TrailingValue != null
+                        ? new Rectangle(
+                            valueBlockX + valueBlockWidth - trailingValueWidth,
+                            y,
+                            trailingValueWidth,
+                            rowHeights[row])
+                        : Rectangle.Empty));
+            }
+
+            _layoutDpi = DeviceDpi;
         }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -204,58 +352,9 @@ namespace TrayTemps
 
         private void DrawOverlay(Graphics graphics)
         {
-            if (_displayFont == null || _metrics.Count == 0)
+            if (_displayFont == null || _metrics.Count == 0 ||
+                _metricLayouts.Count != _metrics.Count)
                 return;
-
-            int columns = Math.Max(1, Math.Min(_configuration.Columns, _metrics.Count));
-            int rows = (int)Math.Ceiling(_metrics.Count / (double)columns);
-            int padding = GetConfiguredPadding();
-            int rowGap = GetRowsSpacing();
-            int columnGap = GetColumnsSpacing();
-            int columnSpacing = columns > 1 ? columnGap * (columns - 1) : 0;
-            int combinedValueGap = GetCombinedValueGap();
-            int labelGap = ScaleLogical(Math.Max(0, _configuration.LabelValueSpacing));
-            int[] naturalColumnWidths = new int[columns];
-            int[] columnWidths = new int[columns];
-            int[] columnLefts = new int[columns];
-            int[] rowHeights;
-            int[] rowTops = new int[rows];
-
-            MeasureColumnContentWidths(
-                graphics,
-                columns,
-                labelGap,
-                combinedValueGap,
-                naturalColumnWidths);
-            rowHeights = MeasureRowHeights(graphics, columns, rows);
-            int rowTop = padding;
-            for (int row = 0; row < rows; row++)
-            {
-                rowTops[row] = rowTop;
-                rowTop += rowHeights[row];
-                if (row < rows - 1)
-                    rowTop += rowGap;
-            }
-
-            int naturalContentWidth = 0;
-            for (int column = 0; column < columns; column++)
-                naturalContentWidth += naturalColumnWidths[column];
-
-            int availableContentWidth = Math.Max(
-                1,
-                ClientSize.Width - padding * 2 - columnSpacing);
-            bool constrained = availableContentWidth < naturalContentWidth;
-            int columnLeft = padding;
-            for (int column = 0; column < columns; column++)
-            {
-                columnLefts[column] = columnLeft;
-                columnWidths[column] = constrained
-                    ? availableContentWidth / columns + (column < availableContentWidth % columns ? 1 : 0)
-                    : naturalColumnWidths[column];
-                columnLeft += columnWidths[column];
-                if (column < columns - 1)
-                    columnLeft += columnGap;
-            }
 
             GraphicsState graphicsState = graphics.Save();
             graphics.SmoothingMode = SmoothingMode.AntiAlias;
@@ -265,54 +364,20 @@ namespace TrayTemps
             {
                 for (int index = 0; index < _metrics.Count; index++)
                 {
-                    int column = index % columns;
-                    int row = index / columns;
                     OsdMetric metric = _metrics[index];
+                    MetricLayout layout = _metricLayouts[index];
                     Color textColor = metric.TextColor ?? _textColor;
-                    int x = columnLefts[column];
-                    int y = rowTops[row];
-                    int valueBlockWidth = Math.Min(
-                        GetValueBlockWidth(graphics, metric, combinedValueGap),
-                        columnWidths[column]);
-                    int valueBlockX = x + Math.Max(0, columnWidths[column] - valueBlockWidth);
-                    int trailingValueWidth = metric.TrailingValue != null
-                        ? Math.Min(_trailingValueSlotWidth, valueBlockWidth)
-                        : 0;
-                    int combinedGap = trailingValueWidth > 0
-                        ? Math.Min(combinedValueGap, valueBlockWidth - trailingValueWidth)
-                        : 0;
-                    int primaryValueRight = valueBlockX + valueBlockWidth;
-                    if (metric.TrailingValue != null)
-                        primaryValueRight -= combinedGap + trailingValueWidth;
-
-                    Rectangle labelBounds = new Rectangle(
-                        x,
-                        y,
-                        Math.Max(0, valueBlockX - x - labelGap),
-                        rowHeights[row]);
-                    Rectangle primaryValueBounds = new Rectangle(
-                        valueBlockX,
-                        y,
-                        Math.Max(0, primaryValueRight - valueBlockX),
-                        rowHeights[row]);
-                    Rectangle trailingValueBounds = metric.TrailingValue != null
-                        ? new Rectangle(
-                            valueBlockX + valueBlockWidth - trailingValueWidth,
-                            y,
-                            trailingValueWidth,
-                            rowHeights[row])
-                        : Rectangle.Empty;
 
                     DrawDisplayText(
                         graphics,
                         metric.Label,
-                        labelBounds,
+                        layout.LabelBounds,
                         textColor,
                         StringAlignment.Near);
                     DrawDisplayText(
                         graphics,
                         metric.Value,
-                        primaryValueBounds,
+                        layout.PrimaryValueBounds,
                         textColor,
                         StringAlignment.Far);
                     if (metric.TrailingValue != null)
@@ -320,7 +385,7 @@ namespace TrayTemps
                         DrawDisplayText(
                             graphics,
                             metric.TrailingValue,
-                            trailingValueBounds,
+                            layout.TrailingValueBounds,
                             textColor,
                             StringAlignment.Far);
                     }
@@ -332,56 +397,48 @@ namespace TrayTemps
             }
         }
 
-        private int GetValueBlockWidth(Graphics graphics, OsdMetric metric, int combinedValueGap)
-        {
-            int width = GetPrimaryValueSlotWidth(graphics, metric);
-            if (metric.TrailingValue != null)
-                width += combinedValueGap + _trailingValueSlotWidth;
-
-            return width;
-        }
-
-        private void MeasureColumnContentWidths(
+        private void MeasureLayoutMetrics(
             Graphics graphics,
             int columns,
             int labelGap,
             int combinedValueGap,
-            int[] columnContentWidths)
+            int[] columnContentWidths,
+            int[] rowHeights,
+            int[] valueBlockWidths)
         {
+            int sharedRowHeight = MeasureDisplayTextSize(
+                graphics,
+                "N/A 100% 999\u00B0C 999\u00B0F 999.99G 9999").Height;
+
             for (int index = 0; index < _metrics.Count; index++)
             {
                 int column = index % columns;
-                OsdMetric metric = _metrics[index];
-                int rowWidth = MeasureDisplayTextWidth(graphics, metric.Label) +
-                    labelGap +
-                    GetValueBlockWidth(graphics, metric, combinedValueGap);
-                columnContentWidths[column] = Math.Max(columnContentWidths[column], rowWidth);
-            }
-        }
-
-        private int[] MeasureRowHeights(Graphics graphics, int columns, int rows)
-        {
-            var rowHeights = new int[rows];
-            int sharedRowHeight = MeasureOutlinedTextHeight(
-                graphics,
-                "N/A 100% 999\u00B0C 999\u00B0F 999.99G 9999");
-            for (int index = 0; index < _metrics.Count; index++)
-            {
                 int row = index / columns;
                 OsdMetric metric = _metrics[index];
-                rowHeights[row] = Math.Max(rowHeights[row], MeasureOutlinedTextHeight(graphics, metric.Label));
-                rowHeights[row] = Math.Max(rowHeights[row], MeasureOutlinedTextHeight(graphics, metric.Value));
+                Size labelSize = MeasureDisplayTextSize(graphics, metric.Label);
+                Size valueSize = MeasureDisplayTextSize(graphics, metric.Value);
+                int valueBlockWidth = GetPrimaryValueSlotWidth(
+                    graphics,
+                    metric,
+                    valueSize.Width);
+                int metricHeight = Math.Max(labelSize.Height, valueSize.Height);
                 if (metric.TrailingValue != null)
-                    rowHeights[row] = Math.Max(
-                        rowHeights[row],
-                        MeasureOutlinedTextHeight(graphics, metric.TrailingValue));
+                {
+                    valueBlockWidth += combinedValueGap + _trailingValueSlotWidth;
+                    metricHeight = Math.Max(
+                        metricHeight,
+                        MeasureDisplayTextSize(graphics, metric.TrailingValue).Height);
+                }
+
+                valueBlockWidths[index] = valueBlockWidth;
+                int rowWidth = labelSize.Width + labelGap + valueBlockWidth;
+                columnContentWidths[column] = Math.Max(columnContentWidths[column], rowWidth);
+                rowHeights[row] = Math.Max(rowHeights[row], metricHeight);
                 sharedRowHeight = Math.Max(sharedRowHeight, rowHeights[row]);
             }
 
             for (int row = 0; row < rowHeights.Length; row++)
                 rowHeights[row] = sharedRowHeight;
-
-            return rowHeights;
         }
 
         private void DrawDisplayText(
@@ -408,7 +465,8 @@ namespace TrayTemps
             GraphicsPath path = CreateTextPath(graphics, text);
             try
             {
-                if (path.GetBounds().Width > availableWidth)
+                RectangleF pathBounds = path.GetBounds();
+                if (pathBounds.Width > availableWidth)
                 {
                     path.Dispose();
                     path = null;
@@ -418,11 +476,11 @@ namespace TrayTemps
                         return;
 
                     path = CreateTextPath(graphics, displayText);
+                    pathBounds = path.GetBounds();
                 }
 
                 using (var textBrush = new SolidBrush(opaqueTextColor))
                 {
-                    RectangleF pathBounds = path.GetBounds();
                     float x = alignment == StringAlignment.Far
                         ? bounds.Right - strokeInset - pathBounds.Width - pathBounds.X
                         : bounds.Left + strokeInset - pathBounds.X;
@@ -451,17 +509,21 @@ namespace TrayTemps
             }
         }
 
-        private int MeasureOutlinedTextHeight(Graphics graphics, string text)
+        private Size MeasureDisplayTextSize(Graphics graphics, string text)
         {
             using (GraphicsPath path = CreateTextPath(graphics, text))
-                return Math.Max(1, (int)Math.Ceiling(path.GetBounds().Height + GetStrokeWidth()));
+            {
+                RectangleF bounds = path.GetBounds();
+                float strokeWidth = GetStrokeWidth();
+                return new Size(
+                    Math.Max(1, (int)Math.Ceiling(bounds.Width + strokeWidth)),
+                    Math.Max(1, (int)Math.Ceiling(bounds.Height + strokeWidth)));
+            }
         }
 
         private int MeasureDisplayTextWidth(Graphics graphics, string text)
         {
-            return Math.Max(
-                1,
-                (int)Math.Ceiling(MeasureTextPathWidth(graphics, text) + GetStrokeWidth()));
+            return MeasureDisplayTextSize(graphics, text).Width;
         }
 
         private int MeasureStablePercentSlotWidth(Graphics graphics)
@@ -473,13 +535,17 @@ namespace TrayTemps
             return width;
         }
 
-        private int GetPrimaryValueSlotWidth(Graphics graphics, OsdMetric metric)
+        private int GetPrimaryValueSlotWidth(
+            Graphics graphics,
+            OsdMetric metric,
+            int measuredValueWidth)
         {
-            int width = MeasureDisplayTextWidth(graphics, metric.Value);
             if (string.IsNullOrEmpty(metric.ValueWidthTemplate))
-                return width;
+                return measuredValueWidth;
 
-            return Math.Max(width, MeasureStableValueTemplateWidth(graphics, metric.ValueWidthTemplate));
+            return Math.Max(
+                measuredValueWidth,
+                MeasureStableValueTemplateWidth(graphics, metric.ValueWidthTemplate));
         }
 
         private int MeasureStableValueTemplateWidth(Graphics graphics, string template)
@@ -624,14 +690,7 @@ namespace TrayTemps
                         0,
                         ref blend,
                         UlwAlpha);
-                    SetWindowPos(
-                        Handle,
-                        HwndTopMost,
-                        0,
-                        0,
-                        0,
-                        0,
-                        SwpNoSize | SwpNoMove | SwpNoActivate | SwpNoOwnerZOrder);
+                    EnsureTopMost();
                 }
                 finally
                 {
@@ -645,6 +704,21 @@ namespace TrayTemps
                         ReleaseDC(IntPtr.Zero, screenDc);
                 }
             }
+        }
+
+        private void EnsureTopMost()
+        {
+            if (IsDisposed || !IsHandleCreated)
+                return;
+
+            SetWindowPos(
+                Handle,
+                HwndTopMost,
+                0,
+                0,
+                0,
+                0,
+                SwpNoSize | SwpNoMove | SwpNoActivate | SwpNoOwnerZOrder);
         }
 
         private void ApplyConfiguredPosition()
@@ -706,6 +780,23 @@ namespace TrayTemps
         private int ScaleLogical(int value)
         {
             return (int)Math.Round(value * DeviceDpi / 96f);
+        }
+
+        private struct MetricLayout
+        {
+            internal MetricLayout(
+                Rectangle labelBounds,
+                Rectangle primaryValueBounds,
+                Rectangle trailingValueBounds)
+            {
+                LabelBounds = labelBounds;
+                PrimaryValueBounds = primaryValueBounds;
+                TrailingValueBounds = trailingValueBounds;
+            }
+
+            internal Rectangle LabelBounds { get; }
+            internal Rectangle PrimaryValueBounds { get; }
+            internal Rectangle TrailingValueBounds { get; }
         }
 
         [StructLayout(LayoutKind.Sequential)]

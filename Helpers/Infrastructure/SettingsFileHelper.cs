@@ -17,6 +17,8 @@ namespace TrayTemps
         internal static string ReadSettingsJson(string settingsPath)
         {
             string[] candidates = { settingsPath, settingsPath + ".tmp", settingsPath + ".bak" };
+            string newestValidJson = null;
+            DateTime newestValidWriteTime = DateTime.MinValue;
 
             foreach (string path in candidates)
             {
@@ -29,13 +31,22 @@ namespace TrayTemps
                     AppSettings settings = JsonSerializer.Deserialize<AppSettings>(json);
                     if (settings == null)
                         throw new InvalidDataException("Settings content was empty.");
-                    return json;
+
+                    DateTime writeTime = File.GetLastWriteTimeUtc(path);
+                    if (newestValidJson == null || writeTime > newestValidWriteTime)
+                    {
+                        newestValidJson = json;
+                        newestValidWriteTime = writeTime;
+                    }
                 }
                 catch (Exception ex)
                 {
                     Debug.WriteLine($"Ignoring invalid settings candidate '{path}': {ex.Message}");
                 }
             }
+
+            if (newestValidJson != null)
+                return newestValidJson;
 
             throw new InvalidDataException("No valid settings file was found.");
         }

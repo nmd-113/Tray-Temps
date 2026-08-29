@@ -73,6 +73,8 @@ namespace TrayTemps
         public bool ShowRamUsage { get; set; }
         public bool ShowVramUsage { get; set; }
         public bool ShowFps { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public decimal? FpsRefreshIntervalSeconds { get; set; }
         public bool CombineTemperatureAndUsage { get; set; }
         public OsdLabelMode LabelMode { get; set; } = OsdLabelMode.Short;
         public string CustomCpuLabel { get; set; } = "CPU Temp";

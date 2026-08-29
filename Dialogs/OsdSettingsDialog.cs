@@ -21,6 +21,10 @@ namespace TrayTemps
         private bool _configurationLoaded;
         private bool _hasCustomBackgroundColor;
         private List<OsdItemKind> _separateItemOrder;
+        private OsdSettingsPage _currentPage = OsdSettingsPage.Metrics;
+        private Color _navigationBack = Color.FromArgb(30, 30, 30);
+        private Color _navigationSelected = Color.FromArgb(45, 45, 45);
+        private Color _navigationText = Color.WhiteSmoke;
 
         public OsdSettingsDialog()
         {
@@ -59,6 +63,51 @@ namespace TrayTemps
         {
             base.OnHandleCreated(e);
             WindowCornerHelper.ApplyRoundedCorners(Handle);
+            resizeGrip?.UpdateDpiSize();
+        }
+
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+            resizeGrip?.UpdateDpiSize();
+        }
+
+        protected override void WndProc(ref Message message)
+        {
+            const int WmNcHitTest = 0x84;
+            const int HtLeft = 10;
+            const int HtRight = 11;
+            const int HtTop = 12;
+            const int HtTopLeft = 13;
+            const int HtTopRight = 14;
+            const int HtBottom = 15;
+            const int HtBottomLeft = 16;
+            const int HtBottomRight = 17;
+            int resizeAreaSize = Math.Max(6, (int)Math.Round(8d * DeviceDpi / 96d));
+
+            base.WndProc(ref message);
+
+            if (message.Msg != WmNcHitTest)
+                return;
+
+            long coordinates = message.LParam.ToInt64();
+            int x = (short)(coordinates & 0xFFFF);
+            int y = (short)((coordinates >> 16) & 0xFFFF);
+            Point cursor = PointToClient(new Point(x, y));
+
+            bool left = cursor.X <= resizeAreaSize;
+            bool right = cursor.X >= Width - resizeAreaSize;
+            bool top = cursor.Y <= resizeAreaSize;
+            bool bottom = cursor.Y >= Height - resizeAreaSize;
+
+            if (left && top) message.Result = (IntPtr)HtTopLeft;
+            else if (left && bottom) message.Result = (IntPtr)HtBottomLeft;
+            else if (right && top) message.Result = (IntPtr)HtTopRight;
+            else if (right && bottom) message.Result = (IntPtr)HtBottomRight;
+            else if (left) message.Result = (IntPtr)HtLeft;
+            else if (right) message.Result = (IntPtr)HtRight;
+            else if (top) message.Result = (IntPtr)HtTop;
+            else if (bottom) message.Result = (IntPtr)HtBottom;
         }
 
         protected override void OnShown(EventArgs e)
@@ -118,6 +167,7 @@ namespace TrayTemps
             PopulateNumericOptions(rowsSpacing, 0m, 100m, 1m);
             PopulateNumericOptions(columnsSpacing, 0m, 100m, 1m);
             PopulateNumericOptions(columnsValue, 1m, 4m, 1m);
+            PopulateNumericOptions(fpsRefreshIntervalValue, 0.25m, 10m, 0.25m);
 
             foreach (OsdItemKind item in OsdItemOrderHelper.Parse(_configuration.ItemOrder))
                 itemOrder.Items.Add(new OsdItemOption(item));
@@ -140,6 +190,12 @@ namespace TrayTemps
             showRamUsage.Checked = _configuration.ShowRamUsage;
             showVramUsage.Checked = _configuration.ShowVramUsage;
             showFps.Checked = _configuration.ShowFps;
+            SelectNumericOption(
+                fpsRefreshIntervalValue,
+                ValueHelper.ClampDecimal(
+                    _configuration.FpsRefreshIntervalSeconds ?? 0.5m,
+                    0.25m,
+                    10m));
             combineTemperatureAndUsage.Checked = _configuration.CombineTemperatureAndUsage;
             showCpu.Checked = _configuration.ShowCpu;
             showGpu.Checked = _configuration.ShowGpu;
@@ -255,6 +311,7 @@ namespace TrayTemps
                 ShowRamUsage = showRamUsage.Checked,
                 ShowVramUsage = showVramUsage.Checked,
                 ShowFps = showFps.Checked,
+                FpsRefreshIntervalSeconds = GetNumericOptionValue(fpsRefreshIntervalValue, 0.5m),
                 CombineTemperatureAndUsage = combineTemperatureAndUsage.Checked,
                 LabelMode = customLabelsEnabled.Checked
                     ? OsdLabelMode.Custom
@@ -536,9 +593,8 @@ namespace TrayTemps
 
             for (int index = 0; index < updatedItems.Count; index++)
             {
-                var current = itemOrder.Items[index] as OsdItemOption;
                 OsdItemOption updated = updatedItems[index];
-                if (current == null || current.Kind != updated.Kind ||
+                if (!(itemOrder.Items[index] is OsdItemOption current) || current.Kind != updated.Kind ||
                     current.IsCombinedTemperatureUsage != updated.IsCombinedTemperatureUsage)
                 {
                     return false;
@@ -555,8 +611,7 @@ namespace TrayTemps
 
             for (int index = 0; index < itemOrder.Items.Count; index++)
             {
-                var option = itemOrder.Items[index] as OsdItemOption;
-                if (option == null)
+                if (!(itemOrder.Items[index] is OsdItemOption option))
                     continue;
 
                 bool sameMetricGroup = option.Kind == selectedKind.Value ||
@@ -583,6 +638,8 @@ namespace TrayTemps
             ramFontColor.Enabled = showRamUsage.Checked;
             vramFontColor.Enabled = showVramUsage.Checked;
             fpsFontColor.Enabled = showFps.Checked;
+            fpsRefreshIntervalLabel.Enabled = showFps.Checked;
+            fpsRefreshIntervalValue.Enabled = showFps.Checked;
             combineTemperatureAndUsage.Enabled =
                 (showCpu.Checked && showCpuUsage.Checked) ||
                 (showGpu.Checked && showGpuUsage.Checked);
@@ -656,6 +713,66 @@ namespace TrayTemps
             ApplyTheme();
         }
 
+        private void MetricsNavButton_Click(object sender, EventArgs e)
+        {
+            ShowPage(OsdSettingsPage.Metrics);
+        }
+
+        private void AppearanceNavButton_Click(object sender, EventArgs e)
+        {
+            ShowPage(OsdSettingsPage.Appearance);
+        }
+
+        private void LayoutNavButton_Click(object sender, EventArgs e)
+        {
+            ShowPage(OsdSettingsPage.Layout);
+        }
+
+        private void ShowPage(OsdSettingsPage page)
+        {
+            _currentPage = page;
+
+            Panel selectedPage = page == OsdSettingsPage.Metrics
+                ? metricsPage
+                : page == OsdSettingsPage.Appearance ? appearancePage : layoutPage;
+
+            contentPanel.SuspendLayout();
+            try
+            {
+                metricsPage.Visible = page == OsdSettingsPage.Metrics;
+                appearancePage.Visible = page == OsdSettingsPage.Appearance;
+                layoutPage.Visible = page == OsdSettingsPage.Layout;
+                selectedPage.BringToFront();
+            }
+            finally
+            {
+                contentPanel.ResumeLayout(true);
+            }
+
+            metricsNavButton.BackColor = page == OsdSettingsPage.Metrics
+                ? _navigationSelected
+                : _navigationBack;
+            appearanceNavButton.BackColor = page == OsdSettingsPage.Appearance
+                ? _navigationSelected
+                : _navigationBack;
+            layoutNavButton.BackColor = page == OsdSettingsPage.Layout
+                ? _navigationSelected
+                : _navigationBack;
+
+            metricsNavButton.ForeColor = _navigationText;
+            appearanceNavButton.ForeColor = _navigationText;
+            layoutNavButton.ForeColor = _navigationText;
+
+            Button selectedButton = page == OsdSettingsPage.Metrics
+                ? metricsNavButton
+                : page == OsdSettingsPage.Appearance ? appearanceNavButton : layoutNavButton;
+            if (accentLine.Parent != selectedButton)
+                selectedButton.Controls.Add(accentLine);
+            accentLine.Dock = DockStyle.Left;
+            accentLine.Width = 3;
+            accentLine.BringToFront();
+        }
+
         private void ApplyTheme()
         {
             bool light = _mainForm != null && _mainForm.IsLightModeEnabled;
@@ -665,16 +782,40 @@ namespace TrayTemps
             Color title = light ? Color.FromArgb(15, 23, 42) : Color.WhiteSmoke;
             Color accent = light ? Color.FromArgb(37, 99, 235) : Color.FromArgb(0, 120, 212);
             Color border = light ? Color.FromArgb(210, 218, 230) : Color.FromArgb(70, 70, 70);
+            Color shellBorder = light ? Color.FromArgb(210, 218, 230) : Color.FromArgb(60, 60, 60);
+            Color barBack = light ? Color.White : Color.FromArgb(30, 30, 30);
+            Color muted = light ? Color.FromArgb(91, 103, 122) : Color.DarkGray;
+            Color navigationHover = light ? Color.FromArgb(232, 238, 247) : Color.FromArgb(55, 55, 55);
+            Color navigationDown = light ? Color.FromArgb(210, 220, 234) : Color.FromArgb(70, 70, 70);
+
+            _navigationBack = light ? Color.White : Color.FromArgb(30, 30, 30);
+            _navigationSelected = light ? Color.FromArgb(226, 239, 255) : Color.FromArgb(45, 45, 45);
+            _navigationText = title;
 
             BackColor = windowBack;
             ForeColor = text;
+            outerBorder.BackColor = shellBorder;
             mainPanel.BackColor = windowBack;
-            rootLayout.BackColor = windowBack;
-            leftColumn.BackColor = windowBack;
-            rightColumn.BackColor = windowBack;
-            formTitle.ForeColor = title;
+            titleBar.BackColor = barBack;
+            bottomBar.BackColor = barBack;
+            contentPanel.BackColor = windowBack;
+            metricsPage.BackColor = windowBack;
+            appearancePage.BackColor = windowBack;
+            layoutPage.BackColor = windowBack;
+            metricsPageLayout.BackColor = windowBack;
+            layoutPageLayout.BackColor = windowBack;
+            navigationPanel.BackColor = _navigationBack;
+            navigationTitle.ForeColor = muted;
+            subtitleLabel.ForeColor = muted;
+            accentLine.BackColor = accent;
 
-            foreach (Panel card in new[] { metricsCard, labelsCard, appearanceCard, layoutCard, hotkeyCard })
+            if (resizeGrip != null && !resizeGrip.IsDisposed)
+            {
+                resizeGrip.LightTheme = light;
+                resizeGrip.BackColor = barBack;
+            }
+
+            foreach (Panel card in new[] { metricsCard, labelsCard, appearanceCard, layoutCard, spacingCard, hotkeyCard })
             {
                 card.BackColor = surfaceBack;
 
@@ -689,6 +830,7 @@ namespace TrayTemps
             }
 
             customLabelsLayout.BackColor = surfaceBack;
+            spacingLayout.BackColor = surfaceBack;
             foreach (Label label in new[]
             {
                 customCpuLabelCaption,
@@ -698,7 +840,9 @@ namespace TrayTemps
                 customRamLabelCaption,
                 customVramLabelCaption,
                 customFpsLabelCaption,
-                spacingHeader
+                spacingHeader,
+                rowsGapHeader,
+                columnsGapHeader
             })
             {
                 label.BackColor = surfaceBack;
@@ -717,7 +861,7 @@ namespace TrayTemps
                 positionValue, fontFamilyValue,
                 customCpuLabel, customGpuLabel, customCpuUsageLabel, customGpuUsageLabel,
                 customRamLabel, customVramLabel, customFpsLabel, labelValueSpacing, rowsSpacing, columnsSpacing,
-                columnsValue, fontSizeValue, screenMarginValue, itemOrder, hotkeyValue
+                columnsValue, fontSizeValue, screenMarginValue, fpsRefreshIntervalValue, itemOrder, hotkeyValue
             })
             {
                 input.BackColor = light ? Color.White : Color.FromArgb(32, 32, 32);
@@ -743,6 +887,13 @@ namespace TrayTemps
                     : Color.FromArgb(70, 70, 70);
             }
 
+            foreach (Button button in new[] { metricsNavButton, appearanceNavButton, layoutNavButton })
+            {
+                button.ForeColor = _navigationText;
+                button.FlatAppearance.MouseOverBackColor = navigationHover;
+                button.FlatAppearance.MouseDownBackColor = navigationDown;
+            }
+
             foreach (Button button in new[] { backgroundColor, cpuFontColor, gpuFontColor, ramFontColor, vramFontColor, fpsFontColor })
             {
                 button.ForeColor = GetReadableForeground(button.BackColor);
@@ -758,9 +909,12 @@ namespace TrayTemps
             saveBtn.FlatAppearance.MouseDownBackColor = light
                 ? Color.FromArgb(30, 64, 175)
                 : Color.FromArgb(0, 84, 153);
-            exitBtn.BackColor = windowBack;
+            exitBtn.BackColor = barBack;
             exitBtn.ForeColor = title;
-            exitBtn.FlatAppearance.BorderColor = windowBack;
+            exitBtn.FlatAppearance.BorderColor = barBack;
+            exitBtn.FlatAppearance.MouseOverBackColor = Color.FromArgb(220, 38, 38);
+            exitBtn.FlatAppearance.MouseDownBackColor = Color.DarkRed;
+            ShowPage(_currentPage);
         }
 
         private static Color GetReadableForeground(Color background)
@@ -835,8 +989,15 @@ namespace TrayTemps
 
             public override string ToString()
             {
-                return Value.ToString("0.#", CultureInfo.CurrentCulture);
+                return Value.ToString("0.##", CultureInfo.CurrentCulture);
             }
+        }
+
+        private enum OsdSettingsPage
+        {
+            Metrics,
+            Appearance,
+            Layout
         }
     }
 }

@@ -37,6 +37,7 @@ namespace TrayTemps
         private const int MaximumIconSizePercent = 100;
         private const int DefaultIconSizePercent = 90;
         private const int StartupTaskQueryTimeoutMs = 2000;
+        private const int MaximumFpsStartFailures = 3;
         private const int OsdHotkeyId = 0x5453;
         private const int OsdHotkeyTestId = 0x5454;
         private const float SingleTrayTextPadding = 0.25f;
@@ -46,10 +47,12 @@ namespace TrayTemps
         private const float CombinedTraySlotAdvanceFactor = 1.02f;
         private const float CombinedTrayTextOccupancy = 1f;
         private static readonly TimeSpan TemperatureAlertCooldown = TimeSpan.FromSeconds(5);
+        private static readonly TimeSpan FpsStartRetryDelay = TimeSpan.FromSeconds(15);
         private static readonly Size HardwareDialogMinimumSize = new Size(640, 440);
 
         private Computer _computer;
         private readonly Timer _tempTimer = new Timer();
+        private readonly Timer _fpsTimer = new Timer();
 
         private List<IHardware> _cpuHardwares;
         private IHardware _selectedCpuHardware;
@@ -85,7 +88,10 @@ namespace TrayTemps
         private OsdOverlay _osdOverlay;
         private OsdSettingsDialog _osdSettingsDialog;
         private ForegroundFpsMonitor _fpsMonitor;
-        private bool _fpsMonitoringStartFailed;
+        private List<OsdMetric> _lastOsdMetrics;
+        private OsdMetric _lastOsdFpsMetric;
+        private int _fpsMonitoringStartFailures;
+        private DateTime _nextFpsMonitoringStartAttemptUtc = DateTime.MinValue;
         private bool _osdHotkeyRegistered;
         private OsdHotkeyModifiers _registeredOsdHotkeyModifiers;
         private Keys _registeredOsdHotkeyKey;
@@ -126,6 +132,8 @@ namespace TrayTemps
         private float _cpuMinTemp = float.MaxValue;
         private float _gpuMaxTemp = float.MinValue;
         private float _gpuMinTemp = float.MaxValue;
+        private float? _cpuLoadPercent;
+        private float? _gpuLoadPercent;
 
         private string _lastCpuTempText;
         private string _lastGpuTempText;
@@ -309,6 +317,7 @@ namespace TrayTemps
             _sensorElevationPromptShown = suppressStartupElevationPrompt;
             EmbeddedFonts.Initialize();
             InitializeComponent();
+            _fpsTimer.Tick += FpsTimer_Tick;
 
             if (initialPageIndex >= 0 && initialPageIndex < mainTabControl.TabCount)
                 mainTabControl.SelectedIndex = initialPageIndex;
@@ -365,6 +374,7 @@ namespace TrayTemps
                 SetDefaultControlValues();
                 LoadSettings();
                 RefreshCurrentDpiScale();
+                ClampInitialBoundsToWorkingArea();
                 _dpiMonitoringReady = true;
                 RememberNormalWindowBounds();
                 CacheDisplaySettings();
@@ -384,8 +394,6 @@ namespace TrayTemps
 
                 if (startHidden)
                     BeginInvoke((MethodInvoker)HideToTrayAfterStartup);
-
-                SelectedTabChanged(this, EventArgs.Empty);
 
                 try
                 {
@@ -903,8 +911,7 @@ namespace TrayTemps
                     StorageNativeData nativeData = StorageReportHelper.QueryNativeStorageData(
                         query =>
                         {
-                            List<ManagementObject> disks;
-                            diskQuerySucceeded = WmiQueryHelper.TryWmiQuery(query, out disks);
+                            diskQuerySucceeded = WmiQueryHelper.TryWmiQuery(query, out List<ManagementObject> disks);
                             return disks;
                         },
                         WmiQueryHelper.WmiQuery);
@@ -1210,8 +1217,6 @@ namespace TrayTemps
             try
             {
                 OsdConfiguration displayConfiguration = _osdPreviewConfiguration ?? _osdConfiguration;
-                bool preparedFpsEnabled = osdEnable.Checked && displayConfiguration.ShowFps;
-                UpdateFpsMonitoring(preparedFpsEnabled);
                 IHardware osdMemoryHardware = displayConfiguration.ShowRamUsage
                     ? GetCompletedMemoryHardware()
                     : null;
@@ -1250,7 +1255,7 @@ namespace TrayTemps
                 UpdateTemperatureTrayCheckboxAvailability();
                 UpdateAllTrayIcons(cpuTemp, gpuTemp);
                 EvaluateTemperatureAlerts(cpuTemp, gpuTemp);
-                UpdateOsd(cpuTemp, gpuTemp, preparedFpsEnabled);
+                UpdateOsd(cpuTemp, gpuTemp);
             }
             catch (Exception ex)
             {
@@ -1294,10 +1299,14 @@ namespace TrayTemps
                 // Keep bounds tracking suspended until the form is visible again.
                 // Windows can report a temporary position while displays resume.
                 RestoreLastWindowBoundsWhenShown();
+                PerformLayout();
                 Show();
 
                 if (_dpiRestartPending)
                     return;
+
+                if (!_initialWindowDisplaySuppressed)
+                    Update();
 
                 RestoreInitialWindowDisplay();
 
@@ -1331,6 +1340,8 @@ namespace TrayTemps
             if (_dpiRestartPending)
                 return;
 
+            PerformLayout();
+            Update();
             Opacity = 1;
             _initialWindowDisplaySuppressed = false;
         }
@@ -1431,6 +1442,77 @@ namespace TrayTemps
                 SetTextIfChanged(gpuTempMin, "N/A");
                 SetTextIfChanged(gpuTempMax, "N/A");
             }
+
+            UpdateLoadIndicators();
+        }
+
+        private void UpdateLoadIndicators()
+        {
+            _cpuLoadPercent = ClampLoadPercent(GetLoadValueForCard(_selectedCpuHardware, isCpu: true));
+            _gpuLoadPercent = ClampLoadPercent(GetLoadValueForCard(_selectedGpuHardware, isCpu: false));
+
+            UpdateLoadIndicator(cpuLoadValue, cpuLoadTrack, cpuLoadFill, _cpuLoadPercent);
+            UpdateLoadIndicator(gpuLoadValue, gpuLoadTrack, gpuLoadFill, _gpuLoadPercent);
+        }
+
+        private void UpdateLoadIndicator(Label valueLabel, Panel track, Panel fill, float? loadPercent)
+        {
+            SetTextIfChanged(valueLabel, loadPercent.HasValue ? $"{loadPercent.Value:F0}%" : "N/A");
+            Color fillColor = loadPercent.HasValue ? GetLoadColor(loadPercent.Value) : Color.Gray;
+            if (fill.BackColor != fillColor)
+                fill.BackColor = fillColor;
+            UpdateLoadFill(track, fill, loadPercent);
+        }
+
+        private static float? ClampLoadPercent(float? value)
+        {
+            if (!value.HasValue || float.IsNaN(value.Value))
+                return null;
+
+            return Math.Max(0f, Math.Min(100f, value.Value));
+        }
+
+        private static Color GetLoadColor(float percentage)
+        {
+            float clamped = float.IsNaN(percentage)
+                ? 0f
+                : Math.Max(0f, Math.Min(100f, percentage));
+            float ratio = clamped / 100f;
+            Color start = Color.LimeGreen;
+            Color end = Color.Red;
+            return Color.FromArgb(
+                (int)Math.Round(start.R + ((end.R - start.R) * ratio), MidpointRounding.AwayFromZero),
+                (int)Math.Round(start.G + ((end.G - start.G) * ratio), MidpointRounding.AwayFromZero),
+                (int)Math.Round(start.B + ((end.B - start.B) * ratio), MidpointRounding.AwayFromZero));
+        }
+
+        private static float? GetLoadValueForCard(IHardware hardware, bool isCpu)
+        {
+            float? preferredValue = GetPreferredLoadValue(hardware, isCpu);
+            if (preferredValue.HasValue)
+                return preferredValue;
+
+            return EnumerateSensorsRecursive(hardware)
+                .FirstOrDefault(sensor => sensor.SensorType == SensorType.Load && sensor.Value.HasValue)
+                ?.Value;
+        }
+
+        private static void UpdateLoadFill(Panel track, Panel fill, float? loadPercent)
+        {
+            int trackWidth = track.ClientSize.Width;
+            int fillWidth = loadPercent.HasValue
+                ? (int)Math.Round(trackWidth * loadPercent.Value / 100f, MidpointRounding.AwayFromZero)
+                : 0;
+
+            fill.Size = new Size(Math.Max(0, Math.Min(trackWidth, fillWidth)), track.ClientSize.Height);
+        }
+
+        private void LoadTrack_SizeChanged(object sender, EventArgs e)
+        {
+            if (sender == cpuLoadTrack)
+                UpdateLoadFill(cpuLoadTrack, cpuLoadFill, _cpuLoadPercent);
+            else if (sender == gpuLoadTrack)
+                UpdateLoadFill(gpuLoadTrack, gpuLoadFill, _gpuLoadPercent);
         }
 
         private void EvaluateTemperatureAlerts(float? cpuTemp, float? gpuTemp)
@@ -1760,6 +1842,11 @@ namespace TrayTemps
             if (!colortempsEnable.Checked)
                 return hardwareColor;
 
+            return GetTemperatureStateColor(temperature);
+        }
+
+        private Color GetTemperatureStateColor(float? temperature)
+        {
             if (!temperature.HasValue)
                 return Color.Gray;
 
@@ -2317,7 +2404,7 @@ namespace TrayTemps
             WarmTempMin = 60;
             WarmTempMax = 80;
 
-            NormalColor = Color.White;
+            NormalColor = Color.FromArgb(240, 240, 255);
             WarningColor = Color.Yellow;
             CriticalColor = Color.Red;
 
@@ -2500,6 +2587,24 @@ namespace TrayTemps
             }
         }
 
+        private void ClampInitialBoundsToWorkingArea()
+        {
+            Rectangle workingArea = Screen.FromRectangle(Bounds).WorkingArea;
+            if (workingArea.Width <= 0 || workingArea.Height <= 0)
+                return;
+
+            int width = Math.Max(MinimumSize.Width, Math.Min(Width, workingArea.Width));
+            int height = Math.Max(MinimumSize.Height, Math.Min(Height, workingArea.Height));
+            int left = width >= workingArea.Width
+                ? workingArea.Left
+                : Math.Max(workingArea.Left, Math.Min(Left, workingArea.Right - width));
+            int top = height >= workingArea.Height
+                ? workingArea.Top
+                : Math.Max(workingArea.Top, Math.Min(Top, workingArea.Bottom - height));
+
+            Bounds = new Rectangle(left, top, width, height);
+        }
+
         private void ApplyLoadedBasicControlSettings(AppSettings settings)
         {
             lightModeSwitch.Checked = settings.LightMode;
@@ -2537,7 +2642,7 @@ namespace TrayTemps
             WarmTempMin = ValueHelper.ClampInt(settings.MinWarmTemp, 0, 130);
             WarmTempMax = ValueHelper.ClampInt(settings.MaxWarmTemp, WarmTempMin, 130);
 
-            NormalColor = ValueHelper.LoadColorOrDefault(settings.NormalTempColor, Color.White);
+            NormalColor = ValueHelper.LoadColorOrDefault(settings.NormalTempColor, Color.FromArgb(240, 240, 255));
             WarningColor = ValueHelper.LoadColorOrDefault(settings.WarmTempColor, Color.Yellow);
             CriticalColor = ValueHelper.LoadColorOrDefault(settings.HotTempColor, Color.Red);
         }
@@ -2732,6 +2837,15 @@ namespace TrayTemps
 
         private void ApplyThemeToMainContainers(ThemePalette theme)
         {
+            Color subtleSeparator = Color.FromArgb(
+                (theme.SurfaceBack.R + theme.Border.R) / 2,
+                (theme.SurfaceBack.G + theme.Border.G) / 2,
+                (theme.SurfaceBack.B + theme.Border.B) / 2);
+            Color loadTrackColor = Color.FromArgb(
+                ((theme.PageBack.R * 3) + theme.Border.R) / 4,
+                ((theme.PageBack.G * 3) + theme.Border.G) / 4,
+                ((theme.PageBack.B * 3) + theme.Border.B) / 4);
+
             BackColor = theme.WindowBack;
             ForeColor = theme.Text;
 
@@ -2750,6 +2864,8 @@ namespace TrayTemps
                 iconsizePanel,
                 colortempsPanel);
             ApplyBackColor(theme.SurfaceBack, osdPanel);
+            ApplyBackColor(subtleSeparator, cpuLoadSeparator, gpuLoadSeparator);
+            ApplyBackColor(loadTrackColor, cpuLoadTrack, gpuLoadTrack);
             ApplyBackColor(theme.NavBack, mainMenu, AppDataPnl, homePanel, settingsPanel, aboutPanel);
             ApplyBackColor(theme.Accent, divider1, divider2, divider3, sidepanelHome, sidepanelSettings, sidepanelAbout);
         }
@@ -2794,6 +2910,8 @@ namespace TrayTemps
                 gpuTempCurLabel,
                 gpuTempMinLabel,
                 gpuTempMaxLabel,
+                cpuLoadLabel,
+                gpuLoadLabel,
                 appAboutExtra,
                 appVersion);
 
@@ -2805,6 +2923,8 @@ namespace TrayTemps
                 motherboardDetails,
                 cpuName,
                 gpuName,
+                cpuLoadValue,
+                gpuLoadValue,
                 refreshLabel,
                 fontFamilyLabel,
                 cpuColorLabel,
@@ -2860,8 +2980,7 @@ namespace TrayTemps
 
         private void ConfigureTrayDisplayDropDown(ThemePalette theme)
         {
-            var dropDown = trayDisplayMenu.DropDown as ToolStripDropDownMenu;
-            if (dropDown == null)
+            if (!(trayDisplayMenu.DropDown is ToolStripDropDownMenu dropDown))
                 return;
 
             dropDown.BackColor = theme.SurfaceBack;
@@ -3892,6 +4011,8 @@ namespace TrayTemps
         {
             OsdConfiguration configuration = NormalizeOsdConfiguration(_osdConfiguration);
             configuration.Enabled = osdEnable != null && osdEnable.Checked;
+            if (!configuration.FpsRefreshIntervalSeconds.HasValue)
+                configuration.FpsRefreshIntervalSeconds = GetEffectiveFpsRefreshIntervalSeconds(configuration);
             return configuration;
         }
 
@@ -3923,6 +4044,8 @@ namespace TrayTemps
             result.Columns = ValueHelper.ClampInt(result.Columns, 1, 4);
             result.RowsSpacing = ValueHelper.ClampInt(result.RowsSpacing, 0, 100);
             result.ColumnsSpacing = ValueHelper.ClampInt(result.ColumnsSpacing, 0, 100);
+            if (result.FpsRefreshIntervalSeconds.HasValue)
+                result.FpsRefreshIntervalSeconds = GetEffectiveFpsRefreshIntervalSeconds(result);
             result.CustomCpuLabel = NormalizeOsdLabel(result.CustomCpuLabel, "CPU Temp");
             result.CustomGpuLabel = NormalizeOsdLabel(result.CustomGpuLabel, "GPU Temp");
             result.CustomCpuUsageLabel = NormalizeOsdLabel(result.CustomCpuUsageLabel, "CPU Load");
@@ -3971,10 +4094,7 @@ namespace TrayTemps
             return string.IsNullOrWhiteSpace(text) ? fallback : text;
         }
 
-        private void UpdateOsd(
-            float? cpuTemp,
-            float? gpuTemp,
-            bool? preparedFpsEnabled = null)
+        private void UpdateOsd(float? cpuTemp, float? gpuTemp)
         {
             if (!osdEnable.Checked || _isShutdownInitiated || _resourcesDisposed)
             {
@@ -3986,12 +4106,16 @@ namespace TrayTemps
                 _osdOverlay = new OsdOverlay();
 
             OsdConfiguration displayConfiguration = _osdPreviewConfiguration ?? _osdConfiguration;
-            if (!preparedFpsEnabled.HasValue ||
-                preparedFpsEnabled.Value != displayConfiguration.ShowFps)
-            {
-                UpdateFpsMonitoring(displayConfiguration.ShowFps);
-            }
-            List<OsdMetric> metrics = BuildOsdMetrics(cpuTemp, gpuTemp, displayConfiguration);
+            UpdateFpsMonitoring(
+                displayConfiguration.ShowFps,
+                GetEffectiveFpsRefreshIntervalMilliseconds(displayConfiguration));
+            List<OsdMetric> metrics = BuildOsdMetrics(
+                cpuTemp,
+                gpuTemp,
+                displayConfiguration,
+                out OsdMetric fpsMetric);
+            _lastOsdMetrics = metrics;
+            _lastOsdFpsMetric = fpsMetric;
             Rectangle workingArea = Screen.FromControl(this).WorkingArea;
             _osdOverlay.UpdateDisplay(
                 displayConfiguration,
@@ -4005,8 +4129,10 @@ namespace TrayTemps
         private List<OsdMetric> BuildOsdMetrics(
             float? cpuTemp,
             float? gpuTemp,
-            OsdConfiguration configuration)
+            OsdConfiguration configuration,
+            out OsdMetric fpsMetric)
         {
+            fpsMetric = null;
             bool combineCpu = configuration.CombineTemperatureAndUsage &&
                 configuration.ShowCpu && configuration.ShowCpuUsage;
             bool combineGpu = configuration.CombineTemperatureAndUsage &&
@@ -4023,7 +4149,6 @@ namespace TrayTemps
             string gpuUsageLabel = GetOsdLabel(configuration, configuration.CustomGpuUsageLabel, "GPU Load");
             string ramLabel = GetOsdLabel(configuration, configuration.CustomRamLabel, "RAM Use");
             string vramLabel = GetOsdLabel(configuration, configuration.CustomVramLabel, "VRAM Use");
-            string fpsLabel = GetOsdLabel(configuration, configuration.CustomFpsLabel, "FPS");
             bool useFahrenheit = tempsFahrenheit.Checked;
             string unit = TemperatureFormatHelper.GetUnit(useFahrenheit);
             string temperatureWidthTemplate = "###" + unit;
@@ -4123,14 +4248,8 @@ namespace TrayTemps
 
             if (configuration.ShowFps)
             {
-                int? fps = _fpsMonitor?.GetLatestFps();
-                availableMetrics[OsdItemKind.Fps] = new OsdMetric(
-                    fpsLabel,
-                    fps.HasValue ? fps.Value.ToString(CultureInfo.InvariantCulture) : "N/A",
-                    Color.FromArgb(configuration.FpsFontColor))
-                {
-                    ValueWidthTemplate = "####"
-                };
+                fpsMetric = CreateFpsMetric(configuration);
+                availableMetrics[OsdItemKind.Fps] = fpsMetric;
             }
 
             return OsdItemOrderHelper.Parse(configuration.ItemOrder)
@@ -4138,6 +4257,18 @@ namespace TrayTemps
                 .Select(item => availableMetrics[item])
                 .Distinct()
                 .ToList();
+        }
+
+        private OsdMetric CreateFpsMetric(OsdConfiguration configuration)
+        {
+            int? fps = _fpsMonitor?.GetLatestFps();
+            return new OsdMetric(
+                GetOsdLabel(configuration, configuration.CustomFpsLabel, "FPS"),
+                fps.HasValue ? fps.Value.ToString(CultureInfo.InvariantCulture) : "N/A",
+                Color.FromArgb(configuration.FpsFontColor))
+            {
+                ValueWidthTemplate = "####"
+            };
         }
 
         private static string GetOsdLabel(
@@ -4286,6 +4417,8 @@ namespace TrayTemps
         private void CloseOsdOverlay()
         {
             StopFpsMonitoring();
+            _lastOsdMetrics = null;
+            _lastOsdFpsMetric = null;
 
             if (_osdOverlay == null)
                 return;
@@ -4305,7 +4438,7 @@ namespace TrayTemps
             }
         }
 
-        private void UpdateFpsMonitoring(bool enabled)
+        private void UpdateFpsMonitoring(bool enabled, int intervalMilliseconds)
         {
             if (!enabled)
             {
@@ -4313,31 +4446,123 @@ namespace TrayTemps
                 return;
             }
 
+            if (_fpsMonitor == null && _fpsMonitoringStartFailures >= MaximumFpsStartFailures)
+            {
+                _fpsTimer.Stop();
+                return;
+            }
+
+            int safeInterval = ValueHelper.ClampInt(intervalMilliseconds, 250, 10000);
+            if (_fpsTimer.Interval != safeInterval)
+                _fpsTimer.Interval = safeInterval;
+            if (!_fpsTimer.Enabled)
+                _fpsTimer.Start();
+
             if (_fpsMonitor == null)
             {
-                if (_fpsMonitoringStartFailed)
+                if (DateTime.UtcNow < _nextFpsMonitoringStartAttemptUtc)
                     return;
 
                 var monitor = new ForegroundFpsMonitor();
                 if (!monitor.Start())
                 {
                     monitor.Dispose();
-                    _fpsMonitoringStartFailed = true;
+                    _fpsMonitoringStartFailures++;
+                    _nextFpsMonitoringStartAttemptUtc = DateTime.UtcNow + FpsStartRetryDelay;
+                    if (_fpsMonitoringStartFailures >= MaximumFpsStartFailures)
+                        _fpsTimer.Stop();
+                    Debug.WriteLine(_fpsMonitoringStartFailures < MaximumFpsStartFailures
+                        ? "FPS monitoring start failed; retry will be allowed after " +
+                          FpsStartRetryDelay.TotalSeconds + " seconds."
+                        : "FPS monitoring start failed; retry limit reached for this OSD session.");
                     return;
                 }
 
                 _fpsMonitor = monitor;
+                _fpsMonitoringStartFailures = 0;
+                _nextFpsMonitoringStartAttemptUtc = DateTime.MinValue;
+                _fpsMonitor.UpdateForegroundProcess();
+                _fpsMonitor.FlushIfNeeded(safeInterval);
+            }
+        }
+
+        private void FpsTimer_Tick(object sender, EventArgs e)
+        {
+            if (_isShutdownInitiated || _resourcesDisposed || IsDisposed || !IsHandleCreated)
+            {
+                StopFpsMonitoring();
+                return;
             }
 
+            OsdConfiguration displayConfiguration = _osdPreviewConfiguration ?? _osdConfiguration;
+            if (osdEnable == null || !osdEnable.Checked || !displayConfiguration.ShowFps)
+            {
+                StopFpsMonitoring();
+                return;
+            }
+
+            int intervalMilliseconds = GetEffectiveFpsRefreshIntervalMilliseconds(displayConfiguration);
+            UpdateFpsMonitoring(enabled: true, intervalMilliseconds);
+            if (_fpsMonitor == null)
+                return;
+
             _fpsMonitor.UpdateForegroundProcess();
-            _fpsMonitor.FlushIfNeeded(_tempTimer.Interval);
+            _fpsMonitor.FlushIfNeeded(intervalMilliseconds);
+            RefreshFpsOsdMetric(displayConfiguration);
+        }
+
+        private void RefreshFpsOsdMetric(OsdConfiguration configuration)
+        {
+            if (_osdOverlay == null || _osdOverlay.IsDisposed ||
+                _lastOsdMetrics == null || _lastOsdFpsMetric == null)
+                return;
+
+            int fpsIndex = _lastOsdMetrics.IndexOf(_lastOsdFpsMetric);
+            if (fpsIndex < 0)
+                return;
+
+            OsdMetric nextFpsMetric = CreateFpsMetric(configuration);
+            _lastOsdMetrics[fpsIndex] = nextFpsMetric;
+            _lastOsdFpsMetric = nextFpsMetric;
+            _osdOverlay.UpdateDisplay(
+                configuration,
+                _lastOsdMetrics,
+                Screen.FromControl(this).WorkingArea);
+
+            if (!_osdOverlay.Visible)
+                _osdOverlay.Show();
+        }
+
+        private decimal GetEffectiveFpsRefreshIntervalSeconds(OsdConfiguration configuration)
+        {
+            decimal interval = configuration?.FpsRefreshIntervalSeconds ?? GetSelectedRefreshInterval();
+            interval = ValueHelper.ClampDecimal(
+                interval,
+                MinimumRefreshIntervalSeconds,
+                MaximumRefreshIntervalSeconds);
+            return Math.Round(interval * 4M, MidpointRounding.AwayFromZero) / 4M;
+        }
+
+        private int GetEffectiveFpsRefreshIntervalMilliseconds(OsdConfiguration configuration)
+        {
+            return (int)(GetEffectiveFpsRefreshIntervalSeconds(configuration) * 1000M);
         }
 
         private void StopFpsMonitoring()
         {
+            try
+            {
+                _fpsTimer.Stop();
+            }
+            catch (ObjectDisposedException)
+            {
+                // Shutdown may already own the timer.
+            }
+
             ForegroundFpsMonitor monitor = _fpsMonitor;
             _fpsMonitor = null;
-            _fpsMonitoringStartFailed = false;
+            _fpsMonitoringStartFailures = 0;
+            _nextFpsMonitoringStartAttemptUtc = DateTime.MinValue;
             monitor?.Dispose();
         }
 
@@ -5694,6 +5919,15 @@ namespace TrayTemps
             {
                 Debug.WriteLine("ExecuteShutdownSequence: failed to stop timer: " + ex);
             }
+
+            try
+            {
+                _fpsTimer.Stop();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("ExecuteShutdownSequence: failed to stop FPS timer: " + ex);
+            }
         }
 
         private void CloseHardwareDialogsForShutdown()
@@ -5795,6 +6029,16 @@ namespace TrayTemps
             catch (Exception ex)
             {
                 Debug.WriteLine("ExecuteShutdownSequence: failed disposing timer: " + ex);
+            }
+
+            try
+            {
+                _fpsTimer.Tick -= FpsTimer_Tick;
+                _fpsTimer.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("ExecuteShutdownSequence: failed disposing FPS timer: " + ex);
             }
         }
 

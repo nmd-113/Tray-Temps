@@ -50,6 +50,7 @@ namespace TrayTemps
         private const ulong InvalidProcessTraceHandle = ulong.MaxValue;
         private const int EventTracePropertiesSizeX64 = 120;
         private const int EventTraceLogFileSizeX64 = 448;
+        private const int ConsumerThreadJoinTimeoutMilliseconds = 2000;
 
         private static readonly Guid DxgiProviderGuid =
             new Guid("CA11C036-0102-4A2D-A6AD-F03CFED5D3C9");
@@ -104,6 +105,7 @@ namespace TrayTemps
         private bool _dxgKrnlFallbackEnabled;
         private bool _running;
         private bool _disposed;
+        private int _stopCleanupDeferred;
 #if DEBUG
         private byte _debugPublishedBackend;
 #endif
@@ -122,7 +124,8 @@ namespace TrayTemps
 
         internal bool Start()
         {
-            if (_disposed || _running || IntPtr.Size != 8 ||
+            if (_disposed || _running || Volatile.Read(ref _stopCleanupDeferred) != 0 ||
+                IntPtr.Size != 8 ||
                 Marshal.SizeOf(typeof(EventTraceProperties)) != EventTracePropertiesSizeX64 ||
                 Marshal.SizeOf(typeof(EventTraceLogFile)) != EventTraceLogFileSizeX64)
             {
@@ -132,9 +135,8 @@ namespace TrayTemps
             try
             {
                 uint processId = GetCurrentProcessId();
-                uint sessionId;
                 _sessionName = "TrayTemps.FPS." +
-                    (ProcessIdToSessionId(processId, out sessionId) ? sessionId : processId);
+                    (ProcessIdToSessionId(processId, out uint sessionId) ? sessionId : processId);
                 _sessionGuid = Guid.NewGuid();
 
                 if (!CreatePropertiesBuffer(_sessionGuid))
@@ -331,6 +333,9 @@ namespace TrayTemps
 
         internal void Stop()
         {
+            if (Volatile.Read(ref _stopCleanupDeferred) != 0)
+                return;
+
             Volatile.Write(ref _lastFlushTimestamp, 0L);
             _missingForegroundSamples = 0;
             Interlocked.Exchange(ref _targetProcessId, 0);
@@ -367,13 +372,34 @@ namespace TrayTemps
 
             Thread consumerThread = _consumerThread;
             _consumerThread = null;
-            if (consumerThread != null && consumerThread != Thread.CurrentThread)
-                consumerThread.Join();
+            _running = false;
+            if (consumerThread != null)
+            {
+                if (consumerThread == Thread.CurrentThread ||
+                    !consumerThread.Join(ConsumerThreadJoinTimeoutMilliseconds))
+                {
+                    Trace.WriteLine(
+                        "ForegroundFpsMonitor: ETW consumer thread did not exit within " +
+                        ConsumerThreadJoinTimeoutMilliseconds + "ms; cleanup deferred.");
+                    Volatile.Write(ref _stopCleanupDeferred, 1);
+                    ThreadPool.QueueUserWorkItem(_ =>
+                    {
+                        consumerThread.Join();
+                        CompleteStopCleanup();
+                    });
+                    return;
+                }
+            }
 
+            CompleteStopCleanup();
+        }
+
+        private void CompleteStopCleanup()
+        {
             _eventRecordCallback = null;
             _dxgKrnlFallbackEnabled = false;
-            _running = false;
             ReleasePropertiesBuffer();
+            Volatile.Write(ref _stopCleanupDeferred, 0);
         }
 
         private unsafe bool CreatePropertiesBuffer(Guid sessionGuid)
@@ -568,9 +594,7 @@ namespace TrayTemps
 
             byte provider = isDxgiPresent ? DxgiPresentProvider : D3d9PresentProvider;
             int threadId = *(int*)(header + 8);
-            ulong swapChain;
-            uint presentFlags;
-            ReadPresentData(header, out swapChain, out presentFlags);
+            ReadPresentData(header, out ulong swapChain, out uint presentFlags);
             if (isDxgiPresent && (presentFlags & DxgiPresentTest) != 0)
                 return;
 
@@ -1156,7 +1180,7 @@ namespace TrayTemps
         private void ClearFallbackCandidates()
         {
             for (int index = 0; index < _fallbackCandidateCount; index++)
-                _fallbackCandidates[index] = default(FallbackCandidate);
+                _fallbackCandidates[index] = default;
             _fallbackCandidateCount = 0;
             _fallbackCandidateOverflow = false;
             _fallbackQualificationStartTimestamp = 0;
