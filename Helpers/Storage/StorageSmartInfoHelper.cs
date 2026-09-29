@@ -1,4 +1,3 @@
-using LibreHardwareMonitor.Hardware;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -192,30 +191,6 @@ namespace TrayTemps
                 value |= ((ulong)data[offset + i]) << (8 * i);
 
             return value;
-        }
-
-        internal static SmartLifeInfo FindSmartLifeInfoForDrive(
-            IHardware drive,
-            List<ManagementObject> disks,
-            List<SmartLifeInfo> smartLifeInfos)
-        {
-            if (drive == null || disks == null || smartLifeInfos == null)
-                return null;
-
-            string driveName = HardwareReportFormatHelper.NormalizeHardwareText(drive.Name);
-
-            foreach (var disk in disks)
-            {
-                string model = HardwareReportFormatHelper.NormalizeHardwareText(HardwareReportFormatHelper.Safe(disk["Model"]));
-
-                if (string.IsNullOrWhiteSpace(model) || string.IsNullOrWhiteSpace(driveName))
-                    continue;
-
-                if (model.Contains(driveName) || driveName.Contains(model))
-                    return FindSmartLifeInfoForDisk(disk, smartLifeInfos);
-            }
-
-            return null;
         }
 
         internal static SmartLifeInfo FindSmartLifeInfoForDisk(ManagementObject disk, List<SmartLifeInfo> smartLifeInfos)

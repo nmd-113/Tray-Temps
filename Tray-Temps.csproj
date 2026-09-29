@@ -188,6 +188,9 @@
     <Compile Include="Helpers\UI\WindowResizeGripPanel.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="Helpers\UI\BorderlessTabControl.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="Helpers\UI\OsdModels.cs" />
     <Compile Include="Helpers\Storage\StorageReportHelper.cs" />
     <Compile Include="Helpers\Storage\StorageLiveSensorFallbackHelper.cs" />

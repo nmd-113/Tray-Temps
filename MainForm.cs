@@ -1033,9 +1033,9 @@ namespace TrayTemps
 
             Task applyStorageTask = ApplyBackgroundResultAsync(storageInfoTask, info =>
             {
-                _wmiStorageDisplayNames = ComponentDisplayNameHelper.MergeStorageDisplayNames(
-                    info.DisplayNames,
-                    ComponentDisplayNameHelper.GetLhmDisplayNames(_storageHardwares));
+                // WMI enumerates physical disks; LHM adds sensor nodes which may use
+                // controller labels such as "PCIe" rather than another physical disk.
+                _wmiStorageDisplayNames = info.DisplayNames;
                 UpdateStorageDetailsText();
                 PromptForElevationIfCriticalSensorsAreMissing(
                     storageFallbackDiscoveryCompleted: _storageFallbackDiskQuerySucceeded,

@@ -16,7 +16,7 @@ namespace TrayTemps
             sb.AppendLine(HardwareReportFormatHelper.Label("Interface", GetStorageInterfaceText(disk, physicalDisks)));
             sb.AppendLine(HardwareReportFormatHelper.Label("Media Type", disk["MediaType"]));
             sb.AppendLine(HardwareReportFormatHelper.Label("Size", HardwareReportFormatHelper.SizeHuman(disk["Size"])));
-            sb.AppendLine(HardwareReportFormatHelper.Label("Serial", disk["SerialNumber"]));
+            sb.AppendLine(HardwareReportFormatHelper.Label("Serial", GetDisplaySerial(disk["SerialNumber"])));
             sb.AppendLine(HardwareReportFormatHelper.Label("Firmware", disk["FirmwareRevision"]));
             sb.AppendLine(HardwareReportFormatHelper.Label("Partitions", disk["Partitions"]));
             sb.AppendLine(HardwareReportFormatHelper.Label("PNP ID", disk["PNPDeviceID"]));
@@ -121,57 +121,132 @@ namespace TrayTemps
             string diskModel = NormalizeMatchValue(disk["Model"]);
             string diskSerial = NormalizeMatchValue(disk["SerialNumber"]);
 
-            foreach (var drive in storageHardwares)
+            // LHM's /ahci/N and /usb/N identifiers are provider-local paths, not
+            // Windows PNP IDs or disk indexes. Exact values are the only valid
+            // identity match; substring matches can attach one disk's SMART data to
+            // another disk, especially through UASP bridges.
+            IHardware pnpMatch = FindUniqueStorageHardware(storageHardwares, drive =>
+                !string.IsNullOrEmpty(diskPnpId) &&
+                string.Equals(diskPnpId, NormalizeMatchValue(drive.Identifier), StringComparison.OrdinalIgnoreCase));
+
+            if (pnpMatch != null)
+                return pnpMatch;
+
+            if (IsPlausibleSerial(diskSerial))
             {
-                if (drive == null)
-                    continue;
+                IHardware serialMatch = FindUniqueStorageHardware(storageHardwares, drive =>
+                    IsTransportCompatible(disk, drive) &&
+                    (string.Equals(diskSerial, NormalizeMatchValue(drive.Identifier), StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(diskSerial, NormalizeMatchValue(drive.Name), StringComparison.OrdinalIgnoreCase)));
 
-                string driveIdentifier = NormalizeMatchValue(drive.Identifier);
-
-                if (!string.IsNullOrWhiteSpace(diskPnpId) &&
-                    !string.IsNullOrWhiteSpace(driveIdentifier) &&
-                    (driveIdentifier.Contains(diskPnpId) || diskPnpId.Contains(driveIdentifier)))
-                {
-                    return drive;
-                }
+                if (serialMatch != null)
+                    return serialMatch;
             }
 
-            foreach (var drive in storageHardwares)
+            if (!string.IsNullOrEmpty(diskModel))
             {
-                if (drive == null)
-                    continue;
-
-                string driveIdentifier = NormalizeMatchValue(drive.Identifier);
-                string driveName = NormalizeMatchValue(drive.Name);
-
-                if (!string.IsNullOrWhiteSpace(diskSerial) &&
-                    (driveIdentifier.Contains(diskSerial) || driveName.Contains(diskSerial)))
-                {
-                    return drive;
-                }
-            }
-
-            IHardware modelMatch = null;
-
-            foreach (var drive in storageHardwares)
-            {
-                if (drive == null)
-                    continue;
-
-                string driveIdentifier = NormalizeMatchValue(drive.Identifier);
-                string driveName = NormalizeMatchValue(drive.Name);
-
-                if (string.IsNullOrWhiteSpace(diskModel) ||
-                    (!driveName.Contains(diskModel) && !driveIdentifier.Contains(diskModel)))
-                    continue;
+                IHardware modelMatch = FindUniqueStorageHardware(storageHardwares, drive =>
+                    IsTransportCompatible(disk, drive) &&
+                    string.Equals(diskModel, NormalizeMatchValue(drive.Name), StringComparison.OrdinalIgnoreCase));
 
                 if (modelMatch != null)
-                    return null;
-
-                modelMatch = drive;
+                    return modelMatch;
             }
 
-            return modelMatch;
+            return null;
+        }
+
+        internal static IHardware FindStorageHardwareForDisk(
+            ManagementObject disk,
+            List<IHardware> storageHardwares,
+            List<ManagementObject> allDisks)
+        {
+            IHardware identityMatch = FindStorageHardwareForDisk(disk, storageHardwares);
+
+            if (identityMatch != null || !IsUsbBridgeDisk(disk) ||
+                allDisks == null ||
+                allDisks.Count(IsUsbBridgeDisk) != 1)
+            {
+                return identityMatch;
+            }
+
+            // A USB bridge normally exposes no usable serial/model in LHM. A
+            // singleton external SCSI bridge and a singleton LHM /usb node are a
+            // topology match, not an index match, and are safe to associate.
+            return FindUniqueStorageHardware(storageHardwares, IsUsbStorageHardware);
+        }
+
+        private static IHardware FindUniqueStorageHardware(
+            IEnumerable<IHardware> drives,
+            Func<IHardware, bool> predicate)
+        {
+            IHardware match = null;
+
+            foreach (IHardware drive in drives)
+            {
+                if (drive == null || !predicate(drive))
+                    continue;
+
+                if (match != null)
+                    return null;
+
+                match = drive;
+            }
+
+            return match;
+        }
+
+        private static bool IsTransportCompatible(ManagementObject disk, IHardware drive)
+        {
+            string identifier = HardwareReportFormatHelper.Safe(drive?.Identifier);
+            string interfaceType = HardwareReportFormatHelper.Safe(disk["InterfaceType"]);
+
+            if (identifier.StartsWith("/ahci/", StringComparison.OrdinalIgnoreCase))
+                return interfaceType.Equals("SATA", StringComparison.OrdinalIgnoreCase) ||
+                       interfaceType.Equals("IDE", StringComparison.OrdinalIgnoreCase);
+
+            if (identifier.StartsWith("/usb/", StringComparison.OrdinalIgnoreCase))
+                return IsUsbBridgeDisk(disk);
+
+            if (identifier.StartsWith("/nvme/", StringComparison.OrdinalIgnoreCase))
+            {
+                string pnpId = HardwareReportFormatHelper.Safe(disk["PNPDeviceID"]);
+                return pnpId.IndexOf("NVME", StringComparison.OrdinalIgnoreCase) >= 0;
+            }
+
+            // Unknown LHM path types have no independently verifiable transport.
+            return false;
+        }
+
+        private static bool IsUsbStorageHardware(IHardware drive)
+        {
+            return HardwareReportFormatHelper.Safe(drive?.Identifier)
+                .StartsWith("/usb/", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsUsbBridgeDisk(ManagementObject disk)
+        {
+            if (disk == null)
+                return false;
+
+            string interfaceType = HardwareReportFormatHelper.Safe(disk["InterfaceType"]);
+            string mediaType = HardwareReportFormatHelper.Safe(disk["MediaType"]);
+
+            return interfaceType.Equals("SCSI", StringComparison.OrdinalIgnoreCase) &&
+                   mediaType.IndexOf("external", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static string GetDisplaySerial(object value)
+        {
+            string serial = HardwareReportFormatHelper.Safe(value);
+            return IsPlausibleSerial(NormalizeMatchValue(serial))
+                ? serial
+                : "Unavailable from Windows bridge";
+        }
+
+        private static bool IsPlausibleSerial(string normalizedSerial)
+        {
+            return !string.IsNullOrWhiteSpace(normalizedSerial) && normalizedSerial.Length >= 6;
         }
 
         internal static void AppendStorageHealthSummary(StringBuilder sb, IHardware drive, SmartLifeInfo smartLifeInfo)
@@ -291,7 +366,7 @@ namespace TrayTemps
                 sb.AppendLine();
                 sb.AppendLine("  No storage information found.");
 
-                AppendUnmatchedStorageHardwaresSection(sb, unmatchedStorageHardwares, disks, smartLifeInfos, unmatchedSmartLifeInfos, updateHardwareRecursive);
+                AppendUnmatchedStorageHardwaresSection(sb, unmatchedStorageHardwares, updateHardwareRecursive);
                 AppendUnmatchedSmartLifeInfosSection(sb, unmatchedSmartLifeInfos);
 
                 return new HardwareDiscoveryResult("Unknown Storage", sb.ToString(), displayNames, 0);
@@ -306,14 +381,14 @@ namespace TrayTemps
                 sb.Append(HardwareReportFormatHelper.Group(diskDisplayName));
                 AppendStorageStaticDiskFields(sb, disk, physicalDisks);
 
-                IHardware matchedDrive = FindStorageHardwareForDisk(disk, unmatchedStorageHardwares);
+                IHardware matchedDrive = FindStorageHardwareForDisk(disk, unmatchedStorageHardwares, disks);
                 SmartLifeInfo smartLifeInfo = StorageSmartInfoHelper.FindSmartLifeInfoForDisk(disk, smartLifeInfos);
 
                 if (matchedDrive != null || smartLifeInfo != null)
                     AppendStorageHealthSectionForDisk(sb, matchedDrive, smartLifeInfo, unmatchedStorageHardwares, unmatchedSmartLifeInfos, updateHardwareRecursive);
             }
 
-            AppendUnmatchedStorageHardwaresSection(sb, unmatchedStorageHardwares, disks, smartLifeInfos, unmatchedSmartLifeInfos, updateHardwareRecursive);
+            AppendUnmatchedStorageHardwaresSection(sb, unmatchedStorageHardwares, updateHardwareRecursive);
             AppendUnmatchedSmartLifeInfosSection(sb, unmatchedSmartLifeInfos);
 
             string summary = displayNames.Count == 1
@@ -362,9 +437,6 @@ namespace TrayTemps
         internal static void AppendUnmatchedStorageHardwaresSection(
             StringBuilder sb,
             List<IHardware> unmatchedStorageHardwares,
-            List<ManagementObject> disks,
-            List<SmartLifeInfo> smartLifeInfos,
-            List<SmartLifeInfo> unmatchedSmartLifeInfos,
             Action<IHardware> updateHardwareRecursive)
         {
             if (unmatchedStorageHardwares == null || unmatchedStorageHardwares.Count == 0)
@@ -389,11 +461,9 @@ namespace TrayTemps
                     Debug.WriteLine("UpdateHardwareRecursive(drive) failed: " + ex);
                 }
 
-                SmartLifeInfo driveSmartLifeInfo = StorageSmartInfoHelper.FindSmartLifeInfoForDrive(drive, disks, smartLifeInfos);
-                AppendStorageHealthSummary(sb, drive, driveSmartLifeInfo);
-
-                if (driveSmartLifeInfo != null)
-                    unmatchedSmartLifeInfos.Remove(driveSmartLifeInfo);
+                // An unmatched LHM node has no verified WMI identity. Do not attach
+                // WMI SMART data merely because its displayed name looks similar.
+                AppendStorageHealthSummary(sb, drive, null);
 
                 sb.AppendLine();
             }

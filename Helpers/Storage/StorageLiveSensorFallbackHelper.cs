@@ -22,7 +22,11 @@ namespace TrayTemps
                 .GroupBy(item => item.Index)
                 .ToDictionary(
                     group => group.Key,
-                    group => new StorageLiveFallbackDevice(group.Key, group.First().Name));
+                    group => new StorageLiveFallbackDevice(
+                        group.Key,
+                        group.First().Name,
+                        group.First().InterfaceType,
+                        group.First().IsExternal));
 
             foreach (StorageLiveFallbackDeviceMetadata item in metadata)
             {
@@ -55,7 +59,11 @@ namespace TrayTemps
 
                     if (!devices.TryGetValue(diskIndex, out StorageLiveFallbackDevice device))
                     {
-                        device = new StorageLiveFallbackDevice(diskIndex, "Disk " + diskIndex.ToString(CultureInfo.InvariantCulture));
+                        device = new StorageLiveFallbackDevice(
+                            diskIndex,
+                            "Disk " + diskIndex.ToString(CultureInfo.InvariantCulture),
+                            string.Empty,
+                            false);
                         devices.Add(diskIndex, device);
                     }
 
@@ -86,7 +94,7 @@ namespace TrayTemps
                     return new List<StorageLiveFallbackDeviceMetadata>(_metadataCache);
 
                 List<ManagementObject> disks = WmiQueryHelper.WmiQuery(
-                    "SELECT Index, Model, PNPDeviceID FROM Win32_DiskDrive");
+                    "SELECT Index, Model, PNPDeviceID, InterfaceType, MediaType FROM Win32_DiskDrive");
                 List<SmartLifeInfo> smartLifeInfos = StorageSmartInfoHelper.GetSmartLifeInfos(WmiQueryHelper.WmiQuery);
                 var metadata = new List<StorageLiveFallbackDeviceMetadata>();
 
@@ -108,7 +116,16 @@ namespace TrayTemps
                                 lifeInfo.RemainingPercent,
                                 lifeInfo.UsedPercent);
 
-                        metadata.Add(new StorageLiveFallbackDeviceMetadata(index, name, lifeRemaining));
+                        string interfaceType = HardwareReportFormatHelper.Safe(disk["InterfaceType"]);
+                        string mediaType = HardwareReportFormatHelper.Safe(disk["MediaType"]);
+                        bool isExternal = mediaType.IndexOf("external", StringComparison.OrdinalIgnoreCase) >= 0;
+
+                        metadata.Add(new StorageLiveFallbackDeviceMetadata(
+                            index,
+                            name,
+                            lifeRemaining,
+                            interfaceType,
+                            isExternal));
                     }
                 }
                 finally
@@ -275,16 +292,25 @@ namespace TrayTemps
 
         private sealed class StorageLiveFallbackDeviceMetadata
         {
-            internal StorageLiveFallbackDeviceMetadata(int index, string name, string lifeRemaining)
+            internal StorageLiveFallbackDeviceMetadata(
+                int index,
+                string name,
+                string lifeRemaining,
+                string interfaceType,
+                bool isExternal)
             {
                 Index = index;
                 Name = name;
                 LifeRemaining = lifeRemaining;
+                InterfaceType = interfaceType;
+                IsExternal = isExternal;
             }
 
             internal int Index { get; }
             internal string Name { get; }
             internal string LifeRemaining { get; }
+            internal string InterfaceType { get; }
+            internal bool IsExternal { get; }
         }
 
         private struct LogicalDiskSpace
@@ -302,15 +328,19 @@ namespace TrayTemps
 
     internal sealed class StorageLiveFallbackDevice
     {
-        internal StorageLiveFallbackDevice(int index, string name)
+        internal StorageLiveFallbackDevice(int index, string name, string interfaceType, bool isExternal)
         {
             Index = index;
             Name = HardwareReportFormatHelper.Safe(name);
+            InterfaceType = HardwareReportFormatHelper.Safe(interfaceType);
+            IsExternal = isExternal;
             Sensors = new List<StorageLiveFallbackSensor>();
         }
 
         internal int Index { get; }
         internal string Name { get; }
+        internal string InterfaceType { get; }
+        internal bool IsExternal { get; }
         internal List<StorageLiveFallbackSensor> Sensors { get; }
     }
 

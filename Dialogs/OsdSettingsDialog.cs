@@ -732,21 +732,18 @@ namespace TrayTemps
         {
             _currentPage = page;
 
-            Panel selectedPage = page == OsdSettingsPage.Metrics
+            TabPage selectedPage = page == OsdSettingsPage.Metrics
                 ? metricsPage
                 : page == OsdSettingsPage.Appearance ? appearancePage : layoutPage;
 
-            contentPanel.SuspendLayout();
+            pageTabs.SuspendLayout();
             try
             {
-                metricsPage.Visible = page == OsdSettingsPage.Metrics;
-                appearancePage.Visible = page == OsdSettingsPage.Appearance;
-                layoutPage.Visible = page == OsdSettingsPage.Layout;
-                selectedPage.BringToFront();
+                pageTabs.SelectedTab = selectedPage;
             }
             finally
             {
-                contentPanel.ResumeLayout(true);
+                pageTabs.ResumeLayout(true);
             }
 
             metricsNavButton.BackColor = page == OsdSettingsPage.Metrics
@@ -799,9 +796,14 @@ namespace TrayTemps
             titleBar.BackColor = barBack;
             bottomBar.BackColor = barBack;
             contentPanel.BackColor = windowBack;
+            pageTabs.BackColor = windowBack;
+            pageTabs.ForeColor = text;
             metricsPage.BackColor = windowBack;
             appearancePage.BackColor = windowBack;
             layoutPage.BackColor = windowBack;
+            metricsPage.UseVisualStyleBackColor = false;
+            appearancePage.UseVisualStyleBackColor = false;
+            layoutPage.UseVisualStyleBackColor = false;
             metricsPageLayout.BackColor = windowBack;
             layoutPageLayout.BackColor = windowBack;
             navigationPanel.BackColor = _navigationBack;
@@ -915,6 +917,15 @@ namespace TrayTemps
             exitBtn.FlatAppearance.MouseOverBackColor = Color.FromArgb(220, 38, 38);
             exitBtn.FlatAppearance.MouseDownBackColor = Color.DarkRed;
             ShowPage(_currentPage);
+        }
+
+        private void PageTabs_DrawItem(object sender, DrawItemEventArgs e)
+        {
+            // The sidebar is the visible page selector.  The tab strip remains a
+            // one-pixel, themed surface so the standard TabControl has no chrome
+            // that can introduce a light border around the page content.
+            using (var brush = new SolidBrush(pageTabs.BackColor))
+                e.Graphics.FillRectangle(brush, e.Bounds);
         }
 
         private static Color GetReadableForeground(Color background)

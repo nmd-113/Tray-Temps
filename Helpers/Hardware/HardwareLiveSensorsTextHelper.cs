@@ -69,7 +69,7 @@ namespace TrayTemps
 
         private static bool AppendAllStorageLiveSensors(
             StringBuilder sb,
-            IEnumerable<IHardware> storageHardwares,
+            List<IHardware> storageHardwares,
             Action<IHardware> updateHardwareRecursive,
             List<StorageLiveFallbackDevice> fallbackDevices)
         {
@@ -87,11 +87,9 @@ namespace TrayTemps
                     Debug.WriteLine("UpdateHardwareRecursive(drive) failed: " + ex);
                 }
 
-                // LHM 0.9.7-pre722 can expose storage sensors before their first value is
-                // available. Keep those sensors visible as N/A instead of leaving
-                // an otherwise valid drive section empty.
                 StorageLiveFallbackDevice fallbackDevice = FindFallbackDevice(
                     drive,
+                    storageHardwares,
                     fallbackDevices,
                     matchedFallbackDevices);
 
@@ -103,7 +101,8 @@ namespace TrayTemps
                     drive,
                     "",
                     includeUnavailableSensors: true,
-                    fallbackDevice?.Sensors);
+                    fallbackDevice?.Sensors,
+                    fallbackDevice?.Name);
                 appendedAnyDrive = true;
             }
 
@@ -121,51 +120,117 @@ namespace TrayTemps
 
         private static StorageLiveFallbackDevice FindFallbackDevice(
             IHardware drive,
-            IEnumerable<StorageLiveFallbackDevice> fallbackDevices,
+            List<IHardware> storageHardwares,
+            List<StorageLiveFallbackDevice> fallbackDevices,
             HashSet<StorageLiveFallbackDevice> alreadyMatched)
         {
-            if (TryGetStorageIndex(drive, out int storageIndex))
-            {
-                StorageLiveFallbackDevice indexMatch = fallbackDevices.FirstOrDefault(device =>
-                    !alreadyMatched.Contains(device) && device.Index == storageIndex);
-
-                if (indexMatch != null)
-                    return indexMatch;
-            }
-
-            string driveName = HardwareReportFormatHelper.NormalizeHardwareText(
-                HardwareReportFormatHelper.Safe(drive?.Name));
-
-            if (string.IsNullOrEmpty(driveName))
+            if (drive == null)
                 return null;
 
-            return fallbackDevices.FirstOrDefault(device =>
-            {
-                if (alreadyMatched.Contains(device))
-                    return false;
+            string driveName = HardwareReportFormatHelper.NormalizeHardwareText(
+                HardwareReportFormatHelper.Safe(drive.Name));
+            List<StorageLiveFallbackDevice> exactNameMatches = fallbackDevices
+                .Where(device => !alreadyMatched.Contains(device) &&
+                    IsTransportCompatible(drive, device) &&
+                    string.Equals(
+                        driveName,
+                        HardwareReportFormatHelper.NormalizeHardwareText(device.Name),
+                        StringComparison.OrdinalIgnoreCase))
+                .ToList();
 
-                string fallbackName = HardwareReportFormatHelper.NormalizeHardwareText(device.Name);
-                return !string.IsNullOrEmpty(fallbackName) &&
-                    (string.Equals(driveName, fallbackName, StringComparison.OrdinalIgnoreCase) ||
-                     driveName.Contains(fallbackName) ||
-                     fallbackName.Contains(driveName));
-            });
+            if (exactNameMatches.Count == 1 &&
+                storageHardwares.Count(candidate =>
+                    IsSameLhmTransport(candidate, drive) &&
+                    string.Equals(
+                        driveName,
+                        HardwareReportFormatHelper.NormalizeHardwareText(
+                            HardwareReportFormatHelper.Safe(candidate.Name)),
+                        StringComparison.OrdinalIgnoreCase)) == 1)
+            {
+                return exactNameMatches[0];
+            }
+
+            // The LHM USB node often has the generic name "PCIe".  It can only be
+            // paired by topology when each side has exactly one USB bridge node.
+            if (IsUsbStorageHardware(drive) &&
+                storageHardwares.Count(IsUsbStorageHardware) == 1)
+            {
+                return FindUniqueFallbackDevice(
+                    fallbackDevices,
+                    alreadyMatched,
+                    device => IsUsbBridgeDevice(device));
+            }
+
+            // Apply the same conservative rule to an AHCI node whose LHM display
+            // name was replaced by a USB-controller label.
+            if (IsAhciStorageHardware(drive) &&
+                storageHardwares.Count(IsAhciStorageHardware) == 1)
+            {
+                return FindUniqueFallbackDevice(
+                    fallbackDevices,
+                    alreadyMatched,
+                    device => IsAhciDevice(device));
+            }
+
+            return null;
         }
 
-        private static bool TryGetStorageIndex(IHardware drive, out int index)
+        private static StorageLiveFallbackDevice FindUniqueFallbackDevice(
+            IEnumerable<StorageLiveFallbackDevice> fallbackDevices,
+            HashSet<StorageLiveFallbackDevice> alreadyMatched,
+            Func<StorageLiveFallbackDevice, bool> predicate)
         {
-            index = -1;
+            StorageLiveFallbackDevice match = null;
 
-            string identifier = drive?.Identifier.ToString();
-            if (string.IsNullOrWhiteSpace(identifier))
-                return false;
+            foreach (StorageLiveFallbackDevice device in fallbackDevices)
+            {
+                if (alreadyMatched.Contains(device) || !predicate(device))
+                    continue;
 
-            int separatorIndex = identifier.LastIndexOf('/');
-            string indexText = separatorIndex < 0
-                ? identifier
-                : identifier.Substring(separatorIndex + 1);
+                if (match != null)
+                    return null;
 
-            return int.TryParse(indexText, out index);
+                match = device;
+            }
+
+            return match;
+        }
+
+        private static bool IsTransportCompatible(IHardware drive, StorageLiveFallbackDevice device)
+        {
+            return (IsUsbStorageHardware(drive) && IsUsbBridgeDevice(device)) ||
+                   (IsAhciStorageHardware(drive) && IsAhciDevice(device));
+        }
+
+        private static bool IsSameLhmTransport(IHardware first, IHardware second)
+        {
+            return (IsUsbStorageHardware(first) && IsUsbStorageHardware(second)) ||
+                   (IsAhciStorageHardware(first) && IsAhciStorageHardware(second));
+        }
+
+        private static bool IsUsbStorageHardware(IHardware drive)
+        {
+            return HardwareReportFormatHelper.Safe(drive?.Identifier)
+                .StartsWith("/usb/", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsAhciStorageHardware(IHardware drive)
+        {
+            return HardwareReportFormatHelper.Safe(drive?.Identifier)
+                .StartsWith("/ahci/", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsUsbBridgeDevice(StorageLiveFallbackDevice device)
+        {
+            return device != null && device.IsExternal &&
+                   device.InterfaceType.Equals("SCSI", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsAhciDevice(StorageLiveFallbackDevice device)
+        {
+            return device != null && !device.IsExternal &&
+                   (device.InterfaceType.Equals("SATA", StringComparison.OrdinalIgnoreCase) ||
+                    device.InterfaceType.Equals("IDE", StringComparison.OrdinalIgnoreCase));
         }
 
         private static void AppendLiveHardwareSensors(
@@ -173,12 +238,15 @@ namespace TrayTemps
             IHardware hardware,
             string indent,
             bool includeUnavailableSensors,
-            IEnumerable<StorageLiveFallbackSensor> fallbackSensors = null)
+            IEnumerable<StorageLiveFallbackSensor> fallbackSensors = null,
+            string displayName = null)
         {
             if (hardware == null)
                 return;
 
-            string hardwareName = HardwareReportFormatHelper.Safe(hardware.Name);
+            string hardwareName = string.IsNullOrWhiteSpace(displayName)
+                ? HardwareReportFormatHelper.Safe(hardware.Name)
+                : HardwareReportFormatHelper.Safe(displayName);
             sb.AppendLine($"{indent}{hardwareName}");
             sb.AppendLine($"{indent}{new string('-', Math.Min(64, hardwareName.Length + 8))}");
 
@@ -266,7 +334,8 @@ namespace TrayTemps
             StringBuilder sb,
             StorageLiveFallbackDevice device)
         {
-            string deviceName = HardwareReportFormatHelper.Safe(device.Name);
+            string deviceName = "WMI Disk " + device.Index.ToString() + " - " +
+                HardwareReportFormatHelper.Safe(device.Name);
             sb.AppendLine(deviceName);
             sb.AppendLine(new string('-', Math.Min(64, deviceName.Length + 8)));
 
