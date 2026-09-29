@@ -158,6 +158,7 @@
             this.githubLink = new System.Windows.Forms.Label();
             this.donatePic = new System.Windows.Forms.PictureBox();
             this.panelWrapper = new System.Windows.Forms.Panel();
+            this.resizeGrip = new TrayTemps.WindowResizeGripPanel();
             this.cpuTrayIcon = new System.Windows.Forms.NotifyIcon(this.components);
             this.contextMenuStrip = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.ShowForm = new System.Windows.Forms.ToolStripMenuItem();
@@ -176,7 +177,6 @@
             this.gpuTrayIcon = new System.Windows.Forms.NotifyIcon(this.components);
             this.NotifyIcon = new System.Windows.Forms.NotifyIcon(this.components);
             this.colorDialog = new System.Windows.Forms.ColorDialog();
-            this.resizeGrip = new TrayTemps.WindowResizeGripPanel();
             this.mainMenu.SuspendLayout();
             this.aboutPanel.SuspendLayout();
             this.settingsPanel.SuspendLayout();
@@ -1585,7 +1585,6 @@
             // minimizeOnStart
             // 
             this.minimizeOnStart.AutoSize = true;
-            this.minimizeOnStart.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.minimizeOnStart.Dock = System.Windows.Forms.DockStyle.Left;
             this.minimizeOnStart.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.minimizeOnStart.ForeColor = System.Drawing.Color.LightGray;
@@ -1609,7 +1608,7 @@
             this.clearSettings.Location = new System.Drawing.Point(324, 93);
             this.clearSettings.Margin = new System.Windows.Forms.Padding(9, 6, 3, 6);
             this.clearSettings.Name = "clearSettings";
-            this.clearSettings.Size = new System.Drawing.Size(179, 29);
+            this.clearSettings.Size = new System.Drawing.Size(186, 29);
             this.clearSettings.TabIndex = 24;
             this.clearSettings.Text = "🔁 Reset Settings";
             this.clearSettings.UseVisualStyleBackColor = false;
@@ -1634,7 +1633,6 @@
             // osdEnable
             // 
             this.osdEnable.AutoSize = true;
-            this.osdEnable.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.osdEnable.Dock = System.Windows.Forms.DockStyle.Left;
             this.osdEnable.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.osdEnable.ForeColor = System.Drawing.Color.LightGray;
@@ -1739,7 +1737,6 @@
             // autostartInstall
             // 
             this.autostartInstall.AutoSize = true;
-            this.autostartInstall.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.autostartInstall.Dock = System.Windows.Forms.DockStyle.Left;
             this.autostartInstall.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.autostartInstall.ForeColor = System.Drawing.Color.LightGray;
@@ -1755,7 +1752,6 @@
             // tempsFahrenheit
             // 
             this.tempsFahrenheit.AutoSize = true;
-            this.tempsFahrenheit.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.tempsFahrenheit.Dock = System.Windows.Forms.DockStyle.Left;
             this.tempsFahrenheit.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.tempsFahrenheit.ForeColor = System.Drawing.Color.LightGray;
@@ -1771,7 +1767,6 @@
             // lightModeSwitch
             // 
             this.lightModeSwitch.AutoSize = true;
-            this.lightModeSwitch.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.lightModeSwitch.Dock = System.Windows.Forms.DockStyle.Left;
             this.lightModeSwitch.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lightModeSwitch.ForeColor = System.Drawing.Color.LightGray;
@@ -1829,7 +1824,6 @@
             // colortempsEnable
             // 
             this.colortempsEnable.AutoSize = true;
-            this.colortempsEnable.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.colortempsEnable.Dock = System.Windows.Forms.DockStyle.Left;
             this.colortempsEnable.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.colortempsEnable.ForeColor = System.Drawing.Color.LightGray;
@@ -1892,7 +1886,6 @@
             // singleIconTray
             // 
             this.singleIconTray.AutoSize = true;
-            this.singleIconTray.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.singleIconTray.Dock = System.Windows.Forms.DockStyle.Left;
             this.singleIconTray.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.singleIconTray.ForeColor = System.Drawing.Color.LightGray;
@@ -1908,7 +1901,6 @@
             // enableCpuTray
             // 
             this.enableCpuTray.AutoSize = true;
-            this.enableCpuTray.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.enableCpuTray.Dock = System.Windows.Forms.DockStyle.Left;
             this.enableCpuTray.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.enableCpuTray.ForeColor = System.Drawing.Color.LightGray;
@@ -1924,7 +1916,6 @@
             // enableGpuTray
             // 
             this.enableGpuTray.AutoSize = true;
-            this.enableGpuTray.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.enableGpuTray.Dock = System.Windows.Forms.DockStyle.Left;
             this.enableGpuTray.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.enableGpuTray.ForeColor = System.Drawing.Color.LightGray;
@@ -2258,6 +2249,17 @@
             this.panelWrapper.Size = new System.Drawing.Size(688, 553);
             this.panelWrapper.TabIndex = 3;
             // 
+            // resizeGrip
+            // 
+            this.resizeGrip.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.resizeGrip.BackColor = System.Drawing.Color.Transparent;
+            this.resizeGrip.Cursor = System.Windows.Forms.Cursors.SizeNWSE;
+            this.resizeGrip.Location = new System.Drawing.Point(668, 533);
+            this.resizeGrip.Margin = new System.Windows.Forms.Padding(0);
+            this.resizeGrip.Name = "resizeGrip";
+            this.resizeGrip.Size = new System.Drawing.Size(20, 20);
+            this.resizeGrip.TabIndex = 1;
+            // 
             // cpuTrayIcon
             // 
             this.cpuTrayIcon.ContextMenuStrip = this.contextMenuStrip;
@@ -2404,17 +2406,6 @@
             this.NotifyIcon.Icon = ((System.Drawing.Icon)(resources.GetObject("NotifyIcon.Icon")));
             this.NotifyIcon.Text = "TrayTemps";
             this.NotifyIcon.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.NotifyIcon_MouseDoubleClick);
-            // 
-            // resizeGrip
-            // 
-            this.resizeGrip.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.resizeGrip.BackColor = System.Drawing.Color.Transparent;
-            this.resizeGrip.Cursor = System.Windows.Forms.Cursors.SizeNWSE;
-            this.resizeGrip.Location = new System.Drawing.Point(668, 533);
-            this.resizeGrip.Margin = new System.Windows.Forms.Padding(0);
-            this.resizeGrip.Name = "resizeGrip";
-            this.resizeGrip.Size = new System.Drawing.Size(20, 20);
-            this.resizeGrip.TabIndex = 1;
             // 
             // MainForm
             // 

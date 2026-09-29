@@ -157,7 +157,7 @@ namespace TrayTemps
             this.columnsValue.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.columnsValue.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.columnsValue.FormattingEnabled = true;
-            this.columnsValue.Location = new System.Drawing.Point(563, 46);
+            this.columnsValue.Location = new System.Drawing.Point(563, 44);
             this.columnsValue.Margin = new System.Windows.Forms.Padding(2);
             this.columnsValue.Name = "columnsValue";
             this.columnsValue.Size = new System.Drawing.Size(54, 24);
@@ -203,10 +203,10 @@ namespace TrayTemps
             this.fpsRefreshIntervalValue.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.fpsRefreshIntervalValue.FormattingEnabled = true;
             this.fpsRefreshIntervalValue.IntegralHeight = false;
-            this.fpsRefreshIntervalValue.Location = new System.Drawing.Point(164, 176);
+            this.fpsRefreshIntervalValue.Location = new System.Drawing.Point(130, 176);
             this.fpsRefreshIntervalValue.Margin = new System.Windows.Forms.Padding(2);
             this.fpsRefreshIntervalValue.Name = "fpsRefreshIntervalValue";
-            this.fpsRefreshIntervalValue.Size = new System.Drawing.Size(90, 21);
+            this.fpsRefreshIntervalValue.Size = new System.Drawing.Size(93, 21);
             this.fpsRefreshIntervalValue.TabIndex = 9;
             this.settingsToolTip.SetToolTip(this.fpsRefreshIntervalValue, "Changes only FPS display refresh; hardware sensor polling is unaffected.");
             this.fpsRefreshIntervalValue.SelectedIndexChanged += new System.EventHandler(this.VisualSettingChanged);
@@ -375,7 +375,7 @@ namespace TrayTemps
             this.showGpu.AutoSize = true;
             this.showGpu.Checked = true;
             this.showGpu.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.showGpu.Location = new System.Drawing.Point(454, 42);
+            this.showGpu.Location = new System.Drawing.Point(444, 42);
             this.showGpu.Margin = new System.Windows.Forms.Padding(2);
             this.showGpu.Name = "showGpu";
             this.showGpu.Size = new System.Drawing.Size(136, 20);
@@ -400,7 +400,7 @@ namespace TrayTemps
             // 
             this.showGpuUsage.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.showGpuUsage.AutoSize = true;
-            this.showGpuUsage.Location = new System.Drawing.Point(454, 106);
+            this.showGpuUsage.Location = new System.Drawing.Point(444, 106);
             this.showGpuUsage.Margin = new System.Windows.Forms.Padding(2);
             this.showGpuUsage.Name = "showGpuUsage";
             this.showGpuUsage.Size = new System.Drawing.Size(132, 20);
@@ -438,7 +438,7 @@ namespace TrayTemps
             // 
             this.showFps.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.showFps.AutoSize = true;
-            this.showFps.Location = new System.Drawing.Point(502, 74);
+            this.showFps.Location = new System.Drawing.Point(444, 74);
             this.showFps.Margin = new System.Windows.Forms.Padding(2);
             this.showFps.Name = "showFps";
             this.showFps.Size = new System.Drawing.Size(88, 20);
@@ -451,7 +451,7 @@ namespace TrayTemps
             // 
             this.fpsRefreshIntervalLabel.AutoSize = true;
             this.fpsRefreshIntervalLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.fpsRefreshIntervalLabel.Location = new System.Drawing.Point(18, 181);
+            this.fpsRefreshIntervalLabel.Location = new System.Drawing.Point(18, 180);
             this.fpsRefreshIntervalLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.fpsRefreshIntervalLabel.Name = "fpsRefreshIntervalLabel";
             this.fpsRefreshIntervalLabel.Size = new System.Drawing.Size(99, 13);
@@ -783,7 +783,7 @@ namespace TrayTemps
             this.fontLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.fontLabel.AutoSize = true;
             this.fontLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.fontLabel.Location = new System.Drawing.Point(505, 46);
+            this.fontLabel.Location = new System.Drawing.Point(510, 46);
             this.fontLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.fontLabel.Name = "fontLabel";
             this.fontLabel.Size = new System.Drawing.Size(27, 13);
@@ -797,10 +797,10 @@ namespace TrayTemps
             this.fontSizeValue.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.fontSizeValue.FormattingEnabled = true;
             this.fontSizeValue.IntegralHeight = false;
-            this.fontSizeValue.Location = new System.Drawing.Point(560, 42);
+            this.fontSizeValue.Location = new System.Drawing.Point(548, 40);
             this.fontSizeValue.Margin = new System.Windows.Forms.Padding(2);
             this.fontSizeValue.Name = "fontSizeValue";
-            this.fontSizeValue.Size = new System.Drawing.Size(57, 24);
+            this.fontSizeValue.Size = new System.Drawing.Size(69, 24);
             this.fontSizeValue.TabIndex = 1;
             this.fontSizeValue.SelectedIndexChanged += new System.EventHandler(this.VisualSettingChanged);
             // 
@@ -1134,7 +1134,7 @@ namespace TrayTemps
             // 
             this.positionValue.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.positionValue.FormattingEnabled = true;
-            this.positionValue.Location = new System.Drawing.Point(78, 46);
+            this.positionValue.Location = new System.Drawing.Point(78, 44);
             this.positionValue.Margin = new System.Windows.Forms.Padding(2);
             this.positionValue.Name = "positionValue";
             this.positionValue.Size = new System.Drawing.Size(176, 24);
