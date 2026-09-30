@@ -161,13 +161,14 @@ namespace TrayTemps
                 "Bottom left", "Bottom center", "Bottom right"
             });
             fontFamilyValue.Items.AddRange(OsdFontHelper.GetAvailableFamilyNames());
-            PopulateNumericOptions(fontSizeValue, 8m, 48m, 0.5m);
+            PopulateNumericOptions(fontSizeValue, 6m, 48m, 0.5m);
             PopulateNumericOptions(screenMarginValue, 0m, 100m, 1m);
             PopulateNumericOptions(labelValueSpacing, 0m, 100m, 1m);
             PopulateNumericOptions(rowsSpacing, 0m, 100m, 1m);
             PopulateNumericOptions(columnsSpacing, 0m, 100m, 1m);
             PopulateNumericOptions(columnsValue, 1m, 4m, 1m);
             PopulateNumericOptions(fpsRefreshIntervalValue, 0.25m, 10m, 0.25m);
+            PopulateNumericOptions(fpsLabelValueSpacing, 0m, 100m, 1m);
 
             foreach (OsdItemKind item in OsdItemOrderHelper.Parse(_configuration.ItemOrder))
                 itemOrder.Items.Add(new OsdItemOption(item));
@@ -196,6 +197,12 @@ namespace TrayTemps
                     _configuration.FpsRefreshIntervalSeconds ?? 0.5m,
                     0.25m,
                     10m));
+            SelectNumericOption(
+                fpsLabelValueSpacing,
+                ValueHelper.ClampInt(
+                    _configuration.FpsLabelValueSpacing ?? _configuration.LabelValueSpacing,
+                    0,
+                    100));
             combineTemperatureAndUsage.Checked = _configuration.CombineTemperatureAndUsage;
             showCpu.Checked = _configuration.ShowCpu;
             showGpu.Checked = _configuration.ShowGpu;
@@ -233,7 +240,7 @@ namespace TrayTemps
                 ValueHelper.ClampInt(_configuration.ColumnsSpacing, 0, 100));
             SelectNumericOption(
                 fontSizeValue,
-                ValueHelper.ClampDecimal((decimal)_configuration.FontSize, 8m, 48m));
+                ValueHelper.ClampDecimal((decimal)_configuration.FontSize, 6m, 48m));
             _hotkeyModifiers = (OsdHotkeyModifiers)_configuration.HotkeyModifiers;
             _hotkeyKey = (Keys)_configuration.HotkeyKey;
             if (!OsdHotkeyHelper.IsValid(_hotkeyModifiers, _hotkeyKey))
@@ -312,6 +319,7 @@ namespace TrayTemps
                 ShowVramUsage = showVramUsage.Checked,
                 ShowFps = showFps.Checked,
                 FpsRefreshIntervalSeconds = GetNumericOptionValue(fpsRefreshIntervalValue, 0.5m),
+                FpsLabelValueSpacing = (int)GetNumericOptionValue(fpsLabelValueSpacing, 15m),
                 CombineTemperatureAndUsage = combineTemperatureAndUsage.Checked,
                 LabelMode = customLabelsEnabled.Checked
                     ? OsdLabelMode.Custom
@@ -326,7 +334,7 @@ namespace TrayTemps
                 LabelValueSpacing = (int)GetNumericOptionValue(labelValueSpacing, 15m),
                 RowsSpacing = (int)GetNumericOptionValue(rowsSpacing, 5m),
                 ColumnsSpacing = (int)GetNumericOptionValue(columnsSpacing, 20m),
-                ScreenMargin = (int)GetNumericOptionValue(screenMarginValue, 12m),
+                ScreenMargin = (int)GetNumericOptionValue(screenMarginValue, 10m),
                 Columns = (int)GetNumericOptionValue(columnsValue, 1m),
                 ItemOrder = OsdItemOrderHelper.Serialize(_separateItemOrder),
                 HotkeyEnabled = hotkeyEnabled.Checked,
@@ -413,7 +421,9 @@ namespace TrayTemps
         private static string NormalizeCustomLabel(string value, string fallback)
         {
             string text = HardwareReportFormatHelper.SanitizeSingleLineText(value);
-            return string.IsNullOrWhiteSpace(text) ? fallback : text;
+            return value == null
+                ? fallback
+                : string.IsNullOrWhiteSpace(text) ? string.Empty : text;
         }
 
         private void HotkeyValue_KeyDown(object sender, KeyEventArgs e)
@@ -640,6 +650,8 @@ namespace TrayTemps
             fpsFontColor.Enabled = showFps.Checked;
             fpsRefreshIntervalLabel.Enabled = showFps.Checked;
             fpsRefreshIntervalValue.Enabled = showFps.Checked;
+            fpsLabelValueSpacingLabel.Enabled = showFps.Checked;
+            fpsLabelValueSpacing.Enabled = showFps.Checked;
             combineTemperatureAndUsage.Enabled =
                 (showCpu.Checked && showCpuUsage.Checked) ||
                 (showGpu.Checked && showGpuUsage.Checked);
@@ -863,7 +875,8 @@ namespace TrayTemps
                 positionValue, fontFamilyValue,
                 customCpuLabel, customGpuLabel, customCpuUsageLabel, customGpuUsageLabel,
                 customRamLabel, customVramLabel, customFpsLabel, labelValueSpacing, rowsSpacing, columnsSpacing,
-                columnsValue, fontSizeValue, screenMarginValue, fpsRefreshIntervalValue, itemOrder, hotkeyValue
+                columnsValue, fontSizeValue, screenMarginValue, fpsRefreshIntervalValue,
+                fpsLabelValueSpacing, itemOrder, hotkeyValue
             })
             {
                 input.BackColor = light ? Color.White : Color.FromArgb(32, 32, 32);

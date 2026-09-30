@@ -25,11 +25,14 @@ namespace TrayTemps
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(OsdSettingsDialog));
             this.settingsToolTip = new System.Windows.Forms.ToolTip(this.components);
+            this.fpsRefreshIntervalValue = new System.Windows.Forms.ComboBox();
+            this.fpsLabelValueSpacingLabel = new System.Windows.Forms.Label();
+            this.fpsLabelValueSpacing = new System.Windows.Forms.ComboBox();
+            this.combineTemperatureAndUsage = new System.Windows.Forms.CheckBox();
             this.columnsValue = new System.Windows.Forms.ComboBox();
             this.labelValueSpacing = new System.Windows.Forms.ComboBox();
             this.hotkeyValue = new System.Windows.Forms.TextBox();
-            this.fpsRefreshIntervalValue = new System.Windows.Forms.ComboBox();
-            this.combineTemperatureAndUsage = new System.Windows.Forms.CheckBox();
+            this.spacingHeader = new System.Windows.Forms.Label();
             this.outerBorder = new System.Windows.Forms.Panel();
             this.resizeGrip = new TrayTemps.WindowResizeGripPanel();
             this.mainPanel = new System.Windows.Forms.Panel();
@@ -107,7 +110,6 @@ namespace TrayTemps
             this.spacingLayout = new System.Windows.Forms.TableLayoutPanel();
             this.screenMarginLabel = new System.Windows.Forms.Label();
             this.screenMarginValue = new System.Windows.Forms.ComboBox();
-            this.spacingHeader = new System.Windows.Forms.Label();
             this.rowsGapHeader = new System.Windows.Forms.Label();
             this.rowsSpacing = new System.Windows.Forms.ComboBox();
             this.columnsGapHeader = new System.Windows.Forms.Label();
@@ -151,6 +153,61 @@ namespace TrayTemps
             this.titleBar.SuspendLayout();
             this.navigationPanel.SuspendLayout();
             this.SuspendLayout();
+            // 
+            // fpsRefreshIntervalValue
+            // 
+            this.fpsRefreshIntervalValue.DropDownHeight = 200;
+            this.fpsRefreshIntervalValue.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.fpsRefreshIntervalValue.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.fpsRefreshIntervalValue.FormattingEnabled = true;
+            this.fpsRefreshIntervalValue.IntegralHeight = false;
+            this.fpsRefreshIntervalValue.Location = new System.Drawing.Point(130, 166);
+            this.fpsRefreshIntervalValue.Margin = new System.Windows.Forms.Padding(2);
+            this.fpsRefreshIntervalValue.Name = "fpsRefreshIntervalValue";
+            this.fpsRefreshIntervalValue.Size = new System.Drawing.Size(93, 21);
+            this.fpsRefreshIntervalValue.TabIndex = 9;
+            this.settingsToolTip.SetToolTip(this.fpsRefreshIntervalValue, "Changes only FPS display refresh; hardware sensor polling is unaffected.");
+            this.fpsRefreshIntervalValue.SelectedIndexChanged += new System.EventHandler(this.VisualSettingChanged);
+            // 
+            // fpsLabelValueSpacingLabel
+            // 
+            this.fpsLabelValueSpacingLabel.AutoSize = true;
+            this.fpsLabelValueSpacingLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.fpsLabelValueSpacingLabel.Location = new System.Drawing.Point(244, 170);
+            this.fpsLabelValueSpacingLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
+            this.fpsLabelValueSpacingLabel.Name = "fpsLabelValueSpacingLabel";
+            this.fpsLabelValueSpacingLabel.Size = new System.Drawing.Size(104, 13);
+            this.fpsLabelValueSpacingLabel.TabIndex = 10;
+            this.fpsLabelValueSpacingLabel.Text = "FPS label/value gap";
+            this.settingsToolTip.SetToolTip(this.fpsLabelValueSpacingLabel, "Controls spacing between the FPS label and value only.");
+            // 
+            // fpsLabelValueSpacing
+            // 
+            this.fpsLabelValueSpacing.DropDownHeight = 200;
+            this.fpsLabelValueSpacing.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.fpsLabelValueSpacing.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.fpsLabelValueSpacing.FormattingEnabled = true;
+            this.fpsLabelValueSpacing.IntegralHeight = false;
+            this.fpsLabelValueSpacing.Location = new System.Drawing.Point(365, 166);
+            this.fpsLabelValueSpacing.Margin = new System.Windows.Forms.Padding(2);
+            this.fpsLabelValueSpacing.Name = "fpsLabelValueSpacing";
+            this.fpsLabelValueSpacing.Size = new System.Drawing.Size(93, 21);
+            this.fpsLabelValueSpacing.TabIndex = 11;
+            this.settingsToolTip.SetToolTip(this.fpsLabelValueSpacing, "Controls spacing between the FPS label and value only.");
+            this.fpsLabelValueSpacing.SelectedIndexChanged += new System.EventHandler(this.VisualSettingChanged);
+            // 
+            // combineTemperatureAndUsage
+            // 
+            this.combineTemperatureAndUsage.AutoSize = true;
+            this.combineTemperatureAndUsage.Location = new System.Drawing.Point(18, 100);
+            this.combineTemperatureAndUsage.Margin = new System.Windows.Forms.Padding(2);
+            this.combineTemperatureAndUsage.Name = "combineTemperatureAndUsage";
+            this.combineTemperatureAndUsage.Size = new System.Drawing.Size(171, 20);
+            this.combineTemperatureAndUsage.TabIndex = 2;
+            this.combineTemperatureAndUsage.Text = "Combine temps + usage";
+            this.settingsToolTip.SetToolTip(this.combineTemperatureAndUsage, "Places each CPU/GPU temperature and usage value together in one OSD entry.");
+            this.combineTemperatureAndUsage.UseVisualStyleBackColor = true;
+            this.combineTemperatureAndUsage.CheckedChanged += new System.EventHandler(this.HardwareVisibility_CheckedChanged);
             // 
             // columnsValue
             // 
@@ -196,33 +253,19 @@ namespace TrayTemps
             this.settingsToolTip.SetToolTip(this.hotkeyValue, "Sets the shortcut that toggles OSD visibility.");
             this.hotkeyValue.KeyDown += new System.Windows.Forms.KeyEventHandler(this.HotkeyValue_KeyDown);
             // 
-            // fpsRefreshIntervalValue
+            // spacingHeader
             // 
-            this.fpsRefreshIntervalValue.DropDownHeight = 200;
-            this.fpsRefreshIntervalValue.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.fpsRefreshIntervalValue.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.fpsRefreshIntervalValue.FormattingEnabled = true;
-            this.fpsRefreshIntervalValue.IntegralHeight = false;
-            this.fpsRefreshIntervalValue.Location = new System.Drawing.Point(130, 176);
-            this.fpsRefreshIntervalValue.Margin = new System.Windows.Forms.Padding(2);
-            this.fpsRefreshIntervalValue.Name = "fpsRefreshIntervalValue";
-            this.fpsRefreshIntervalValue.Size = new System.Drawing.Size(93, 21);
-            this.fpsRefreshIntervalValue.TabIndex = 9;
-            this.settingsToolTip.SetToolTip(this.fpsRefreshIntervalValue, "Changes only FPS display refresh; hardware sensor polling is unaffected.");
-            this.fpsRefreshIntervalValue.SelectedIndexChanged += new System.EventHandler(this.VisualSettingChanged);
-            // 
-            // combineTemperatureAndUsage
-            // 
-            this.combineTemperatureAndUsage.AutoSize = true;
-            this.combineTemperatureAndUsage.Location = new System.Drawing.Point(18, 74);
-            this.combineTemperatureAndUsage.Margin = new System.Windows.Forms.Padding(2);
-            this.combineTemperatureAndUsage.Name = "combineTemperatureAndUsage";
-            this.combineTemperatureAndUsage.Size = new System.Drawing.Size(171, 20);
-            this.combineTemperatureAndUsage.TabIndex = 2;
-            this.combineTemperatureAndUsage.Text = "Combine temps + usage";
-            this.settingsToolTip.SetToolTip(this.combineTemperatureAndUsage, "Places each CPU/GPU temperature and usage value together in one OSD entry.");
-            this.combineTemperatureAndUsage.UseVisualStyleBackColor = true;
-            this.combineTemperatureAndUsage.CheckedChanged += new System.EventHandler(this.HardwareVisibility_CheckedChanged);
+            this.spacingHeader.AutoSize = true;
+            this.spacingHeader.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.spacingHeader.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.spacingHeader.Location = new System.Drawing.Point(305, 2);
+            this.spacingHeader.Margin = new System.Windows.Forms.Padding(2);
+            this.spacingHeader.Name = "spacingHeader";
+            this.spacingHeader.Size = new System.Drawing.Size(126, 25);
+            this.spacingHeader.TabIndex = 19;
+            this.spacingHeader.Text = "Label/value spacing";
+            this.spacingHeader.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.settingsToolTip.SetToolTip(this.spacingHeader, "Controls label/value spacing for all OSD items except FPS.");
             // 
             // outerBorder
             // 
@@ -336,6 +379,8 @@ namespace TrayTemps
             this.metricsCard.Controls.Add(this.showFps);
             this.metricsCard.Controls.Add(this.fpsRefreshIntervalLabel);
             this.metricsCard.Controls.Add(this.fpsRefreshIntervalValue);
+            this.metricsCard.Controls.Add(this.fpsLabelValueSpacingLabel);
+            this.metricsCard.Controls.Add(this.fpsLabelValueSpacing);
             this.metricsCard.Controls.Add(this.combineTemperatureAndUsage);
             this.metricsCard.Dock = System.Windows.Forms.DockStyle.Fill;
             this.metricsCard.Location = new System.Drawing.Point(0, 0);
@@ -371,11 +416,10 @@ namespace TrayTemps
             // 
             // showGpu
             // 
-            this.showGpu.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.showGpu.AutoSize = true;
             this.showGpu.Checked = true;
             this.showGpu.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.showGpu.Location = new System.Drawing.Point(444, 42);
+            this.showGpu.Location = new System.Drawing.Point(18, 71);
             this.showGpu.Margin = new System.Windows.Forms.Padding(2);
             this.showGpu.Name = "showGpu";
             this.showGpu.Size = new System.Drawing.Size(136, 20);
@@ -386,8 +430,9 @@ namespace TrayTemps
             // 
             // showCpuUsage
             // 
+            this.showCpuUsage.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.showCpuUsage.AutoSize = true;
-            this.showCpuUsage.Location = new System.Drawing.Point(18, 106);
+            this.showCpuUsage.Location = new System.Drawing.Point(365, 42);
             this.showCpuUsage.Margin = new System.Windows.Forms.Padding(2);
             this.showCpuUsage.Name = "showCpuUsage";
             this.showCpuUsage.Size = new System.Drawing.Size(131, 20);
@@ -400,7 +445,7 @@ namespace TrayTemps
             // 
             this.showGpuUsage.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.showGpuUsage.AutoSize = true;
-            this.showGpuUsage.Location = new System.Drawing.Point(444, 106);
+            this.showGpuUsage.Location = new System.Drawing.Point(365, 71);
             this.showGpuUsage.Margin = new System.Windows.Forms.Padding(2);
             this.showGpuUsage.Name = "showGpuUsage";
             this.showGpuUsage.Size = new System.Drawing.Size(132, 20);
@@ -411,8 +456,9 @@ namespace TrayTemps
             // 
             // showRamUsage
             // 
+            this.showRamUsage.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.showRamUsage.AutoSize = true;
-            this.showRamUsage.Location = new System.Drawing.Point(18, 138);
+            this.showRamUsage.Location = new System.Drawing.Point(365, 100);
             this.showRamUsage.Margin = new System.Windows.Forms.Padding(2);
             this.showRamUsage.Name = "showRamUsage";
             this.showRamUsage.Size = new System.Drawing.Size(133, 20);
@@ -425,7 +471,7 @@ namespace TrayTemps
             // 
             this.showVramUsage.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.showVramUsage.AutoSize = true;
-            this.showVramUsage.Location = new System.Drawing.Point(444, 138);
+            this.showVramUsage.Location = new System.Drawing.Point(365, 129);
             this.showVramUsage.Margin = new System.Windows.Forms.Padding(2);
             this.showVramUsage.Name = "showVramUsage";
             this.showVramUsage.Size = new System.Drawing.Size(142, 20);
@@ -436,9 +482,8 @@ namespace TrayTemps
             // 
             // showFps
             // 
-            this.showFps.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.showFps.AutoSize = true;
-            this.showFps.Location = new System.Drawing.Point(444, 74);
+            this.showFps.Location = new System.Drawing.Point(18, 129);
             this.showFps.Margin = new System.Windows.Forms.Padding(2);
             this.showFps.Name = "showFps";
             this.showFps.Size = new System.Drawing.Size(88, 20);
@@ -451,7 +496,7 @@ namespace TrayTemps
             // 
             this.fpsRefreshIntervalLabel.AutoSize = true;
             this.fpsRefreshIntervalLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.fpsRefreshIntervalLabel.Location = new System.Drawing.Point(18, 180);
+            this.fpsRefreshIntervalLabel.Location = new System.Drawing.Point(18, 170);
             this.fpsRefreshIntervalLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.fpsRefreshIntervalLabel.Name = "fpsRefreshIntervalLabel";
             this.fpsRefreshIntervalLabel.Size = new System.Drawing.Size(99, 13);
@@ -1280,19 +1325,6 @@ namespace TrayTemps
             this.screenMarginValue.TabIndex = 9;
             this.screenMarginValue.SelectedIndexChanged += new System.EventHandler(this.VisualSettingChanged);
             // 
-            // spacingHeader
-            // 
-            this.spacingHeader.AutoSize = true;
-            this.spacingHeader.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.spacingHeader.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.spacingHeader.Location = new System.Drawing.Point(305, 2);
-            this.spacingHeader.Margin = new System.Windows.Forms.Padding(2);
-            this.spacingHeader.Name = "spacingHeader";
-            this.spacingHeader.Size = new System.Drawing.Size(126, 25);
-            this.spacingHeader.TabIndex = 19;
-            this.spacingHeader.Text = "Label/value spacing";
-            this.spacingHeader.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            // 
             // rowsGapHeader
             // 
             this.rowsGapHeader.AutoSize = true;
@@ -1664,6 +1696,8 @@ namespace TrayTemps
         private System.Windows.Forms.CheckBox showFps;
         private System.Windows.Forms.Label fpsRefreshIntervalLabel;
         private System.Windows.Forms.ComboBox fpsRefreshIntervalValue;
+        private System.Windows.Forms.Label fpsLabelValueSpacingLabel;
+        private System.Windows.Forms.ComboBox fpsLabelValueSpacing;
         private System.Windows.Forms.CheckBox combineTemperatureAndUsage;
         private System.Windows.Forms.CheckBox customLabelsEnabled;
         private System.Windows.Forms.ComboBox labelValueSpacing;

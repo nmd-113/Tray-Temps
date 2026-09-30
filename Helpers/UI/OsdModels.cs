@@ -94,6 +94,9 @@ namespace TrayTemps
             }
         }
 
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? FpsLabelValueSpacing { get; set; }
+
         public int RowsSpacing { get; set; } = 5;
         public int ColumnsSpacing { get; set; } = 20;
 
@@ -112,7 +115,7 @@ namespace TrayTemps
         public int? VramUsageSpacing { get; set; }
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? FpsSpacing { get; set; }
-        public int ScreenMargin { get; set; } = 12;
+        public int ScreenMargin { get; set; } = 10;
         public int Columns { get; set; } = 1;
         public string ItemOrder { get; set; } =
             "CpuTemperature,GpuTemperature,CpuUsage,GpuUsage,RamUsage,VramUsage,Fps";
@@ -146,8 +149,9 @@ namespace TrayTemps
 
     internal static class OsdFontHelper
     {
-        internal const string DefaultFamily = "Segoe UI";
         internal const string EmbeddedBunkenDisplayName = "Bunken Tech Sans Pro Bold";
+        internal const string EmbeddedBunkenBookDisplayName = "Bunken Tech Sans Pro Book";
+        internal const string DefaultFamily = EmbeddedBunkenDisplayName;
 
         internal static string[] GetAvailableFamilyNames()
         {
@@ -156,7 +160,7 @@ namespace TrayTemps
             {
                 return families
                     .Select(family => family.Name)
-                    .Concat(new[] { EmbeddedBunkenDisplayName, "Consolas" })
+                    .Concat(new[] { EmbeddedBunkenDisplayName, EmbeddedBunkenBookDisplayName, "Consolas" })
                     .Where(name => !string.IsNullOrWhiteSpace(name))
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
@@ -171,10 +175,18 @@ namespace TrayTemps
 
         internal static Font CreateFont(string familyName, float size)
         {
-            float safeSize = Math.Max(8f, Math.Min(48f, size));
+            float safeSize = Math.Max(6f, Math.Min(48f, size));
 
             try
             {
+                if (IsEmbeddedBunkenBookFamily(familyName) && EmbeddedFonts.Book != null)
+                {
+                    FontStyle style = EmbeddedFonts.Book.IsStyleAvailable(FontStyle.Regular)
+                        ? FontStyle.Regular
+                        : FontStyle.Bold;
+                    return new Font(EmbeddedFonts.Book, safeSize, style, GraphicsUnit.Point);
+                }
+
                 if (IsEmbeddedBunkenFamily(familyName) && EmbeddedFonts.Bold != null)
                 {
                     FontStyle style = EmbeddedFonts.Bold.IsStyleAvailable(FontStyle.Bold)
@@ -201,6 +213,12 @@ namespace TrayTemps
                    string.Equals(familyName, EmbeddedFonts.Bold?.Name, StringComparison.OrdinalIgnoreCase) ||
                    string.Equals(familyName, EmbeddedFonts.Book?.Name, StringComparison.OrdinalIgnoreCase);
         }
+
+        private static bool IsEmbeddedBunkenBookFamily(string familyName)
+        {
+            return string.Equals(familyName, EmbeddedBunkenBookDisplayName, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(familyName, EmbeddedFonts.Book?.Name, StringComparison.OrdinalIgnoreCase);
+        }
     }
 
     internal sealed class OsdMetric
@@ -222,6 +240,8 @@ namespace TrayTemps
         internal string Value { get; }
         internal string TrailingValue { get; }
         internal string ValueWidthTemplate { get; set; }
+        internal int? LabelValueSpacingOverride { get; set; }
+        internal bool ValueFollowsLabel { get; set; }
         internal Color? TextColor { get; }
     }
 

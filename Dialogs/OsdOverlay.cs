@@ -174,6 +174,8 @@ namespace TrayTemps
                 bool metricLayoutChanged =
                     !string.Equals(current.Label, next.Label, StringComparison.Ordinal) ||
                     !string.Equals(current.ValueWidthTemplate, next.ValueWidthTemplate, StringComparison.Ordinal) ||
+                    current.LabelValueSpacingOverride != next.LabelValueSpacingOverride ||
+                    current.ValueFollowsLabel != next.ValueFollowsLabel ||
                     (current.TrailingValue == null) != (next.TrailingValue == null) ||
                     (string.IsNullOrEmpty(next.ValueWidthTemplate) && valueChanged);
                 if (metricLayoutChanged)
@@ -198,7 +200,7 @@ namespace TrayTemps
             string fontFamily = string.IsNullOrWhiteSpace(_configuration.FontFamily)
                 ? OsdFontHelper.DefaultFamily
                 : _configuration.FontFamily;
-            float fontSize = Math.Max(8f, Math.Min(48f, _configuration.FontSize));
+            float fontSize = Math.Max(6f, Math.Min(48f, _configuration.FontSize));
             if (_displayFont == null ||
                 !string.Equals(_displayFontFamily, fontFamily, StringComparison.OrdinalIgnoreCase) ||
                 Math.Abs(_displayFontSize - fontSize) > 0.01f)
@@ -232,6 +234,7 @@ namespace TrayTemps
             int[] columnContentWidths = new int[columns];
             int[] rowHeights = new int[rows];
             int[] valueBlockWidths = new int[_metrics.Count];
+            int[] labelWidths = new int[_metrics.Count];
 
             using (var measurementBitmap = new Bitmap(1, 1, PixelFormat.Format32bppPArgb))
             {
@@ -253,7 +256,8 @@ namespace TrayTemps
                         combinedValueGap,
                         columnContentWidths,
                         rowHeights,
-                        valueBlockWidths);
+                        valueBlockWidths,
+                        labelWidths);
                 }
             }
 
@@ -310,7 +314,12 @@ namespace TrayTemps
                 int x = columnLefts[column];
                 int y = rowTops[row];
                 int valueBlockWidth = Math.Min(valueBlockWidths[index], columnWidths[column]);
-                int valueBlockX = x + Math.Max(0, columnWidths[column] - valueBlockWidth);
+                int metricLabelGap = GetMetricLabelGap(metric, labelGap);
+                int rightAlignedValueX = x + Math.Max(0, columnWidths[column] - valueBlockWidth);
+                int labelFollowingValueX = x + labelWidths[index] + metricLabelGap;
+                int valueBlockX = metric.ValueFollowsLabel
+                    ? Math.Min(labelFollowingValueX, rightAlignedValueX)
+                    : rightAlignedValueX;
                 int trailingValueWidth = metric.TrailingValue != null
                     ? Math.Min(_trailingValueSlotWidth, valueBlockWidth)
                     : 0;
@@ -325,7 +334,7 @@ namespace TrayTemps
                     new Rectangle(
                         x,
                         y,
-                        Math.Max(0, valueBlockX - x - labelGap),
+                        Math.Max(0, valueBlockX - x - metricLabelGap),
                         rowHeights[row]),
                     new Rectangle(
                         valueBlockX,
@@ -404,7 +413,8 @@ namespace TrayTemps
             int combinedValueGap,
             int[] columnContentWidths,
             int[] rowHeights,
-            int[] valueBlockWidths)
+            int[] valueBlockWidths,
+            int[] labelWidths)
         {
             int sharedRowHeight = MeasureDisplayTextSize(
                 graphics,
@@ -416,6 +426,7 @@ namespace TrayTemps
                 int row = index / columns;
                 OsdMetric metric = _metrics[index];
                 Size labelSize = MeasureDisplayTextSize(graphics, metric.Label);
+                labelWidths[index] = labelSize.Width;
                 Size valueSize = MeasureDisplayTextSize(graphics, metric.Value);
                 int valueBlockWidth = GetPrimaryValueSlotWidth(
                     graphics,
@@ -431,7 +442,7 @@ namespace TrayTemps
                 }
 
                 valueBlockWidths[index] = valueBlockWidth;
-                int rowWidth = labelSize.Width + labelGap + valueBlockWidth;
+                int rowWidth = labelSize.Width + GetMetricLabelGap(metric, labelGap) + valueBlockWidth;
                 columnContentWidths[column] = Math.Max(columnContentWidths[column], rowWidth);
                 rowHeights[row] = Math.Max(rowHeights[row], metricHeight);
                 sharedRowHeight = Math.Max(sharedRowHeight, rowHeights[row]);
@@ -621,6 +632,16 @@ namespace TrayTemps
         {
             // Keep a small DPI-scaled gap between the two stable value slots.
             return Math.Max(ScaleLogical(8), (int)Math.Ceiling(GetStrokeWidth()));
+        }
+
+        private int GetMetricLabelGap(OsdMetric metric, int defaultGap)
+        {
+            if (string.IsNullOrEmpty(metric.Label))
+                return 0;
+
+            return metric.LabelValueSpacingOverride.HasValue
+                ? ScaleLogical(Math.Max(0, metric.LabelValueSpacingOverride.Value))
+                : defaultGap;
         }
 
         private void PresentLayeredWindow()

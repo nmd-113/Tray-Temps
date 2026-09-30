@@ -43,8 +43,8 @@ namespace TrayTemps
                 if (_initialized)
                     return;
 
-                Book = LoadFontFamily(BookResourceName);
-                Bold = LoadFontFamily(BoldResourceName);
+                Book = LoadFontFamily(BookResourceName, "Bunken Tech Sans Pro Book");
+                Bold = LoadFontFamily(BoldResourceName, "Bunken Tech Sans Pro Bold");
 
                 AppDomain.CurrentDomain.ProcessExit += (s, e) => ReleaseFontMemory();
                 AppDomain.CurrentDomain.DomainUnload += (s, e) => ReleaseFontMemory();
@@ -163,7 +163,7 @@ namespace TrayTemps
             return false;
         }
 
-        private static FontFamily LoadFontFamily(string resourceName)
+        private static FontFamily LoadFontFamily(string resourceName, string expectedFamilyName)
         {
             Assembly assembly = Assembly.GetExecutingAssembly();
 
@@ -198,7 +198,26 @@ namespace TrayTemps
 
                 FontMemory.Add(fontPointer);
 
-                return FontCollection.Families[FontCollection.Families.Length - 1];
+                FontFamily selectedFamily = null;
+                FontFamily[] families = FontCollection.Families;
+                foreach (FontFamily family in families)
+                {
+                    if (selectedFamily == null &&
+                        string.Equals(family.Name, expectedFamilyName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        selectedFamily = family;
+                    }
+                    else
+                    {
+                        family.Dispose();
+                    }
+                }
+
+                if (selectedFamily == null)
+                    throw new InvalidOperationException(
+                        "Font family not found in resource " + resourceName + ": " + expectedFamilyName);
+
+                return selectedFamily;
             }
         }
 

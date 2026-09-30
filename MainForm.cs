@@ -24,6 +24,7 @@ namespace TrayTemps
 
         private const string AppName = "TrayTemps";
         private const string EmbeddedBunkenBoldDisplayName = "Bunken Tech Sans Pro Bold";
+        private const string EmbeddedBunkenBookDisplayName = "Bunken Tech Sans Pro Book";
         private string InstallPath;
         private string SettingsFilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), AppName, "settings.json");
         private const int IconSize = 16;
@@ -2682,9 +2683,9 @@ namespace TrayTemps
 
             var names = FontFamily.Families
                 .Select(f => f.Name)
-                .Concat(new[] { EmbeddedBunkenBoldDisplayName, "Consolas" })
                 .Where(name => !string.IsNullOrWhiteSpace(name))
                 .Where(name => !IsHiddenBunkenFontListEntry(name))
+                .Concat(new[] { EmbeddedBunkenBoldDisplayName, EmbeddedBunkenBookDisplayName, "Consolas" })
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
@@ -2694,7 +2695,9 @@ namespace TrayTemps
 
         private void SelectFontFamily(string familyName, int fallbackIndex)
         {
-            if (IsEmbeddedBunkenFamily(familyName))
+            if (IsEmbeddedBunkenBookFamily(familyName))
+                familyName = EmbeddedBunkenBookDisplayName;
+            else if (IsEmbeddedBunkenFamily(familyName))
                 familyName = EmbeddedBunkenBoldDisplayName;
 
             if (!string.IsNullOrWhiteSpace(familyName))
@@ -2716,6 +2719,9 @@ namespace TrayTemps
         {
             try
             {
+                if (IsEmbeddedBunkenBookFamily(familyName))
+                    return new Font(EmbeddedFonts.Book, size, GetEmbeddedBookStyle(), GraphicsUnit.Pixel);
+
                 if (IsEmbeddedBunkenFamily(familyName))
                     return new Font(EmbeddedFonts.Bold, size, GetEmbeddedBoldStyle(), GraphicsUnit.Pixel);
 
@@ -2734,12 +2740,25 @@ namespace TrayTemps
                 : FontStyle.Regular;
         }
 
+        private static FontStyle GetEmbeddedBookStyle()
+        {
+            return EmbeddedFonts.Book.IsStyleAvailable(FontStyle.Regular)
+                ? FontStyle.Regular
+                : FontStyle.Bold;
+        }
+
         private static bool IsEmbeddedBunkenFamily(string familyName)
         {
             if (string.Equals(familyName, EmbeddedBunkenBoldDisplayName, StringComparison.OrdinalIgnoreCase))
                 return true;
 
             return string.Equals(familyName, EmbeddedFonts.Bold.Name, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(familyName, EmbeddedFonts.Book.Name, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsEmbeddedBunkenBookFamily(string familyName)
+        {
+            return string.Equals(familyName, EmbeddedBunkenBookDisplayName, StringComparison.OrdinalIgnoreCase) ||
                    string.Equals(familyName, EmbeddedFonts.Book.Name, StringComparison.OrdinalIgnoreCase);
         }
 
@@ -4028,7 +4047,7 @@ namespace TrayTemps
                 result.FontFamily = OsdFontHelper.DefaultFamily;
             result.FontSize = float.IsNaN(result.FontSize) || float.IsInfinity(result.FontSize)
                 ? 16f
-                : Math.Max(8f, Math.Min(48f, result.FontSize));
+                : Math.Max(6f, Math.Min(48f, result.FontSize));
             result.OpacityPercent = ValueHelper.ClampInt(result.OpacityPercent, 20, 100);
             result.BackgroundOpacityPercent = result.TransparentBackground
                 ? 0
@@ -4063,6 +4082,10 @@ namespace TrayTemps
                   result.VramUsageSpacing ??
                   result.FpsSpacing ?? 15;
             result.LabelValueSpacing = ValueHelper.ClampInt(labelValueSpacing, 0, 100);
+            result.FpsLabelValueSpacing = ValueHelper.ClampInt(
+                result.FpsLabelValueSpacing ?? result.LabelValueSpacing,
+                0,
+                100);
             result.CpuTemperatureSpacing = null;
             result.GpuTemperatureSpacing = null;
             result.CpuUsageSpacing = null;
@@ -4091,7 +4114,9 @@ namespace TrayTemps
         private static string NormalizeOsdLabel(string value, string fallback)
         {
             string text = HardwareReportFormatHelper.SanitizeSingleLineText(value);
-            return string.IsNullOrWhiteSpace(text) ? fallback : text;
+            return value == null
+                ? fallback
+                : string.IsNullOrWhiteSpace(text) ? string.Empty : text;
         }
 
         private void UpdateOsd(float? cpuTemp, float? gpuTemp)
@@ -4267,7 +4292,9 @@ namespace TrayTemps
                 fps.HasValue ? fps.Value.ToString(CultureInfo.InvariantCulture) : "N/A",
                 Color.FromArgb(configuration.FpsFontColor))
             {
-                ValueWidthTemplate = "####"
+                ValueWidthTemplate = "####",
+                LabelValueSpacingOverride = configuration.FpsLabelValueSpacing ?? configuration.LabelValueSpacing,
+                ValueFollowsLabel = true
             };
         }
 
