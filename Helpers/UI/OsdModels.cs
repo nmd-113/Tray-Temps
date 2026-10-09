@@ -149,9 +149,21 @@ namespace TrayTemps
 
     internal static class OsdFontHelper
     {
-        internal const string EmbeddedBunkenDisplayName = "Bunken Tech Sans Pro Bold";
-        internal const string EmbeddedBunkenBookDisplayName = "Bunken Tech Sans Pro Book";
-        internal const string DefaultFamily = EmbeddedBunkenDisplayName;
+        internal const string EmbeddedOxaniumExtraBoldDisplayName = "Oxanium ExtraBold";
+        internal const string EmbeddedOxaniumRegularDisplayName = "Oxanium";
+        internal const string DefaultFamily = EmbeddedOxaniumExtraBoldDisplayName;
+
+        // Keep settings saved by older releases working after replacing Bunken.
+        internal static string NormalizeFamilyName(string familyName)
+        {
+            if (IsEmbeddedOxaniumRegularFamily(familyName))
+                return EmbeddedOxaniumRegularDisplayName;
+
+            if (IsEmbeddedOxaniumExtraBoldFamily(familyName))
+                return EmbeddedOxaniumExtraBoldDisplayName;
+
+            return familyName;
+        }
 
         internal static string[] GetAvailableFamilyNames()
         {
@@ -160,7 +172,7 @@ namespace TrayTemps
             {
                 return families
                     .Select(family => family.Name)
-                    .Concat(new[] { EmbeddedBunkenDisplayName, EmbeddedBunkenBookDisplayName, "Consolas" })
+                    .Concat(new[] { EmbeddedOxaniumExtraBoldDisplayName, EmbeddedOxaniumRegularDisplayName, "Consolas" })
                     .Where(name => !string.IsNullOrWhiteSpace(name))
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
@@ -175,24 +187,22 @@ namespace TrayTemps
 
         internal static Font CreateFont(string familyName, float size)
         {
+            familyName = NormalizeFamilyName(familyName);
             float safeSize = Math.Max(6f, Math.Min(48f, size));
 
             try
             {
-                if (IsEmbeddedBunkenBookFamily(familyName) && EmbeddedFonts.Book != null)
+                if (IsEmbeddedOxaniumRegularFamily(familyName) && EmbeddedFonts.Regular != null)
                 {
-                    FontStyle style = EmbeddedFonts.Book.IsStyleAvailable(FontStyle.Regular)
-                        ? FontStyle.Regular
-                        : FontStyle.Bold;
-                    return new Font(EmbeddedFonts.Book, safeSize, style, GraphicsUnit.Point);
+                    return new Font(EmbeddedFonts.Regular, safeSize, FontStyle.Regular, GraphicsUnit.Point);
                 }
 
-                if (IsEmbeddedBunkenFamily(familyName) && EmbeddedFonts.Bold != null)
+                if (IsEmbeddedOxaniumExtraBoldFamily(familyName) && EmbeddedFonts.ExtraBold != null)
                 {
-                    FontStyle style = EmbeddedFonts.Bold.IsStyleAvailable(FontStyle.Bold)
+                    FontStyle style = EmbeddedFonts.ExtraBold.IsStyleAvailable(FontStyle.Bold)
                         ? FontStyle.Bold
                         : FontStyle.Regular;
-                    return new Font(EmbeddedFonts.Bold, safeSize, style, GraphicsUnit.Point);
+                    return new Font(EmbeddedFonts.ExtraBold, safeSize, style, GraphicsUnit.Point);
                 }
 
                 return new Font(
@@ -207,17 +217,17 @@ namespace TrayTemps
             }
         }
 
-        private static bool IsEmbeddedBunkenFamily(string familyName)
+        private static bool IsEmbeddedOxaniumExtraBoldFamily(string familyName)
         {
-            return string.Equals(familyName, EmbeddedBunkenDisplayName, StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(familyName, EmbeddedFonts.Bold?.Name, StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(familyName, EmbeddedFonts.Book?.Name, StringComparison.OrdinalIgnoreCase);
+            return string.Equals(familyName, EmbeddedOxaniumExtraBoldDisplayName, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(familyName, "Bunken Tech Sans Pro Bold", StringComparison.OrdinalIgnoreCase);
         }
 
-        private static bool IsEmbeddedBunkenBookFamily(string familyName)
+        private static bool IsEmbeddedOxaniumRegularFamily(string familyName)
         {
-            return string.Equals(familyName, EmbeddedBunkenBookDisplayName, StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(familyName, EmbeddedFonts.Book?.Name, StringComparison.OrdinalIgnoreCase);
+            return string.Equals(familyName, EmbeddedOxaniumRegularDisplayName, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(familyName, EmbeddedFonts.Regular?.Name, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(familyName, "Bunken Tech Sans Pro Book", StringComparison.OrdinalIgnoreCase);
         }
     }
 

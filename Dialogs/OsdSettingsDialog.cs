@@ -358,9 +358,10 @@ namespace TrayTemps
 
         private void SelectFontFamily(string familyName)
         {
-            string requested = string.IsNullOrWhiteSpace(familyName)
-                ? OsdFontHelper.DefaultFamily
-                : familyName;
+            string requested = OsdFontHelper.NormalizeFamilyName(
+                string.IsNullOrWhiteSpace(familyName)
+                    ? OsdFontHelper.DefaultFamily
+                    : familyName);
 
             for (int index = 0; index < fontFamilyValue.Items.Count; index++)
             {

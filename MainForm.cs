@@ -23,8 +23,8 @@ namespace TrayTemps
         #region [ Fields / Constants ]
 
         private const string AppName = "TrayTemps";
-        private const string EmbeddedBunkenBoldDisplayName = "Bunken Tech Sans Pro Bold";
-        private const string EmbeddedBunkenBookDisplayName = "Bunken Tech Sans Pro Book";
+        private const string EmbeddedOxaniumExtraBoldDisplayName = "Oxanium ExtraBold";
+        private const string EmbeddedOxaniumRegularDisplayName = "Oxanium";
         private string InstallPath;
         private string SettingsFilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), AppName, "settings.json");
         private const int IconSize = 16;
@@ -2340,7 +2340,7 @@ namespace TrayTemps
         {
             _trayFontFamily = fontFamilyValue.Text.Trim();
             if (string.IsNullOrWhiteSpace(_trayFontFamily))
-                _trayFontFamily = EmbeddedFonts.Bold.Name;
+                _trayFontFamily = EmbeddedOxaniumExtraBoldDisplayName;
 
             int iconPixelSize = GetTrayIconPixelSize();
             _lastTrayIconPixelSize = iconPixelSize;
@@ -2400,7 +2400,7 @@ namespace TrayTemps
             gpuColorValue.BackColor = Color.Gold;
 
             if (fontFamilyValue.Items.Count > 0)
-                SelectFontFamily(EmbeddedFonts.Bold.Name, 0);
+                SelectFontFamily(EmbeddedOxaniumExtraBoldDisplayName, 0);
 
             WarmTempMin = 60;
             WarmTempMax = 80;
@@ -2684,8 +2684,8 @@ namespace TrayTemps
             var names = FontFamily.Families
                 .Select(f => f.Name)
                 .Where(name => !string.IsNullOrWhiteSpace(name))
-                .Where(name => !IsHiddenBunkenFontListEntry(name))
-                .Concat(new[] { EmbeddedBunkenBoldDisplayName, EmbeddedBunkenBookDisplayName, "Consolas" })
+                .Where(name => !IsHiddenEmbeddedOxaniumFamily(name))
+                .Concat(new[] { EmbeddedOxaniumExtraBoldDisplayName, EmbeddedOxaniumRegularDisplayName, "Consolas" })
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
@@ -2695,10 +2695,7 @@ namespace TrayTemps
 
         private void SelectFontFamily(string familyName, int fallbackIndex)
         {
-            if (IsEmbeddedBunkenBookFamily(familyName))
-                familyName = EmbeddedBunkenBookDisplayName;
-            else if (IsEmbeddedBunkenFamily(familyName))
-                familyName = EmbeddedBunkenBoldDisplayName;
+            familyName = OsdFontHelper.NormalizeFamilyName(familyName);
 
             if (!string.IsNullOrWhiteSpace(familyName))
             {
@@ -2717,55 +2714,45 @@ namespace TrayTemps
 
         private Font CreateTrayFont(string familyName, float size)
         {
+            familyName = OsdFontHelper.NormalizeFamilyName(familyName);
             try
             {
-                if (IsEmbeddedBunkenBookFamily(familyName))
-                    return new Font(EmbeddedFonts.Book, size, GetEmbeddedBookStyle(), GraphicsUnit.Pixel);
+                if (IsEmbeddedOxaniumRegularFamily(familyName))
+                    return new Font(EmbeddedFonts.Regular, size, FontStyle.Regular, GraphicsUnit.Pixel);
 
-                if (IsEmbeddedBunkenFamily(familyName))
-                    return new Font(EmbeddedFonts.Bold, size, GetEmbeddedBoldStyle(), GraphicsUnit.Pixel);
+                if (IsEmbeddedOxaniumExtraBoldFamily(familyName))
+                    return new Font(EmbeddedFonts.ExtraBold, size, GetEmbeddedExtraBoldStyle(), GraphicsUnit.Pixel);
 
                 return new Font(familyName, size, FontStyle.Bold, GraphicsUnit.Pixel);
             }
             catch
             {
-                return new Font(EmbeddedFonts.Bold, size, GetEmbeddedBoldStyle(), GraphicsUnit.Pixel);
+                return new Font(EmbeddedFonts.ExtraBold, size, GetEmbeddedExtraBoldStyle(), GraphicsUnit.Pixel);
             }
         }
 
-        private static FontStyle GetEmbeddedBoldStyle()
+        private static FontStyle GetEmbeddedExtraBoldStyle()
         {
-            return EmbeddedFonts.Bold.IsStyleAvailable(FontStyle.Bold)
+            return EmbeddedFonts.ExtraBold.IsStyleAvailable(FontStyle.Bold)
                 ? FontStyle.Bold
                 : FontStyle.Regular;
         }
 
-        private static FontStyle GetEmbeddedBookStyle()
+        private static bool IsEmbeddedOxaniumExtraBoldFamily(string familyName)
         {
-            return EmbeddedFonts.Book.IsStyleAvailable(FontStyle.Regular)
-                ? FontStyle.Regular
-                : FontStyle.Bold;
+            return string.Equals(familyName, EmbeddedOxaniumExtraBoldDisplayName, StringComparison.OrdinalIgnoreCase);
         }
 
-        private static bool IsEmbeddedBunkenFamily(string familyName)
+        private static bool IsEmbeddedOxaniumRegularFamily(string familyName)
         {
-            if (string.Equals(familyName, EmbeddedBunkenBoldDisplayName, StringComparison.OrdinalIgnoreCase))
-                return true;
-
-            return string.Equals(familyName, EmbeddedFonts.Bold.Name, StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(familyName, EmbeddedFonts.Book.Name, StringComparison.OrdinalIgnoreCase);
+            return string.Equals(familyName, EmbeddedOxaniumRegularDisplayName, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(familyName, EmbeddedFonts.Regular.Name, StringComparison.OrdinalIgnoreCase);
         }
 
-        private static bool IsEmbeddedBunkenBookFamily(string familyName)
+        private static bool IsHiddenEmbeddedOxaniumFamily(string familyName)
         {
-            return string.Equals(familyName, EmbeddedBunkenBookDisplayName, StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(familyName, EmbeddedFonts.Book.Name, StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static bool IsHiddenBunkenFontListEntry(string familyName)
-        {
-            return string.Equals(familyName, EmbeddedFonts.Bold.Name, StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(familyName, EmbeddedFonts.Book.Name, StringComparison.OrdinalIgnoreCase);
+            return string.Equals(familyName, EmbeddedFonts.Regular.Name, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(familyName, EmbeddedFonts.ExtraBold.Name, StringComparison.OrdinalIgnoreCase);
         }
 
         private static bool IsWindowBoundsVisible(Rectangle bounds)

@@ -11,17 +11,18 @@ namespace TrayTemps
 {
     internal static class EmbeddedFonts
     {
-        private const string BookResourceName = "TrayTemps.Resources.bunken_book.ttf";
-        private const string BoldResourceName = "TrayTemps.Resources.bunken_bold.ttf";
+        private const string RegularResourceName = "TrayTemps.Resources.Oxanium-Regular.ttf";
+        private const string ExtraBoldResourceName = "TrayTemps.Resources.Oxanium-ExtraBold.ttf";
 
         private static readonly object SyncRoot = new object();
-        private static readonly PrivateFontCollection FontCollection = new PrivateFontCollection();
+        private static readonly PrivateFontCollection RegularFontCollection = new PrivateFontCollection();
+        private static readonly PrivateFontCollection ExtraBoldFontCollection = new PrivateFontCollection();
         private static readonly List<IntPtr> FontMemory = new List<IntPtr>();
         private static readonly List<IntPtr> FontResourceHandles = new List<IntPtr>();
         private static bool _initialized;
 
-        public static FontFamily Book { get; private set; }
-        public static FontFamily Bold { get; private set; }
+        public static FontFamily Regular { get; private set; }
+        public static FontFamily ExtraBold { get; private set; }
 
         [DllImport("gdi32.dll")]
         private static extern IntPtr AddFontMemResourceEx(
@@ -43,8 +44,8 @@ namespace TrayTemps
                 if (_initialized)
                     return;
 
-                Book = LoadFontFamily(BookResourceName, "Bunken Tech Sans Pro Book");
-                Bold = LoadFontFamily(BoldResourceName, "Bunken Tech Sans Pro Bold");
+                Regular = LoadFontFamily(RegularFontCollection, RegularResourceName, "Oxanium");
+                ExtraBold = LoadFontFamily(ExtraBoldFontCollection, ExtraBoldResourceName, "Oxanium ExtraBold");
 
                 AppDomain.CurrentDomain.ProcessExit += (s, e) => ReleaseFontMemory();
                 AppDomain.CurrentDomain.DomainUnload += (s, e) => ReleaseFontMemory();
@@ -130,7 +131,7 @@ namespace TrayTemps
             if (preserveSystemFont)
                 return source;
 
-            FontFamily family = source.Style.HasFlag(FontStyle.Bold) ? Bold : Book;
+            FontFamily family = source.Style.HasFlag(FontStyle.Bold) ? ExtraBold : Regular;
 
             return new Font(
                 family,
@@ -163,7 +164,10 @@ namespace TrayTemps
             return false;
         }
 
-        private static FontFamily LoadFontFamily(string resourceName, string expectedFamilyName)
+        private static FontFamily LoadFontFamily(
+            PrivateFontCollection fontCollection,
+            string resourceName,
+            string expectedFamilyName)
         {
             Assembly assembly = Assembly.GetExecutingAssembly();
 
@@ -184,7 +188,7 @@ namespace TrayTemps
 
                 IntPtr fontPointer = Marshal.AllocCoTaskMem(fontData.Length);
                 Marshal.Copy(fontData, 0, fontPointer, fontData.Length);
-                FontCollection.AddMemoryFont(fontPointer, fontData.Length);
+                fontCollection.AddMemoryFont(fontPointer, fontData.Length);
 
                 uint fontCount = 0;
                 IntPtr fontResourceHandle = AddFontMemResourceEx(
@@ -199,7 +203,7 @@ namespace TrayTemps
                 FontMemory.Add(fontPointer);
 
                 FontFamily selectedFamily = null;
-                FontFamily[] families = FontCollection.Families;
+                FontFamily[] families = fontCollection.Families;
                 foreach (FontFamily family in families)
                 {
                     if (selectedFamily == null &&
@@ -240,7 +244,8 @@ namespace TrayTemps
                 }
 
                 FontMemory.Clear();
-                FontCollection.Dispose();
+                RegularFontCollection.Dispose();
+                ExtraBoldFontCollection.Dispose();
             }
         }
     }

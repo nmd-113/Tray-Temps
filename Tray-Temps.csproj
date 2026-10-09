@@ -250,8 +250,9 @@
   <ItemGroup>
     <EmbeddedResource Include="App.config" />
     <None Include="Resources\amd.png" />
-    <EmbeddedResource Include="Resources\bunken_bold.ttf" />
-    <EmbeddedResource Include="Resources\bunken_book.ttf" />
+    <EmbeddedResource Include="Resources\Oxanium-Regular.ttf" />
+    <EmbeddedResource Include="Resources\Oxanium-ExtraBold.ttf" />
+    <None Include="Resources\OFL-Oxanium.txt" />
     <EmbeddedResource Include="Resources\PawnIO_setup.exe">
       <LogicalName>TrayTemps.Resources.PawnIO_setup.exe</LogicalName>
     </EmbeddedResource>
