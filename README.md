@@ -34,17 +34,21 @@ It also includes an optional customizable **on-screen display (OSD)** for hardwa
 
 ## Screenshots
 
+### Main Window
+
+![TrayTemps Main Window](https://www.naetech.ro/wp-content/uploads/2024/traytemps/traytemps-main-settings.png?v=2.3.0.4)
+
 ### OSD Settings
 
-![TrayTemps OSD settings](https://www.naetech.ro/wp-content/uploads/2024/traytemps/traytemps-dark.png?v=2.2.0.1)
+![TrayTemps OSD settings](https://www.naetech.ro/wp-content/uploads/2024/traytemps/traytemps-osd.png?v=2.3.0.4)
 
 ### Tray Icons
 
-![TrayTemps tray icons](https://www.naetech.ro/wp-content/uploads/2024/traytemps/traytemps-light.png?v=2.2.0.1)
+![TrayTemps tray icons](https://www.naetech.ro/wp-content/uploads/2024/traytemps/traytemps-main-light.png?v=2.3.0.4)
 
 ### Hardware Information
 
-![TrayTemps hardware information](https://www.naetech.ro/wp-content/uploads/2024/traytemps/traytemps-hardwareinfo.png?v=2.2.0.1)
+![TrayTemps hardware information](https://www.naetech.ro/wp-content/uploads/2024/traytemps/traytemps-hw-dialog.png?v=2.3.0.4)
 
 ---
 
