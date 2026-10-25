@@ -152,8 +152,8 @@ namespace TrayTemps
 
             // The LHM USB node often has the generic name "PCIe".  It can only be
             // paired by topology when each side has exactly one USB bridge node.
-            if (IsUsbStorageHardware(drive) &&
-                storageHardwares.Count(IsUsbStorageHardware) == 1)
+            if (HardwareReportFormatHelper.IsUsbStorageHardware(drive) &&
+                storageHardwares.Count(HardwareReportFormatHelper.IsUsbStorageHardware) == 1)
             {
                 return FindUniqueFallbackDevice(
                     fallbackDevices,
@@ -198,20 +198,15 @@ namespace TrayTemps
 
         private static bool IsTransportCompatible(IHardware drive, StorageLiveFallbackDevice device)
         {
-            return (IsUsbStorageHardware(drive) && IsUsbBridgeDevice(device)) ||
+            return (HardwareReportFormatHelper.IsUsbStorageHardware(drive) && IsUsbBridgeDevice(device)) ||
                    (IsAhciStorageHardware(drive) && IsAhciDevice(device));
         }
 
         private static bool IsSameLhmTransport(IHardware first, IHardware second)
         {
-            return (IsUsbStorageHardware(first) && IsUsbStorageHardware(second)) ||
+            return (HardwareReportFormatHelper.IsUsbStorageHardware(first) &&
+                    HardwareReportFormatHelper.IsUsbStorageHardware(second)) ||
                    (IsAhciStorageHardware(first) && IsAhciStorageHardware(second));
-        }
-
-        private static bool IsUsbStorageHardware(IHardware drive)
-        {
-            return HardwareReportFormatHelper.Safe(drive?.Identifier)
-                .StartsWith("/usb/", StringComparison.OrdinalIgnoreCase);
         }
 
         private static bool IsAhciStorageHardware(IHardware drive)

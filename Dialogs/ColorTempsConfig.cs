@@ -14,12 +14,19 @@ namespace TrayTemps
         private bool _updating = false;
         private const int CsDropShadow = 0x00020000;
 
-        public ColorTempsConfig(MainForm mainForm)
+        public ColorTempsConfig()
         {
             InitializeComponent();
-            EmbeddedFonts.ApplyTo(this);
+            if (!EmbeddedFonts.IsDesignTime(this))
+                EmbeddedFonts.ApplyTo(this);
+        }
 
+        public ColorTempsConfig(MainForm mainForm) : this()
+        {
             _mainForm = mainForm;
+            if (_mainForm == null || EmbeddedFonts.IsDesignTime(this))
+                return;
+
             ApplyTheme();
             _mainForm.ThemeChanged += MainForm_ThemeChanged;
         }
@@ -27,7 +34,8 @@ namespace TrayTemps
         protected override void OnHandleCreated(EventArgs e)
         {
             base.OnHandleCreated(e);
-            WindowCornerHelper.ApplyRoundedCorners(Handle);
+            if (!EmbeddedFonts.IsDesignTime(this))
+                WindowCornerHelper.ApplyRoundedCorners(Handle);
         }
 
         protected override CreateParams CreateParams
@@ -35,13 +43,17 @@ namespace TrayTemps
             get
             {
                 CreateParams createParams = base.CreateParams;
-                createParams.ClassStyle |= CsDropShadow;
+                if (!EmbeddedFonts.IsDesignTime(this))
+                    createParams.ClassStyle |= CsDropShadow;
                 return createParams;
             }
         }
 
         private void ColorTempsConfig_Load(object sender, EventArgs e)
         {
+            if (_mainForm == null || EmbeddedFonts.IsDesignTime(this))
+                return;
+
             LoadSettings();
         }
 
@@ -153,42 +165,34 @@ namespace TrayTemps
         private void ApplyTheme()
         {
             bool light = _mainForm != null && _mainForm.IsLightModeEnabled;
+            ThemePalette theme = ThemePalette.Create(light);
 
-            Color windowBack = light ? Color.FromArgb(218, 226, 238) : Color.FromArgb(21, 21, 21);
-            Color surfaceBack = light ? Color.White : Color.FromArgb(40, 40, 40);
-            Color inputBack = light ? Color.White : Color.FromArgb(40, 40, 40);
-            Color text = light ? Color.FromArgb(31, 41, 55) : Color.LightGray;
-            Color titleText = light ? Color.FromArgb(15, 23, 42) : Color.WhiteSmoke;
-            Color mutedText = light ? Color.FromArgb(91, 103, 122) : Color.LightGray;
-            Color accent = light ? Color.FromArgb(37, 99, 235) : Color.FromArgb(0, 120, 212);
-            Color border = light ? Color.FromArgb(210, 218, 230) : Color.FromArgb(30, 30, 30);
+            BackColor = theme.WindowBack;
+            ForeColor = theme.Text;
+            mainPanel.BackColor = theme.SurfaceBack;
 
-            BackColor = windowBack;
-            ForeColor = text;
-            mainPanel.BackColor = surfaceBack;
+            formTitle.ForeColor = theme.TitleText;
+            colorsetLabel.ForeColor = theme.MutedText;
+            tempsIntervalLabel.ForeColor = theme.MutedText;
+            lineLabel.ForeColor = theme.MutedText;
+            showCornerMarkers.ForeColor = theme.MutedText;
+            temperatureAlerts.ForeColor = theme.MutedText;
 
-            formTitle.ForeColor = titleText;
-            colorsetLabel.ForeColor = mutedText;
-            tempsIntervalLabel.ForeColor = mutedText;
-            lineLabel.ForeColor = mutedText;
-            showCornerMarkers.ForeColor = mutedText;
-            temperatureAlerts.ForeColor = mutedText;
+            ApplyInputTheme(warmTempMin, theme.InputBack, theme.Text);
+            ApplyInputTheme(warmTempMax, theme.InputBack, theme.Text);
 
-            ApplyInputTheme(warmTempMin, inputBack, text);
-            ApplyInputTheme(warmTempMax, inputBack, text);
+            saveBtn.BackColor = theme.Accent;
+            saveBtn.ForeColor = theme.AccentButtonText;
+            saveBtn.FlatAppearance.BorderColor = theme.Border;
 
-            saveBtn.BackColor = accent;
-            saveBtn.ForeColor = Color.White;
-            saveBtn.FlatAppearance.BorderColor = border;
+            exitBtn.BackColor = theme.WindowBack;
+            exitBtn.ForeColor = theme.TitleText;
+            exitBtn.FlatAppearance.BorderColor = theme.WindowBack;
+            exitBtn.FlatAppearance.MouseDownBackColor = light ? theme.NavSelected : theme.SurfaceBack;
 
-            exitBtn.BackColor = windowBack;
-            exitBtn.ForeColor = titleText;
-            exitBtn.FlatAppearance.BorderColor = windowBack;
-            exitBtn.FlatAppearance.MouseDownBackColor = light ? Color.FromArgb(226, 239, 255) : Color.FromArgb(40, 40, 40);
-
-            ApplyColorButtonTheme(normalTempColor, border);
-            ApplyColorButtonTheme(warmTempColor, border);
-            ApplyColorButtonTheme(hotTempColor, border);
+            ApplyColorButtonTheme(normalTempColor, theme.Border);
+            ApplyColorButtonTheme(warmTempColor, theme.Border);
+            ApplyColorButtonTheme(hotTempColor, theme.Border);
         }
 
         private static void ApplyInputTheme(NumericUpDown input, Color backColor, Color foreColor)

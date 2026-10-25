@@ -67,9 +67,9 @@
             this.outerBorder.Padding = new System.Windows.Forms.Padding(1);
             this.outerBorder.Size = new System.Drawing.Size(760, 520);
             this.outerBorder.TabIndex = 0;
-            //
+            // 
             // resizeGrip
-            //
+            // 
             this.resizeGrip.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.resizeGrip.BackColor = System.Drawing.Color.Transparent;
             this.resizeGrip.Cursor = System.Windows.Forms.Cursors.SizeNWSE;
@@ -121,7 +121,7 @@
             this._detailsBox.BorderStyle = System.Windows.Forms.BorderStyle.None;
             this._detailsBox.DetectUrls = false;
             this._detailsBox.Dock = System.Windows.Forms.DockStyle.Fill;
-            this._detailsBox.Font = new System.Drawing.Font("Consolas", 10F);
+            this._detailsBox.Font = new System.Drawing.Font("Consolas", 7.5F);
             this._detailsBox.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(220)))), ((int)(((byte)(220)))), ((int)(((byte)(220)))));
             this._detailsBox.Location = new System.Drawing.Point(15, 15);
             this._detailsBox.Name = "_detailsBox";
@@ -149,7 +149,7 @@
             this._liveBox.BorderStyle = System.Windows.Forms.BorderStyle.None;
             this._liveBox.DetectUrls = false;
             this._liveBox.Dock = System.Windows.Forms.DockStyle.Fill;
-            this._liveBox.Font = new System.Drawing.Font("Consolas", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this._liveBox.Font = new System.Drawing.Font("Consolas", 7.5F);
             this._liveBox.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(120)))), ((int)(((byte)(210)))), ((int)(((byte)(255)))));
             this._liveBox.Location = new System.Drawing.Point(15, 15);
             this._liveBox.Name = "_liveBox";
@@ -171,11 +171,11 @@
             // contentHeaderLabel
             // 
             this.contentHeaderLabel.AutoSize = true;
-            this.contentHeaderLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.contentHeaderLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.contentHeaderLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(150)))), ((int)(((byte)(150)))), ((int)(((byte)(150)))));
             this.contentHeaderLabel.Location = new System.Drawing.Point(0, 9);
             this.contentHeaderLabel.Name = "contentHeaderLabel";
-            this.contentHeaderLabel.Size = new System.Drawing.Size(138, 16);
+            this.contentHeaderLabel.Size = new System.Drawing.Size(130, 15);
             this.contentHeaderLabel.TabIndex = 0;
             this.contentHeaderLabel.Text = "System information";
             // 
@@ -201,9 +201,9 @@
             this._closeBtn.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(75)))), ((int)(((byte)(75)))), ((int)(((byte)(75)))));
             this._closeBtn.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
             this._closeBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this._closeBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.999999F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this._closeBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this._closeBtn.ForeColor = System.Drawing.Color.WhiteSmoke;
-            this._closeBtn.Location = new System.Drawing.Point(308, 10);
+            this._closeBtn.Location = new System.Drawing.Point(293, 10);
             this._closeBtn.Name = "_closeBtn";
             this._closeBtn.Size = new System.Drawing.Size(100, 30);
             this._closeBtn.TabIndex = 2;
@@ -218,9 +218,9 @@
             this.copyAllBtn.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
             this.copyAllBtn.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(55)))), ((int)(((byte)(55)))), ((int)(((byte)(55)))));
             this.copyAllBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.copyAllBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.999999F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.copyAllBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.copyAllBtn.ForeColor = System.Drawing.Color.WhiteSmoke;
-            this.copyAllBtn.Location = new System.Drawing.Point(408, 10);
+            this.copyAllBtn.Location = new System.Drawing.Point(393, 10);
             this.copyAllBtn.Margin = new System.Windows.Forms.Padding(5, 0, 0, 0);
             this.copyAllBtn.Name = "copyAllBtn";
             this.copyAllBtn.Size = new System.Drawing.Size(100, 30);
@@ -237,9 +237,9 @@
             this._copyBtn.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
             this._copyBtn.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(55)))), ((int)(((byte)(55)))), ((int)(((byte)(55)))));
             this._copyBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this._copyBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.999999F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this._copyBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this._copyBtn.ForeColor = System.Drawing.Color.WhiteSmoke;
-            this._copyBtn.Location = new System.Drawing.Point(508, 10);
+            this._copyBtn.Location = new System.Drawing.Point(493, 10);
             this._copyBtn.Name = "_copyBtn";
             this._copyBtn.Size = new System.Drawing.Size(115, 30);
             this._copyBtn.TabIndex = 0;
@@ -277,7 +277,7 @@
             // 
             this.titleLabel.AutoEllipsis = true;
             this.titleLabel.Dock = System.Windows.Forms.DockStyle.Top;
-            this.titleLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.titleLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.titleLabel.ForeColor = System.Drawing.Color.WhiteSmoke;
             this.titleLabel.Location = new System.Drawing.Point(0, 0);
             this.titleLabel.Name = "titleLabel";
@@ -343,7 +343,7 @@
             this._sensorsMenuBtn.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(60)))), ((int)(((byte)(60)))), ((int)(((byte)(60)))));
             this._sensorsMenuBtn.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(50)))), ((int)(((byte)(50)))), ((int)(((byte)(50)))));
             this._sensorsMenuBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this._sensorsMenuBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this._sensorsMenuBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this._sensorsMenuBtn.ForeColor = System.Drawing.Color.WhiteSmoke;
             this._sensorsMenuBtn.Location = new System.Drawing.Point(3, 146);
             this._sensorsMenuBtn.Name = "_sensorsMenuBtn";
@@ -363,7 +363,7 @@
             this._detailsMenuBtn.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(60)))), ((int)(((byte)(60)))), ((int)(((byte)(60)))));
             this._detailsMenuBtn.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(50)))), ((int)(((byte)(50)))), ((int)(((byte)(50)))));
             this._detailsMenuBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this._detailsMenuBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this._detailsMenuBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this._detailsMenuBtn.ForeColor = System.Drawing.Color.WhiteSmoke;
             this._detailsMenuBtn.Location = new System.Drawing.Point(3, 101);
             this._detailsMenuBtn.Name = "_detailsMenuBtn";
@@ -379,7 +379,7 @@
             // menuTitle
             // 
             this.menuTitle.Dock = System.Windows.Forms.DockStyle.Top;
-            this.menuTitle.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.menuTitle.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.menuTitle.ForeColor = System.Drawing.Color.Gray;
             this.menuTitle.Location = new System.Drawing.Point(3, 70);
             this.menuTitle.Name = "menuTitle";
@@ -391,7 +391,7 @@
             // iconLabel
             // 
             this.iconLabel.Dock = System.Windows.Forms.DockStyle.Top;
-            this.iconLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 26.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.iconLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 21.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.iconLabel.ForeColor = System.Drawing.Color.WhiteSmoke;
             this.iconLabel.Location = new System.Drawing.Point(3, 0);
             this.iconLabel.Name = "iconLabel";

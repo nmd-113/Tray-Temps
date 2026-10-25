@@ -149,18 +149,18 @@ namespace TrayTemps
 
     internal static class OsdFontHelper
     {
-        internal const string EmbeddedOxaniumExtraBoldDisplayName = "Oxanium ExtraBold";
-        internal const string EmbeddedOxaniumRegularDisplayName = "Oxanium";
-        internal const string DefaultFamily = EmbeddedOxaniumExtraBoldDisplayName;
+        internal const string EmbeddedJetBrainsMonoExtraBoldDisplayName = "JetBrains Mono ExtraBold";
+        internal const string EmbeddedJetBrainsMonoRegularDisplayName = "JetBrains Mono";
+        internal const string DefaultFamily = EmbeddedJetBrainsMonoExtraBoldDisplayName;
 
-        // Keep settings saved by older releases working after replacing Bunken.
+        // Keep saved settings from older releases working after replacing the embedded font.
         internal static string NormalizeFamilyName(string familyName)
         {
-            if (IsEmbeddedOxaniumRegularFamily(familyName))
-                return EmbeddedOxaniumRegularDisplayName;
+            if (IsEmbeddedRegularFamily(familyName))
+                return EmbeddedJetBrainsMonoRegularDisplayName;
 
-            if (IsEmbeddedOxaniumExtraBoldFamily(familyName))
-                return EmbeddedOxaniumExtraBoldDisplayName;
+            if (IsEmbeddedExtraBoldFamily(familyName))
+                return EmbeddedJetBrainsMonoExtraBoldDisplayName;
 
             return familyName;
         }
@@ -172,7 +172,7 @@ namespace TrayTemps
             {
                 return families
                     .Select(family => family.Name)
-                    .Concat(new[] { EmbeddedOxaniumExtraBoldDisplayName, EmbeddedOxaniumRegularDisplayName, "Consolas" })
+                    .Concat(new[] { EmbeddedJetBrainsMonoExtraBoldDisplayName, EmbeddedJetBrainsMonoRegularDisplayName, "Consolas" })
                     .Where(name => !string.IsNullOrWhiteSpace(name))
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
@@ -187,45 +187,56 @@ namespace TrayTemps
 
         internal static Font CreateFont(string familyName, float size)
         {
-            familyName = NormalizeFamilyName(familyName);
             float safeSize = Math.Max(6f, Math.Min(48f, size));
+            return CreateFont(familyName, safeSize, GraphicsUnit.Point);
+        }
+
+        internal static Font CreatePixelFont(string familyName, float size)
+        {
+            return CreateFont(familyName, size, GraphicsUnit.Pixel);
+        }
+
+        private static Font CreateFont(string familyName, float size, GraphicsUnit unit)
+        {
+            EmbeddedFonts.Initialize();
+            familyName = NormalizeFamilyName(
+                string.IsNullOrWhiteSpace(familyName) ? DefaultFamily : familyName);
 
             try
             {
-                if (IsEmbeddedOxaniumRegularFamily(familyName) && EmbeddedFonts.Regular != null)
+                if (IsEmbeddedRegularFamily(familyName) && EmbeddedFonts.Regular != null)
                 {
-                    return new Font(EmbeddedFonts.Regular, safeSize, FontStyle.Regular, GraphicsUnit.Point);
+                    return new Font(EmbeddedFonts.Regular, size, FontStyle.Regular, unit);
                 }
 
-                if (IsEmbeddedOxaniumExtraBoldFamily(familyName) && EmbeddedFonts.ExtraBold != null)
+                if (IsEmbeddedExtraBoldFamily(familyName) && EmbeddedFonts.ExtraBold != null)
                 {
-                    FontStyle style = EmbeddedFonts.ExtraBold.IsStyleAvailable(FontStyle.Bold)
-                        ? FontStyle.Bold
-                        : FontStyle.Regular;
-                    return new Font(EmbeddedFonts.ExtraBold, safeSize, style, GraphicsUnit.Point);
+                    return new Font(EmbeddedFonts.ExtraBold, size, FontStyle.Regular, unit);
                 }
 
                 return new Font(
-                    string.IsNullOrWhiteSpace(familyName) ? DefaultFamily : familyName,
-                    safeSize,
+                    familyName,
+                    size,
                     FontStyle.Bold,
-                    GraphicsUnit.Point);
+                    unit);
             }
             catch
             {
-                return new Font(DefaultFamily, safeSize, FontStyle.Bold, GraphicsUnit.Point);
+                return new Font(EmbeddedFonts.ExtraBold, size, FontStyle.Regular, unit);
             }
         }
 
-        private static bool IsEmbeddedOxaniumExtraBoldFamily(string familyName)
+        internal static bool IsEmbeddedExtraBoldFamily(string familyName)
         {
-            return string.Equals(familyName, EmbeddedOxaniumExtraBoldDisplayName, StringComparison.OrdinalIgnoreCase) ||
+            return string.Equals(familyName, EmbeddedJetBrainsMonoExtraBoldDisplayName, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(familyName, "Oxanium ExtraBold", StringComparison.OrdinalIgnoreCase) ||
                    string.Equals(familyName, "Bunken Tech Sans Pro Bold", StringComparison.OrdinalIgnoreCase);
         }
 
-        private static bool IsEmbeddedOxaniumRegularFamily(string familyName)
+        internal static bool IsEmbeddedRegularFamily(string familyName)
         {
-            return string.Equals(familyName, EmbeddedOxaniumRegularDisplayName, StringComparison.OrdinalIgnoreCase) ||
+            return string.Equals(familyName, EmbeddedJetBrainsMonoRegularDisplayName, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(familyName, "Oxanium", StringComparison.OrdinalIgnoreCase) ||
                    string.Equals(familyName, EmbeddedFonts.Regular?.Name, StringComparison.OrdinalIgnoreCase) ||
                    string.Equals(familyName, "Bunken Tech Sans Pro Book", StringComparison.OrdinalIgnoreCase);
         }

@@ -173,7 +173,7 @@ namespace TrayTemps
             // A USB bridge normally exposes no usable serial/model in LHM. A
             // singleton external SCSI bridge and a singleton LHM /usb node are a
             // topology match, not an index match, and are safe to associate.
-            return FindUniqueStorageHardware(storageHardwares, IsUsbStorageHardware);
+            return FindUniqueStorageHardware(storageHardwares, HardwareReportFormatHelper.IsUsbStorageHardware);
         }
 
         private static IHardware FindUniqueStorageHardware(
@@ -216,12 +216,6 @@ namespace TrayTemps
 
             // Unknown LHM path types have no independently verifiable transport.
             return false;
-        }
-
-        private static bool IsUsbStorageHardware(IHardware drive)
-        {
-            return HardwareReportFormatHelper.Safe(drive?.Identifier)
-                .StartsWith("/usb/", StringComparison.OrdinalIgnoreCase);
         }
 
         private static bool IsUsbBridgeDisk(ManagementObject disk)

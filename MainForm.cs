@@ -23,8 +23,6 @@ namespace TrayTemps
         #region [ Fields / Constants ]
 
         private const string AppName = "TrayTemps";
-        private const string EmbeddedOxaniumExtraBoldDisplayName = "Oxanium ExtraBold";
-        private const string EmbeddedOxaniumRegularDisplayName = "Oxanium";
         private string InstallPath;
         private string SettingsFilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), AppName, "settings.json");
         private const int IconSize = 16;
@@ -190,8 +188,6 @@ namespace TrayTemps
         private bool _dpiRestartPending;
         private bool _windowMoveResizeActive;
         private DpiRestartRequest? _deferredDpiRestart;
-        private Color _darkWindowBackColor = Color.FromArgb(21, 21, 21);
-        private Color _darkPanelBackColor = Color.FromArgb(25, 25, 25);
 
         private Font _trayFont;
         private SolidBrush _cpuBrush;
@@ -269,6 +265,9 @@ namespace TrayTemps
         {
             base.OnHandleCreated(e);
 
+            if (EmbeddedFonts.IsDesignTime(this))
+                return;
+
             if (!_dpiMonitoringReady)
                 RefreshCurrentDpiScale();
 
@@ -286,7 +285,8 @@ namespace TrayTemps
 
         protected override void OnHandleDestroyed(EventArgs e)
         {
-            UnregisterOsdHotkey();
+            if (!EmbeddedFonts.IsDesignTime(this))
+                UnregisterOsdHotkey();
             base.OnHandleDestroyed(e);
         }
 
@@ -303,28 +303,33 @@ namespace TrayTemps
 
         #region [ Constructor / Form Lifecycle ]
 
+        public MainForm()
+            : this(false, false, false, false, false, 0)
+        {
+        }
+
         public MainForm(
-            bool startHiddenFromCommandLine = false,
-            bool forceVisibleOnStartup = false,
-            bool suppressStartupElevationPrompt = false,
-            bool requireStartupElevationConsent = false,
-            bool deferPawnIoPrompt = false,
-            int initialPageIndex = 0)
+            bool startHiddenFromCommandLine,
+            bool forceVisibleOnStartup,
+            bool suppressStartupElevationPrompt,
+            bool requireStartupElevationConsent,
+            bool deferPawnIoPrompt,
+            int initialPageIndex)
         {
             _startHiddenFromCommandLine = startHiddenFromCommandLine;
             _forceVisibleOnStartup = forceVisibleOnStartup;
             _requireStartupElevationConsent = requireStartupElevationConsent;
             _deferPawnIoPrompt = deferPawnIoPrompt;
             _sensorElevationPromptShown = suppressStartupElevationPrompt;
-            EmbeddedFonts.Initialize();
             InitializeComponent();
+
+            if (EmbeddedFonts.IsDesignTime(this))
+                return;
+
             _fpsTimer.Tick += FpsTimer_Tick;
 
             if (initialPageIndex >= 0 && initialPageIndex < mainTabControl.TabCount)
                 mainTabControl.SelectedIndex = initialPageIndex;
-
-            _darkPanelBackColor = panelWrapper.BackColor;
-            _darkWindowBackColor = Color.FromArgb(21, 21, 21);
 
             EmbeddedFonts.ApplyTo(this);
             PopulateFontFamilyOptions();
@@ -361,13 +366,17 @@ namespace TrayTemps
             get
             {
                 CreateParams createParams = base.CreateParams;
-                createParams.ClassStyle |= CsDropShadow;
+                if (!EmbeddedFonts.IsDesignTime(this))
+                    createParams.ClassStyle |= CsDropShadow;
                 return createParams;
             }
         }
 
         private async void MainForm_Load(object sender, EventArgs e)
         {
+            if (EmbeddedFonts.IsDesignTime(this))
+                return;
+
             try
             {
                 appVersion.Text = $"Version: {Application.ProductVersion}";
@@ -428,6 +437,9 @@ namespace TrayTemps
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
+            if (EmbeddedFonts.IsDesignTime(this))
+                return;
+
             if (_settingsLoaded)
                 SaveSettings();
             ExecuteShutdownSequence();
@@ -436,12 +448,16 @@ namespace TrayTemps
         protected override void OnVisibleChanged(EventArgs e)
         {
             base.OnVisibleChanged(e);
-            UpdateTrayIcons();
+            if (!EmbeddedFonts.IsDesignTime(this))
+                UpdateTrayIcons();
         }
 
         protected override void OnResize(EventArgs e)
         {
             base.OnResize(e);
+            if (EmbeddedFonts.IsDesignTime(this))
+                return;
+
             if (WindowState == FormWindowState.Minimized)
             {
                 HideToTray();
@@ -456,7 +472,8 @@ namespace TrayTemps
         protected override void OnLocationChanged(EventArgs e)
         {
             base.OnLocationChanged(e);
-            RememberNormalWindowBounds();
+            if (!EmbeddedFonts.IsDesignTime(this))
+                RememberNormalWindowBounds();
         }
 
         private void QueueDpiRestart(DpiRestartRequest request)
@@ -528,6 +545,12 @@ namespace TrayTemps
             const int WM_EXITSIZEMOVE = 0x0232;
             const int HTLEFT = 10, HTRIGHT = 11, HTTOP = 12, HTTOPLEFT = 13;
             const int HTTOPRIGHT = 14, HTBOTTOM = 15, HTBOTTOMLEFT = 16;
+
+            if (EmbeddedFonts.IsDesignTime(this))
+            {
+                base.WndProc(ref m);
+                return;
+            }
 
             if (m.Msg == WM_HOTKEY && m.WParam.ToInt32() == OsdHotkeyId)
             {
@@ -1977,7 +2000,7 @@ namespace TrayTemps
         private Font CreateCombinedTrayFont(int iconPixelSize)
         {
             float fontSize = Math.Max(IconSize, iconPixelSize) * 0.95f;
-            return CreateTrayFont(_trayFontFamily, fontSize);
+            return OsdFontHelper.CreatePixelFont(_trayFontFamily, fontSize);
         }
 
         private void DrawStableTrayText(
@@ -2340,14 +2363,14 @@ namespace TrayTemps
         {
             _trayFontFamily = fontFamilyValue.Text.Trim();
             if (string.IsNullOrWhiteSpace(_trayFontFamily))
-                _trayFontFamily = EmbeddedOxaniumExtraBoldDisplayName;
+                _trayFontFamily = OsdFontHelper.DefaultFamily;
 
             int iconPixelSize = GetTrayIconPixelSize();
             _lastTrayIconPixelSize = iconPixelSize;
             float calculatedFontSize = iconPixelSize;
 
             _trayFont?.Dispose();
-            _trayFont = CreateTrayFont(_trayFontFamily, calculatedFontSize);
+            _trayFont = OsdFontHelper.CreatePixelFont(_trayFontFamily, calculatedFontSize);
             _trayGlyphMetricsCache.Clear();
 
             _cpuBrush?.Dispose();
@@ -2400,7 +2423,7 @@ namespace TrayTemps
             gpuColorValue.BackColor = Color.Gold;
 
             if (fontFamilyValue.Items.Count > 0)
-                SelectFontFamily(EmbeddedOxaniumExtraBoldDisplayName, 0);
+                SelectFontFamily(OsdFontHelper.DefaultFamily, 0);
 
             WarmTempMin = 60;
             WarmTempMax = 80;
@@ -2680,17 +2703,7 @@ namespace TrayTemps
         private void PopulateFontFamilyOptions()
         {
             fontFamilyValue.Items.Clear();
-
-            var names = FontFamily.Families
-                .Select(f => f.Name)
-                .Where(name => !string.IsNullOrWhiteSpace(name))
-                .Where(name => !IsHiddenEmbeddedOxaniumFamily(name))
-                .Concat(new[] { EmbeddedOxaniumExtraBoldDisplayName, EmbeddedOxaniumRegularDisplayName, "Consolas" })
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-
-            fontFamilyValue.Items.AddRange(names);
+            fontFamilyValue.Items.AddRange(OsdFontHelper.GetAvailableFamilyNames());
         }
 
         private void SelectFontFamily(string familyName, int fallbackIndex)
@@ -2710,49 +2723,6 @@ namespace TrayTemps
             }
 
             fontFamilyValue.SelectedIndex = ValueHelper.ClampInt(fallbackIndex, 0, fontFamilyValue.Items.Count - 1);
-        }
-
-        private Font CreateTrayFont(string familyName, float size)
-        {
-            familyName = OsdFontHelper.NormalizeFamilyName(familyName);
-            try
-            {
-                if (IsEmbeddedOxaniumRegularFamily(familyName))
-                    return new Font(EmbeddedFonts.Regular, size, FontStyle.Regular, GraphicsUnit.Pixel);
-
-                if (IsEmbeddedOxaniumExtraBoldFamily(familyName))
-                    return new Font(EmbeddedFonts.ExtraBold, size, GetEmbeddedExtraBoldStyle(), GraphicsUnit.Pixel);
-
-                return new Font(familyName, size, FontStyle.Bold, GraphicsUnit.Pixel);
-            }
-            catch
-            {
-                return new Font(EmbeddedFonts.ExtraBold, size, GetEmbeddedExtraBoldStyle(), GraphicsUnit.Pixel);
-            }
-        }
-
-        private static FontStyle GetEmbeddedExtraBoldStyle()
-        {
-            return EmbeddedFonts.ExtraBold.IsStyleAvailable(FontStyle.Bold)
-                ? FontStyle.Bold
-                : FontStyle.Regular;
-        }
-
-        private static bool IsEmbeddedOxaniumExtraBoldFamily(string familyName)
-        {
-            return string.Equals(familyName, EmbeddedOxaniumExtraBoldDisplayName, StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static bool IsEmbeddedOxaniumRegularFamily(string familyName)
-        {
-            return string.Equals(familyName, EmbeddedOxaniumRegularDisplayName, StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(familyName, EmbeddedFonts.Regular.Name, StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static bool IsHiddenEmbeddedOxaniumFamily(string familyName)
-        {
-            return string.Equals(familyName, EmbeddedFonts.Regular.Name, StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(familyName, EmbeddedFonts.ExtraBold.Name, StringComparison.OrdinalIgnoreCase);
         }
 
         private static bool IsWindowBoundsVisible(Rectangle bounds)
@@ -2827,7 +2797,7 @@ namespace TrayTemps
 
         private void ApplyTheme()
         {
-            ThemePalette theme = GetThemePalette();
+            ThemePalette theme = ThemePalette.Create(IsLightModeEnabled);
 
             ApplyThemeToMainContainers(theme);
             ApplyThemeToLabels(theme);
@@ -2872,7 +2842,7 @@ namespace TrayTemps
             ApplyBackColor(theme.SurfaceBack, osdPanel);
             ApplyBackColor(subtleSeparator, cpuLoadSeparator, gpuLoadSeparator);
             ApplyBackColor(loadTrackColor, cpuLoadTrack, gpuLoadTrack);
-            ApplyBackColor(theme.NavBack, mainMenu, AppDataPnl, homePanel, settingsPanel, aboutPanel);
+            ApplyBackColor(theme.NavBack, mainMenu, AppDataPnl);
             ApplyBackColor(theme.Accent, divider1, divider2, divider3, sidepanelHome, sidepanelSettings, sidepanelAbout);
         }
 
@@ -2880,7 +2850,10 @@ namespace TrayTemps
         {
             foreach (Label label in MainFormShadowHelper.FindControls<Label>(this))
             {
-                if (label != appAboutExtra)
+                if (label != appAboutExtra &&
+                    label != homeIconLabel &&
+                    label != settingsIconLabel &&
+                    label != aboutIconLabel)
                     label.BackColor = label.Parent?.BackColor ?? theme.PageBack;
 
                 label.ForeColor = theme.Text;
@@ -2955,8 +2928,9 @@ namespace TrayTemps
 
         private void ApplyThemeToInputsAndButtons(ThemePalette theme)
         {
-            ApplyComboBoxTheme(theme, IsLightModeEnabled, refreshValue, iconsizeValue, fontFamilyValue);
+            ApplyComboBoxTheme(theme, refreshValue, iconsizeValue, fontFamilyValue);
             ApplyNavButtonTheme(theme, homeBtn, settingsBtn, aboutBtn);
+            ApplyNavSelectionColors(mainTabControl.SelectedIndex, theme.NavSelected, theme.NavBack);
             ApplyComponentButtonTheme(theme, cpuConfigButton, gpuConfigButton);
             ApplyWindowButtonTheme(theme, minimizeBtn);
             ApplyWindowButtonTheme(theme, exitBtn);
@@ -3028,54 +3002,6 @@ namespace TrayTemps
             exitBtn.FlatAppearance.MouseOverBackColor = Color.FromArgb(210, 50, 50);
         }
 
-        private ThemePalette GetThemePalette()
-        {
-            if (IsLightModeEnabled)
-            {
-                return new ThemePalette
-                {
-                    WindowBack = Color.FromArgb(218, 226, 238),
-                    PageBack = Color.FromArgb(246, 248, 252),
-                    SurfaceBack = Color.White,
-                    NavBack = Color.White,
-                    NavSelected = Color.FromArgb(226, 239, 255),
-                    Text = Color.FromArgb(31, 41, 55),
-                    MutedText = Color.FromArgb(91, 103, 122),
-                    TitleText = Color.FromArgb(15, 23, 42),
-                    Accent = Color.FromArgb(37, 99, 235),
-                    InputBack = Color.White,
-                    Border = Color.FromArgb(210, 218, 230),
-                    ButtonText = Color.White,
-                    CurrentTemp = Color.FromArgb(15, 23, 42),
-                    Success = Color.FromArgb(21, 128, 61),
-                    Danger = Color.FromArgb(220, 38, 38),
-                    Link = Color.FromArgb(4, 120, 87),
-                    HardwareHoverText = Color.FromArgb(37, 99, 235)
-                };
-            }
-
-            return new ThemePalette
-            {
-                WindowBack = _darkWindowBackColor,
-                PageBack = _darkPanelBackColor,
-                SurfaceBack = Color.FromArgb(40, 40, 40),
-                NavBack = Color.FromArgb(30, 30, 30),
-                NavSelected = Color.FromArgb(50, 50, 50),
-                Text = Color.LightGray,
-                MutedText = Color.DarkGray,
-                TitleText = Color.WhiteSmoke,
-                Accent = Color.FromArgb(0, 120, 212),
-                InputBack = Color.FromArgb(40, 40, 40),
-                Border = Color.FromArgb(30, 30, 30),
-                ButtonText = Color.LightGray,
-                CurrentTemp = Color.LightGray,
-                Success = Color.LimeGreen,
-                Danger = Color.Red,
-                Link = Color.SeaGreen,
-                HardwareHoverText = Color.White
-            };
-        }
-
         private static void ApplyBackColor(Color color, params Control[] controls)
         {
             foreach (Control control in controls)
@@ -3094,18 +3020,14 @@ namespace TrayTemps
             }
         }
 
-        private static void ApplyComboBoxTheme(ThemePalette theme, bool lightTheme, params ComboBox[] comboBoxes)
+        private static void ApplyComboBoxTheme(ThemePalette theme, params ComboBox[] comboBoxes)
         {
-            Color backColor = lightTheme
-                ? Color.FromArgb(230, 235, 240)
-                : theme.InputBack;
-
             foreach (ComboBox comboBox in comboBoxes)
             {
                 if (comboBox == null)
                     continue;
 
-                comboBox.BackColor = backColor;
+                comboBox.BackColor = theme.InputBack;
                 comboBox.ForeColor = theme.Text;
             }
         }
@@ -3123,6 +3045,49 @@ namespace TrayTemps
                 button.FlatAppearance.MouseDownBackColor = theme.NavSelected;
                 button.FlatAppearance.MouseOverBackColor = theme.NavSelected;
             }
+        }
+
+        private void NavPanel_MouseEnter(object sender, EventArgs e)
+        {
+            TableLayoutPanel panel = GetNavPanel(sender);
+            Button button = GetNavButton(panel);
+            if (panel != null && button != null)
+            {
+                panel.BackColor = button.FlatAppearance.MouseOverBackColor;
+                button.BackColor = button.FlatAppearance.MouseOverBackColor;
+            }
+        }
+
+        private void NavPanel_MouseLeave(object sender, EventArgs e)
+        {
+            TableLayoutPanel panel = GetNavPanel(sender);
+            Button button = GetNavButton(panel);
+            if (panel == null || button == null || panel.ClientRectangle.Contains(panel.PointToClient(Cursor.Position)))
+                return;
+
+            ThemePalette theme = ThemePalette.Create(IsLightModeEnabled);
+            int tabIndex = mainTabControl.SelectedIndex;
+            bool isSelected =
+                (panel == homePanel && tabIndex == 0) ||
+                (panel == settingsPanel && tabIndex == 1) ||
+                (panel == aboutPanel && tabIndex == 2);
+            Color backColor = isSelected ? theme.NavSelected : theme.NavBack;
+            panel.BackColor = backColor;
+            button.BackColor = backColor;
+        }
+
+        private TableLayoutPanel GetNavPanel(object sender)
+        {
+            Control control = sender as Control;
+            return control as TableLayoutPanel ?? control?.Parent as TableLayoutPanel;
+        }
+
+        private Button GetNavButton(TableLayoutPanel panel)
+        {
+            if (panel == homePanel) return homeBtn;
+            if (panel == settingsPanel) return settingsBtn;
+            if (panel == aboutPanel) return aboutBtn;
+            return null;
         }
 
         private static void ApplyComponentButtonTheme(ThemePalette theme, params Button[] buttons)
@@ -3216,27 +3181,6 @@ namespace TrayTemps
                 MainMenuShadowWidth);
         }
 
-        private sealed class ThemePalette
-        {
-            public Color WindowBack;
-            public Color PageBack;
-            public Color SurfaceBack;
-            public Color NavBack;
-            public Color NavSelected;
-            public Color Text;
-            public Color MutedText;
-            public Color TitleText;
-            public Color Accent;
-            public Color InputBack;
-            public Color Border;
-            public Color ButtonText;
-            public Color CurrentTemp;
-            public Color Success;
-            public Color Danger;
-            public Color Link;
-            public Color HardwareHoverText;
-        }
-
         private sealed class TrayMenuColorTable : ProfessionalColorTable
         {
             private readonly ThemePalette _theme;
@@ -3281,49 +3225,38 @@ namespace TrayTemps
 
         private void SelectedTabChanged(object sender, EventArgs e)
         {
-            ThemePalette theme = GetThemePalette();
+            ThemePalette theme = ThemePalette.Create(IsLightModeEnabled);
             Color sidepanelline = theme.Accent;
             Color selectedColor = theme.NavSelected;
             Color defaultColor = theme.NavBack;
 
             int index = mainTabControl.SelectedIndex;
 
-            ApplyTabButtonSelectionColors(index, selectedColor, defaultColor);
-            ApplyTabButtonTextColors(theme.Text);
+            ApplyNavSelectionColors(index, selectedColor, defaultColor);
             ApplyTabSideIndicators(index, sidepanelline);
         }
 
-        private void ApplyTabButtonSelectionColors(int index, Color selectedColor, Color defaultColor)
+        private void ApplyNavSelectionColors(int index, Color selectedColor, Color defaultColor)
         {
             homeBtn.BackColor = (index == 0) ? selectedColor : defaultColor;
             settingsBtn.BackColor = (index == 1) ? selectedColor : defaultColor;
             aboutBtn.BackColor = (index == 2) ? selectedColor : defaultColor;
-        }
-
-        private void ApplyTabButtonTextColors(Color textColor)
-        {
-            homeBtn.ForeColor = textColor;
-            settingsBtn.ForeColor = textColor;
-            aboutBtn.ForeColor = textColor;
+            homePanel.BackColor = homeBtn.BackColor;
+            settingsPanel.BackColor = settingsBtn.BackColor;
+            aboutPanel.BackColor = aboutBtn.BackColor;
         }
 
         private void ApplyTabSideIndicators(int index, Color sidepanelline)
         {
             // HOME
-            homePanel.ColumnStyles[0].SizeType = SizeType.Absolute;
-            homePanel.ColumnStyles[0].Width = (index == 0) ? 3 : 0;
             sidepanelHome.Visible = (index == 0);
             if (index == 0) sidepanelHome.BackColor = sidepanelline;
 
             // SETTINGS
-            settingsPanel.ColumnStyles[0].SizeType = SizeType.Absolute;
-            settingsPanel.ColumnStyles[0].Width = (index == 1) ? 3 : 0;
             sidepanelSettings.Visible = (index == 1);
             if (index == 1) sidepanelSettings.BackColor = sidepanelline;
 
             // ABOUT
-            aboutPanel.ColumnStyles[0].SizeType = SizeType.Absolute;
-            aboutPanel.ColumnStyles[0].Width = (index == 2) ? 3 : 0;
             sidepanelAbout.Visible = (index == 2);
             if (index == 2) sidepanelAbout.BackColor = sidepanelline;
         }
@@ -4081,8 +4014,9 @@ namespace TrayTemps
             result.VramUsageSpacing = null;
             result.FpsSpacing = null;
             result.ItemOrder = OsdItemOrderHelper.Serialize(OsdItemOrderHelper.Parse(result.ItemOrder));
-            if (!result.ShowCpu && !result.ShowGpu && !result.ShowRamUsage &&
-                !result.ShowVramUsage && !result.ShowFps)
+            if (!result.ShowCpu && !result.ShowGpu &&
+                !result.ShowCpuUsage && !result.ShowGpuUsage &&
+                !result.ShowRamUsage && !result.ShowVramUsage && !result.ShowFps)
                 result.ShowCpu = true;
             OsdHotkeyModifiers modifiers =
                 (OsdHotkeyModifiers)result.HotkeyModifiers & OsdHotkeyHelper.AllowedModifiers;
@@ -4173,10 +4107,10 @@ namespace TrayTemps
             Color cpuDisplayColor = Color.FromArgb(configuration.CpuFontColor);
             Color gpuDisplayColor = Color.FromArgb(configuration.GpuFontColor);
             var availableMetrics = new Dictionary<OsdItemKind, OsdMetric>();
-            string cpuUsage = configuration.ShowCpu && configuration.ShowCpuUsage
+            string cpuUsage = configuration.ShowCpuUsage
                 ? FormatOsdPercent(GetPreferredLoadValue(_selectedCpuHardware, isCpu: true))
                 : null;
-            string gpuUsage = configuration.ShowGpu && configuration.ShowGpuUsage
+            string gpuUsage = configuration.ShowGpuUsage
                 ? FormatOsdPercent(GetPreferredLoadValue(_selectedGpuHardware, isCpu: false))
                 : null;
 
@@ -5531,13 +5465,13 @@ namespace TrayTemps
             {
                 label.MouseEnter += (s, e) =>
                 {
-                    label.ForeColor = GetThemePalette().HardwareHoverText;
+                    label.ForeColor = ThemePalette.Create(IsLightModeEnabled).HardwareHoverText;
                     label.Cursor = Cursors.Hand;
                 };
 
                 label.MouseLeave += (s, e) =>
                 {
-                    label.ForeColor = GetThemePalette().Text;
+                    label.ForeColor = ThemePalette.Create(IsLightModeEnabled).Text;
                     label.Cursor = Cursors.Default;
                 };
             }

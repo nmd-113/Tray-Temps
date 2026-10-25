@@ -55,6 +55,12 @@ namespace TrayTemps
             return text;
         }
 
+        internal static bool IsUsbStorageHardware(IHardware hardware)
+        {
+            return Safe(hardware?.Identifier)
+                .StartsWith("/usb/", StringComparison.OrdinalIgnoreCase);
+        }
+
         internal static string SanitizeSingleLineText(string text)
         {
             if (string.IsNullOrEmpty(text))

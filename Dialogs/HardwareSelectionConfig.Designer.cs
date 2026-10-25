@@ -58,7 +58,7 @@
             // saveBtn
             // 
             this.saveBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.saveBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold);
+            this.saveBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.saveBtn.Location = new System.Drawing.Point(22, 109);
             this.saveBtn.Name = "saveBtn";
             this.saveBtn.Size = new System.Drawing.Size(282, 34);
@@ -71,40 +71,44 @@
             // 
             this.sensorSelect.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.sensorSelect.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.sensorSelect.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
             this.sensorSelect.FormattingEnabled = true;
             this.sensorSelect.Location = new System.Drawing.Point(22, 75);
             this.sensorSelect.Name = "sensorSelect";
-            this.sensorSelect.Size = new System.Drawing.Size(282, 24);
+            this.sensorSelect.Size = new System.Drawing.Size(282, 21);
             this.sensorSelect.TabIndex = 3;
             // 
             // sensorLabel
             // 
             this.sensorLabel.AutoSize = true;
+            this.sensorLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
             this.sensorLabel.Location = new System.Drawing.Point(22, 54);
             this.sensorLabel.Name = "sensorLabel";
-            this.sensorLabel.Size = new System.Drawing.Size(129, 16);
+            this.sensorLabel.Size = new System.Drawing.Size(102, 13);
             this.sensorLabel.TabIndex = 2;
-            this.sensorLabel.Text = "Temperature sensor";
+            this.sensorLabel.Text = "Temperature sensor:";
             // 
             // hardwareSelect
             // 
             this.hardwareSelect.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.hardwareSelect.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.hardwareSelect.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
             this.hardwareSelect.FormattingEnabled = true;
             this.hardwareSelect.Location = new System.Drawing.Point(22, 26);
             this.hardwareSelect.Name = "hardwareSelect";
-            this.hardwareSelect.Size = new System.Drawing.Size(282, 24);
+            this.hardwareSelect.Size = new System.Drawing.Size(282, 21);
             this.hardwareSelect.TabIndex = 1;
             this.hardwareSelect.SelectedIndexChanged += new System.EventHandler(this.HardwareSelect_SelectedIndexChanged);
             // 
             // hardwareLabel
             // 
             this.hardwareLabel.AutoSize = true;
+            this.hardwareLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
             this.hardwareLabel.Location = new System.Drawing.Point(22, 5);
             this.hardwareLabel.Name = "hardwareLabel";
-            this.hardwareLabel.Size = new System.Drawing.Size(113, 16);
+            this.hardwareLabel.Size = new System.Drawing.Size(92, 13);
             this.hardwareLabel.TabIndex = 0;
-            this.hardwareLabel.Text = "Detected devices";
+            this.hardwareLabel.Text = "Detected devices:";
             // 
             // formTitle
             // 

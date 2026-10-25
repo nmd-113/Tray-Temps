@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Text;
 using System.IO;
@@ -11,8 +12,8 @@ namespace TrayTemps
 {
     internal static class EmbeddedFonts
     {
-        private const string RegularResourceName = "TrayTemps.Resources.Oxanium-Regular.ttf";
-        private const string ExtraBoldResourceName = "TrayTemps.Resources.Oxanium-ExtraBold.ttf";
+        private const string RegularResourceName = "TrayTemps.Resources.JetBrainsMono-Regular.ttf";
+        private const string ExtraBoldResourceName = "TrayTemps.Resources.JetBrainsMono-ExtraBold.ttf";
 
         private static readonly object SyncRoot = new object();
         private static readonly PrivateFontCollection RegularFontCollection = new PrivateFontCollection();
@@ -36,6 +37,9 @@ namespace TrayTemps
 
         public static void Initialize()
         {
+            if (IsDesignTime())
+                return;
+
             if (_initialized)
                 return;
 
@@ -44,8 +48,8 @@ namespace TrayTemps
                 if (_initialized)
                     return;
 
-                Regular = LoadFontFamily(RegularFontCollection, RegularResourceName, "Oxanium");
-                ExtraBold = LoadFontFamily(ExtraBoldFontCollection, ExtraBoldResourceName, "Oxanium ExtraBold");
+                Regular = LoadFontFamily(RegularFontCollection, RegularResourceName, "JetBrains Mono");
+                ExtraBold = LoadFontFamily(ExtraBoldFontCollection, ExtraBoldResourceName, "JetBrains Mono ExtraBold");
 
                 AppDomain.CurrentDomain.ProcessExit += (s, e) => ReleaseFontMemory();
                 AppDomain.CurrentDomain.DomainUnload += (s, e) => ReleaseFontMemory();
@@ -56,7 +60,7 @@ namespace TrayTemps
 
         public static void ApplyTo(Control root)
         {
-            if (root == null)
+            if (root == null || IsDesignTime(root))
                 return;
 
             Initialize();
@@ -77,7 +81,7 @@ namespace TrayTemps
 
         public static void ApplyTo(ToolStrip toolStrip)
         {
-            if (toolStrip == null)
+            if (toolStrip == null || IsDesignTime(toolStrip))
                 return;
 
             Initialize();
@@ -111,9 +115,16 @@ namespace TrayTemps
             }
         }
 
+        internal static bool IsDesignTime(IComponent component = null)
+        {
+            return LicenseManager.UsageMode == LicenseUsageMode.Designtime ||
+                   component?.Site?.DesignMode == true;
+        }
+
         private static void ApplyFont(Control control)
         {
             if (control == null) return;
+
             bool preserveSystemFont = IsSystemSpecialCase(control);
             // Capture the old font, assign the replacement, then dispose the old font if it is safe to do so.
             Font oldFont = control.Font;
@@ -132,11 +143,12 @@ namespace TrayTemps
                 return source;
 
             FontFamily family = source.Style.HasFlag(FontStyle.Bold) ? ExtraBold : Regular;
+            FontStyle style = source.Style & ~FontStyle.Bold;
 
             return new Font(
                 family,
                 source.Size,
-                source.Style,
+                style,
                 source.Unit,
                 source.GdiCharSet,
                 source.GdiVerticalFont);
@@ -150,15 +162,10 @@ namespace TrayTemps
             if (control is NumericUpDown)
                 return true;
 
-            if (control is RichTextBox || control is TextBoxBase)
-            {
-                string name = control.Font?.FontFamily?.Name ?? string.Empty;
-                return name.Equals("Consolas", StringComparison.OrdinalIgnoreCase);
-            }
-
             string controlName = control.Name ?? string.Empty;
 
-            if (controlName.Equals("iconLabel", StringComparison.OrdinalIgnoreCase))
+            if (control is Label &&
+                controlName.EndsWith("IconLabel", StringComparison.OrdinalIgnoreCase))
                 return true;
 
             return false;

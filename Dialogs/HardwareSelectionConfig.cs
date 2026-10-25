@@ -14,13 +14,20 @@ namespace TrayTemps
         private Point _dragFormPoint;
         private const int CsDropShadow = 0x00020000;
 
-        public HardwareSelectionConfig(MainForm mainForm, bool isCpu)
+        public HardwareSelectionConfig()
         {
             InitializeComponent();
-            EmbeddedFonts.ApplyTo(this);
+            if (!EmbeddedFonts.IsDesignTime(this))
+                EmbeddedFonts.ApplyTo(this);
+        }
 
+        public HardwareSelectionConfig(MainForm mainForm, bool isCpu) : this()
+        {
             _mainForm = mainForm;
             _isCpu = isCpu;
+            if (_mainForm == null || EmbeddedFonts.IsDesignTime(this))
+                return;
+
             _mainForm.ThemeChanged += MainForm_ThemeChanged;
             ApplyTheme();
         }
@@ -28,7 +35,8 @@ namespace TrayTemps
         protected override void OnHandleCreated(EventArgs e)
         {
             base.OnHandleCreated(e);
-            WindowCornerHelper.ApplyRoundedCorners(Handle);
+            if (!EmbeddedFonts.IsDesignTime(this))
+                WindowCornerHelper.ApplyRoundedCorners(Handle);
         }
 
         protected override CreateParams CreateParams
@@ -36,13 +44,17 @@ namespace TrayTemps
             get
             {
                 CreateParams createParams = base.CreateParams;
-                createParams.ClassStyle |= CsDropShadow;
+                if (!EmbeddedFonts.IsDesignTime(this))
+                    createParams.ClassStyle |= CsDropShadow;
                 return createParams;
             }
         }
 
         private void HardwareSelectionConfig_Load(object sender, EventArgs e)
         {
+            if (_mainForm == null || EmbeddedFonts.IsDesignTime(this))
+                return;
+
             formTitle.Text = $"Configure {(_isCpu ? "CPU" : "GPU")}";
             hardwareLabel.Text = _isCpu ? "Detected CPUs" : "Detected GPUs";
             LoadHardwareOptions();
@@ -159,30 +171,23 @@ namespace TrayTemps
         private void ApplyTheme()
         {
             bool light = _mainForm != null && _mainForm.IsLightModeEnabled;
-            Color windowBack = light ? Color.FromArgb(218, 226, 238) : Color.FromArgb(21, 21, 21);
-            Color surfaceBack = light ? Color.White : Color.FromArgb(40, 40, 40);
-            Color inputBack = light ? Color.FromArgb(230, 235, 240) : Color.FromArgb(40, 40, 40);
-            Color text = light ? Color.FromArgb(31, 41, 55) : Color.LightGray;
-            Color titleText = light ? Color.FromArgb(15, 23, 42) : Color.WhiteSmoke;
-            Color mutedText = light ? Color.FromArgb(91, 103, 122) : Color.LightGray;
-            Color accent = light ? Color.FromArgb(37, 99, 235) : Color.FromArgb(0, 120, 212);
-            Color border = light ? Color.FromArgb(210, 218, 230) : Color.FromArgb(30, 30, 30);
+            ThemePalette theme = ThemePalette.Create(light);
 
-            BackColor = windowBack;
-            mainPanel.BackColor = surfaceBack;
-            formTitle.ForeColor = titleText;
-            hardwareLabel.ForeColor = mutedText;
-            sensorLabel.ForeColor = mutedText;
-            hardwareSelect.BackColor = inputBack;
-            hardwareSelect.ForeColor = text;
-            sensorSelect.BackColor = inputBack;
-            sensorSelect.ForeColor = text;
-            saveBtn.BackColor = accent;
-            saveBtn.ForeColor = Color.White;
-            saveBtn.FlatAppearance.BorderColor = border;
-            exitBtn.BackColor = windowBack;
-            exitBtn.ForeColor = titleText;
-            exitBtn.FlatAppearance.BorderColor = windowBack;
+            BackColor = theme.WindowBack;
+            mainPanel.BackColor = theme.SurfaceBack;
+            formTitle.ForeColor = theme.TitleText;
+            hardwareLabel.ForeColor = theme.MutedText;
+            sensorLabel.ForeColor = theme.MutedText;
+            hardwareSelect.BackColor = theme.InputBack;
+            hardwareSelect.ForeColor = theme.Text;
+            sensorSelect.BackColor = theme.InputBack;
+            sensorSelect.ForeColor = theme.Text;
+            saveBtn.BackColor = theme.Accent;
+            saveBtn.ForeColor = theme.AccentButtonText;
+            saveBtn.FlatAppearance.BorderColor = theme.Border;
+            exitBtn.BackColor = theme.WindowBack;
+            exitBtn.ForeColor = theme.TitleText;
+            exitBtn.FlatAppearance.BorderColor = theme.WindowBack;
         }
     }
 }

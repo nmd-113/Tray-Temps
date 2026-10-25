@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using TrayTemps;
 
 public partial class HardwareDetailsDialog : Form
 {
@@ -14,7 +15,7 @@ public partial class HardwareDetailsDialog : Form
     private bool _liveUpdateBusy;
 
     private Color _menuBg = Color.FromArgb(30, 30, 30);
-    private Color _selected = Color.FromArgb(45, 45, 45);
+    private Color _selected = Color.FromArgb(50, 50, 50);
     private Color _menuText = Color.WhiteSmoke;
     private Color _disabledText = Color.FromArgb(100, 100, 100);
     private const int CsDropShadow = 0x00020000;
@@ -37,8 +38,11 @@ public partial class HardwareDetailsDialog : Form
     public HardwareDetailsDialog()
     {
         InitializeComponent();
+        if (TrayTemps.EmbeddedFonts.IsDesignTime(this))
+            return;
+
         TrayTemps.EmbeddedFonts.ApplyTo(this);
-        ConfigureReportBoxes();
+        ConfigureReportBoxBehavior();
         _closeBtn.Click += closeTopBtn_Click;
         ApplyTheme(false);
     }
@@ -48,31 +52,16 @@ public partial class HardwareDetailsDialog : Form
         get
         {
             CreateParams createParams = base.CreateParams;
-            createParams.ClassStyle |= CsDropShadow;
+            if (!TrayTemps.EmbeddedFonts.IsDesignTime(this))
+                createParams.ClassStyle |= CsDropShadow;
             return createParams;
         }
     }
 
-    private void ConfigureReportBoxes()
+    private void ConfigureReportBoxBehavior()
     {
-        // Safely replace Designer-created fonts for the report boxes.
-        var oldDetailsFont = _detailsBox.Font;
-        var newDetailsFont = new Font("Consolas", 9.5f, FontStyle.Regular, GraphicsUnit.Point);
-        _detailsBox.Font = newDetailsFont;
-        if (oldDetailsFont != null && !ReferenceEquals(oldDetailsFont, newDetailsFont) && !ReferenceEquals(oldDetailsFont, _detailsBox.Parent?.Font))
-            oldDetailsFont.Dispose();
-
         _detailsBox.ScrollBars = RichTextBoxScrollBars.Both;
-        _detailsBox.WordWrap = false;
-
-        var oldLiveFont = _liveBox.Font;
-        var newLiveFont = new Font("Consolas", 10f, FontStyle.Regular, GraphicsUnit.Point);
-        _liveBox.Font = newLiveFont;
-        if (oldLiveFont != null && !ReferenceEquals(oldLiveFont, newLiveFont) && !ReferenceEquals(oldLiveFont, _liveBox.Parent?.Font))
-            oldLiveFont.Dispose();
-
         _liveBox.ScrollBars = RichTextBoxScrollBars.Both;
-        _liveBox.WordWrap = false;
     }
 
     public HardwareDetailsDialog(
@@ -108,14 +97,18 @@ public partial class HardwareDetailsDialog : Form
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
-        TrayTemps.WindowCornerHelper.ApplyRoundedCorners(Handle);
-        resizeGrip?.UpdateDpiSize();
+        if (!TrayTemps.EmbeddedFonts.IsDesignTime(this))
+        {
+            TrayTemps.WindowCornerHelper.ApplyRoundedCorners(Handle);
+            resizeGrip?.UpdateDpiSize();
+        }
     }
 
     protected override void OnResize(EventArgs e)
     {
         base.OnResize(e);
-        resizeGrip?.UpdateDpiSize();
+        if (!TrayTemps.EmbeddedFonts.IsDesignTime(this))
+            resizeGrip?.UpdateDpiSize();
     }
 
     private void HardwareDetailsDialog_Shown(object sender, EventArgs e)
@@ -232,61 +225,49 @@ public partial class HardwareDetailsDialog : Form
 
     private void ApplyTheme(bool light)
     {
-        Color windowBack = light ? Color.FromArgb(218, 226, 238) : Color.FromArgb(30, 30, 30);
-        Color pageBack = light ? Color.FromArgb(246, 248, 252) : Color.FromArgb(25, 25, 25);
-        Color surfaceBack = light ? Color.White : Color.FromArgb(18, 18, 18);
-        Color secondarySurface = light ? Color.FromArgb(248, 250, 252) : Color.FromArgb(15, 15, 15);
-        Color barBack = light ? Color.White : Color.FromArgb(30, 30, 30);
-        Color border = light ? Color.FromArgb(210, 218, 230) : Color.FromArgb(60, 60, 60);
-        Color text = light ? Color.FromArgb(31, 41, 55) : Color.WhiteSmoke;
-        Color bodyText = light ? Color.FromArgb(51, 65, 85) : Color.FromArgb(220, 220, 220);
-        Color muted = light ? Color.FromArgb(91, 103, 122) : Color.DarkGray;
-        Color accent = light ? Color.FromArgb(37, 99, 235) : Color.FromArgb(0, 120, 212);
-        Color buttonBack = light ? Color.FromArgb(241, 245, 249) : Color.FromArgb(45, 45, 45);
-        Color buttonHover = light ? Color.FromArgb(226, 239, 255) : Color.FromArgb(55, 55, 55);
-        Color buttonDown = light ? Color.FromArgb(210, 228, 255) : Color.FromArgb(65, 65, 65);
+        ThemePalette theme = ThemePalette.Create(light);
 
-        _menuBg = light ? Color.White : Color.FromArgb(30, 30, 30);
-        _selected = light ? Color.FromArgb(226, 239, 255) : Color.FromArgb(45, 45, 45);
-        _menuText = text;
-        _disabledText = light ? Color.FromArgb(148, 163, 184) : Color.FromArgb(100, 100, 100);
+        _menuBg = theme.NavBack;
+        _selected = theme.NavSelected;
+        _menuText = theme.TitleText;
+        _disabledText = theme.DisabledText;
 
         if (resizeGrip != null && !resizeGrip.IsDisposed)
         {
             resizeGrip.LightTheme = light;
-            resizeGrip.BackColor = barBack;
+            resizeGrip.BackColor = theme.BarBack;
         }
 
-        BackColor = windowBack;
-        outerBorder.BackColor = border;
-        mainPanel.BackColor = pageBack;
-        contentArea.BackColor = pageBack;
+        BackColor = theme.WindowBack;
+        outerBorder.BackColor = theme.Border;
+        mainPanel.BackColor = theme.PageBack;
+        contentArea.BackColor = theme.PageBack;
         leftMenu.BackColor = _menuBg;
-        titleBar.BackColor = barBack;
-        bottomBar.BackColor = barBack;
-        headerPanel.BackColor = pageBack;
-        accentLine.BackColor = accent;
+        titleBar.BackColor = theme.BarBack;
+        bottomBar.BackColor = theme.BarBack;
+        headerPanel.BackColor = theme.PageBack;
+        accentLine.BackColor = theme.Accent;
 
-        cardDetails.BackColor = surfaceBack;
-        cardSensors.BackColor = secondarySurface;
-        _detailsBox.BackColor = surfaceBack;
-        _detailsBox.ForeColor = bodyText;
-        _liveBox.BackColor = secondarySurface;
-        _liveBox.ForeColor = light ? accent : Color.FromArgb(120, 210, 255);
+        cardDetails.BackColor = theme.SurfaceBack;
+        cardSensors.BackColor = theme.SecondarySurface;
+        _detailsBox.BackColor = theme.SurfaceBack;
+        _detailsBox.ForeColor = theme.BodyText;
+        _liveBox.BackColor = theme.SecondarySurface;
+        _liveBox.ForeColor = light ? theme.Accent : Color.FromArgb(120, 210, 255);
 
-        titleLabel.ForeColor = text;
-        _subtitleLabel.ForeColor = muted;
-        contentHeaderLabel.ForeColor = muted;
-        menuTitle.ForeColor = muted;
-        iconLabel.ForeColor = text;
+        titleLabel.ForeColor = theme.TitleText;
+        _subtitleLabel.ForeColor = theme.MutedText;
+        contentHeaderLabel.ForeColor = theme.MutedText;
+        menuTitle.ForeColor = theme.MutedText;
+        iconLabel.ForeColor = theme.TitleText;
 
-        ApplyDialogButtonTheme(_closeBtn, buttonBack, text, border, buttonHover, buttonDown);
-        ApplyDialogButtonTheme(copyAllBtn, buttonBack, text, border, buttonHover, buttonDown);
-        ApplyDialogButtonTheme(_copyBtn, buttonBack, text, border, buttonHover, buttonDown);
-        ApplyMenuButtonTheme(_detailsMenuBtn, text, buttonHover, buttonDown);
-        ApplyMenuButtonTheme(_sensorsMenuBtn, text, buttonHover, buttonDown);
-        ApplyTitleButtonTheme(minimizeBtn, text, buttonHover, buttonDown);
-        ApplyTitleButtonTheme(closeTopBtn, text, Color.FromArgb(220, 38, 38), Color.DarkRed);
+        ApplyDialogButtonTheme(_closeBtn, theme.ButtonBack, theme.TitleText, theme.Border, theme.ButtonHover, theme.ButtonDown);
+        ApplyDialogButtonTheme(copyAllBtn, theme.ButtonBack, theme.TitleText, theme.Border, theme.ButtonHover, theme.ButtonDown);
+        ApplyDialogButtonTheme(_copyBtn, theme.ButtonBack, theme.TitleText, theme.Border, theme.ButtonHover, theme.ButtonDown);
+        ApplyMenuButtonTheme(_detailsMenuBtn, theme.TitleText, theme.ButtonHover, theme.ButtonDown);
+        ApplyMenuButtonTheme(_sensorsMenuBtn, theme.TitleText, theme.ButtonHover, theme.ButtonDown);
+        ApplyMenuButtonTheme(minimizeBtn, theme.TitleText, theme.ButtonHover, theme.ButtonDown);
+        ApplyMenuButtonTheme(closeTopBtn, theme.TitleText, Color.FromArgb(220, 38, 38), Color.DarkRed);
 
         ShowPage(_showingSensors);
     }
@@ -301,13 +282,6 @@ public partial class HardwareDetailsDialog : Form
     }
 
     private static void ApplyMenuButtonTheme(Button button, Color text, Color hover, Color down)
-    {
-        button.ForeColor = text;
-        button.FlatAppearance.MouseOverBackColor = hover;
-        button.FlatAppearance.MouseDownBackColor = down;
-    }
-
-    private static void ApplyTitleButtonTheme(Button button, Color text, Color hover, Color down)
     {
         button.ForeColor = text;
         button.FlatAppearance.MouseOverBackColor = hover;
@@ -470,7 +444,7 @@ public partial class HardwareDetailsDialog : Form
 
         base.WndProc(ref m);
 
-        if (m.Msg != WM_NCHITTEST) return;
+        if (TrayTemps.EmbeddedFonts.IsDesignTime(this) || m.Msg != WM_NCHITTEST) return;
 
         long lParam = m.LParam.ToInt64();
         int x = (short)(lParam & 0xFFFF);

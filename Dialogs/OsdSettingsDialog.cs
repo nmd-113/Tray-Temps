@@ -23,7 +23,7 @@ namespace TrayTemps
         private List<OsdItemKind> _separateItemOrder;
         private OsdSettingsPage _currentPage = OsdSettingsPage.Metrics;
         private Color _navigationBack = Color.FromArgb(30, 30, 30);
-        private Color _navigationSelected = Color.FromArgb(45, 45, 45);
+        private Color _navigationSelected = Color.FromArgb(50, 50, 50);
         private Color _navigationText = Color.WhiteSmoke;
 
         public OsdSettingsDialog()
@@ -34,6 +34,9 @@ namespace TrayTemps
         internal OsdSettingsDialog(MainForm mainForm, OsdConfiguration configuration)
             : this()
         {
+            if (EmbeddedFonts.IsDesignTime(this))
+                return;
+
             EmbeddedFonts.ApplyTo(this);
             _mainForm = mainForm;
             _configuration = configuration?.Clone() ?? new OsdConfiguration();
@@ -54,7 +57,8 @@ namespace TrayTemps
             get
             {
                 CreateParams parameters = base.CreateParams;
-                parameters.ClassStyle |= CsDropShadow;
+                if (!EmbeddedFonts.IsDesignTime(this))
+                    parameters.ClassStyle |= CsDropShadow;
                 return parameters;
             }
         }
@@ -62,14 +66,18 @@ namespace TrayTemps
         protected override void OnHandleCreated(EventArgs e)
         {
             base.OnHandleCreated(e);
-            WindowCornerHelper.ApplyRoundedCorners(Handle);
-            resizeGrip?.UpdateDpiSize();
+            if (!EmbeddedFonts.IsDesignTime(this))
+            {
+                WindowCornerHelper.ApplyRoundedCorners(Handle);
+                resizeGrip?.UpdateDpiSize();
+            }
         }
 
         protected override void OnResize(EventArgs e)
         {
             base.OnResize(e);
-            resizeGrip?.UpdateDpiSize();
+            if (!EmbeddedFonts.IsDesignTime(this))
+                resizeGrip?.UpdateDpiSize();
         }
 
         protected override void WndProc(ref Message message)
@@ -87,7 +95,7 @@ namespace TrayTemps
 
             base.WndProc(ref message);
 
-            if (message.Msg != WmNcHitTest)
+            if (EmbeddedFonts.IsDesignTime(this) || message.Msg != WmNcHitTest)
                 return;
 
             long coordinates = message.LParam.ToInt64();
@@ -113,6 +121,9 @@ namespace TrayTemps
         protected override void OnShown(EventArgs e)
         {
             base.OnShown(e);
+
+            if (EmbeddedFonts.IsDesignTime(this))
+                return;
 
             Rectangle workingArea = Screen.FromControl(this).WorkingArea;
             int margin = Math.Max(12, DeviceDpi / 8);
@@ -261,12 +272,13 @@ namespace TrayTemps
 
         private void SaveBtn_Click(object sender, EventArgs e)
         {
-            if (!showCpu.Checked && !showGpu.Checked && !showRamUsage.Checked &&
-                !showVramUsage.Checked && !showFps.Checked)
+            if (!showCpu.Checked && !showGpu.Checked &&
+                !showCpuUsage.Checked && !showGpuUsage.Checked &&
+                !showRamUsage.Checked && !showVramUsage.Checked && !showFps.Checked)
             {
                 MessageBox.Show(
                     this,
-                    "Select at least one CPU, GPU, RAM, VRAM, or FPS item to display in the OSD.",
+                    "Select at least one temperature, usage, RAM, VRAM, or FPS item to display in the OSD.",
                     "OSD Settings",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
@@ -509,8 +521,10 @@ namespace TrayTemps
             bool enabled = customLabelsEnabled.Checked;
             bool cpuTemperatureVisible = showCpu.Checked;
             bool gpuTemperatureVisible = showGpu.Checked;
-            bool cpuUsageVisible = cpuTemperatureVisible && showCpuUsage.Checked && !combineTemperatureAndUsage.Checked;
-            bool gpuUsageVisible = gpuTemperatureVisible && showGpuUsage.Checked && !combineTemperatureAndUsage.Checked;
+            bool cpuUsageCombined = CombineCpuTemperatureAndUsage;
+            bool gpuUsageCombined = CombineGpuTemperatureAndUsage;
+            bool cpuUsageVisible = showCpuUsage.Checked && !cpuUsageCombined;
+            bool gpuUsageVisible = showGpuUsage.Checked && !gpuUsageCombined;
 
             customCpuLabel.Enabled = enabled && cpuTemperatureVisible;
             customGpuLabel.Enabled = enabled && gpuTemperatureVisible;
@@ -521,6 +535,13 @@ namespace TrayTemps
             customFpsLabel.Enabled = enabled && showFps.Checked;
 
         }
+
+        private bool CanCombineCpuTemperatureAndUsage => showCpu.Checked && showCpuUsage.Checked;
+        private bool CanCombineGpuTemperatureAndUsage => showGpu.Checked && showGpuUsage.Checked;
+        private bool CombineCpuTemperatureAndUsage =>
+            combineTemperatureAndUsage.Checked && CanCombineCpuTemperatureAndUsage;
+        private bool CombineGpuTemperatureAndUsage =>
+            combineTemperatureAndUsage.Checked && CanCombineGpuTemperatureAndUsage;
 
         private void HardwareVisibility_CheckedChanged(object sender, EventArgs e)
         {
@@ -538,8 +559,8 @@ namespace TrayTemps
             var updatedItems = new List<OsdItemOption>();
             bool cpuAdded = false;
             bool gpuAdded = false;
-            bool combineCpu = combineTemperatureAndUsage.Checked && showCpu.Checked && showCpuUsage.Checked;
-            bool combineGpu = combineTemperatureAndUsage.Checked && showGpu.Checked && showGpuUsage.Checked;
+            bool combineCpu = CombineCpuTemperatureAndUsage;
+            bool combineGpu = CombineGpuTemperatureAndUsage;
 
             foreach (OsdItemKind item in _separateItemOrder)
             {
@@ -642,10 +663,8 @@ namespace TrayTemps
 
         private void UpdateHardwareVisibility()
         {
-            showCpuUsage.Enabled = showCpu.Checked;
-            showGpuUsage.Enabled = showGpu.Checked;
-            cpuFontColor.Enabled = showCpu.Checked;
-            gpuFontColor.Enabled = showGpu.Checked;
+            cpuFontColor.Enabled = showCpu.Checked || showCpuUsage.Checked;
+            gpuFontColor.Enabled = showGpu.Checked || showGpuUsage.Checked;
             ramFontColor.Enabled = showRamUsage.Checked;
             vramFontColor.Enabled = showVramUsage.Checked;
             fpsFontColor.Enabled = showFps.Checked;
@@ -654,8 +673,7 @@ namespace TrayTemps
             fpsLabelValueSpacingLabel.Enabled = showFps.Checked;
             fpsLabelValueSpacing.Enabled = showFps.Checked;
             combineTemperatureAndUsage.Enabled =
-                (showCpu.Checked && showCpuUsage.Checked) ||
-                (showGpu.Checked && showGpuUsage.Checked);
+                CanCombineCpuTemperatureAndUsage || CanCombineGpuTemperatureAndUsage;
         }
 
         private void FontColor_Click(object sender, EventArgs e)
@@ -786,66 +804,56 @@ namespace TrayTemps
         private void ApplyTheme()
         {
             bool light = _mainForm != null && _mainForm.IsLightModeEnabled;
-            Color windowBack = light ? Color.FromArgb(218, 226, 238) : Color.FromArgb(21, 21, 21);
-            Color surfaceBack = light ? Color.White : Color.FromArgb(40, 40, 40);
-            Color text = light ? Color.FromArgb(31, 41, 55) : Color.LightGray;
-            Color title = light ? Color.FromArgb(15, 23, 42) : Color.WhiteSmoke;
-            Color accent = light ? Color.FromArgb(37, 99, 235) : Color.FromArgb(0, 120, 212);
-            Color border = light ? Color.FromArgb(210, 218, 230) : Color.FromArgb(70, 70, 70);
-            Color shellBorder = light ? Color.FromArgb(210, 218, 230) : Color.FromArgb(60, 60, 60);
-            Color barBack = light ? Color.White : Color.FromArgb(30, 30, 30);
-            Color muted = light ? Color.FromArgb(91, 103, 122) : Color.DarkGray;
-            Color navigationHover = light ? Color.FromArgb(232, 238, 247) : Color.FromArgb(55, 55, 55);
-            Color navigationDown = light ? Color.FromArgb(210, 220, 234) : Color.FromArgb(70, 70, 70);
+            ThemePalette theme = ThemePalette.Create(light);
 
-            _navigationBack = light ? Color.White : Color.FromArgb(30, 30, 30);
-            _navigationSelected = light ? Color.FromArgb(226, 239, 255) : Color.FromArgb(45, 45, 45);
-            _navigationText = title;
+            _navigationBack = theme.NavBack;
+            _navigationSelected = theme.NavSelected;
+            _navigationText = theme.TitleText;
 
-            BackColor = windowBack;
-            ForeColor = text;
-            outerBorder.BackColor = shellBorder;
-            mainPanel.BackColor = windowBack;
-            titleBar.BackColor = barBack;
-            bottomBar.BackColor = barBack;
-            contentPanel.BackColor = windowBack;
-            pageTabs.BackColor = windowBack;
-            pageTabs.ForeColor = text;
-            metricsPage.BackColor = windowBack;
-            appearancePage.BackColor = windowBack;
-            layoutPage.BackColor = windowBack;
+            BackColor = theme.WindowBack;
+            ForeColor = theme.Text;
+            outerBorder.BackColor = theme.Border;
+            mainPanel.BackColor = theme.WindowBack;
+            titleBar.BackColor = theme.BarBack;
+            bottomBar.BackColor = theme.BarBack;
+            contentPanel.BackColor = theme.WindowBack;
+            pageTabs.BackColor = theme.WindowBack;
+            pageTabs.ForeColor = theme.Text;
+            metricsPage.BackColor = theme.WindowBack;
+            appearancePage.BackColor = theme.WindowBack;
+            layoutPage.BackColor = theme.WindowBack;
             metricsPage.UseVisualStyleBackColor = false;
             appearancePage.UseVisualStyleBackColor = false;
             layoutPage.UseVisualStyleBackColor = false;
-            metricsPageLayout.BackColor = windowBack;
-            layoutPageLayout.BackColor = windowBack;
+            metricsPageLayout.BackColor = theme.WindowBack;
+            layoutPageLayout.BackColor = theme.WindowBack;
             navigationPanel.BackColor = _navigationBack;
-            navigationTitle.ForeColor = muted;
-            subtitleLabel.ForeColor = muted;
-            accentLine.BackColor = accent;
+            navigationTitle.ForeColor = theme.MutedText;
+            subtitleLabel.ForeColor = theme.MutedText;
+            accentLine.BackColor = theme.Accent;
 
             if (resizeGrip != null && !resizeGrip.IsDisposed)
             {
                 resizeGrip.LightTheme = light;
-                resizeGrip.BackColor = barBack;
+                resizeGrip.BackColor = theme.BarBack;
             }
 
             foreach (Panel card in new[] { metricsCard, labelsCard, appearanceCard, layoutCard, spacingCard, hotkeyCard })
             {
-                card.BackColor = surfaceBack;
+                card.BackColor = theme.SurfaceBack;
 
                 foreach (Label label in card.Controls.OfType<Label>())
-                    label.ForeColor = text;
+                    label.ForeColor = theme.Text;
                 foreach (CheckBox checkBox in card.Controls.OfType<CheckBox>())
                 {
-                    checkBox.BackColor = surfaceBack;
-                    checkBox.ForeColor = text;
+                    checkBox.BackColor = theme.SurfaceBack;
+                    checkBox.ForeColor = theme.Text;
                     checkBox.UseVisualStyleBackColor = false;
                 }
             }
 
-            customLabelsLayout.BackColor = surfaceBack;
-            spacingLayout.BackColor = surfaceBack;
+            customLabelsLayout.BackColor = theme.SurfaceBack;
+            spacingLayout.BackColor = theme.SurfaceBack;
             foreach (Label label in new[]
             {
                 customCpuLabelCaption,
@@ -860,15 +868,15 @@ namespace TrayTemps
                 columnsGapHeader
             })
             {
-                label.BackColor = surfaceBack;
-                label.ForeColor = text;
+                label.BackColor = theme.SurfaceBack;
+                label.ForeColor = theme.Text;
             }
 
-            fontColorsLayout.BackColor = surfaceBack;
+            fontColorsLayout.BackColor = theme.SurfaceBack;
             foreach (Label label in fontColorsLayout.Controls.OfType<Label>())
             {
-                label.BackColor = surfaceBack;
-                label.ForeColor = text;
+                label.BackColor = theme.SurfaceBack;
+                label.ForeColor = theme.Text;
             }
 
             foreach (Control input in new Control[]
@@ -880,54 +888,50 @@ namespace TrayTemps
                 fpsLabelValueSpacing, itemOrder, hotkeyValue
             })
             {
-                input.BackColor = light ? Color.White : Color.FromArgb(32, 32, 32);
-                input.ForeColor = text;
+                input.BackColor = theme.InputBack;
+                input.ForeColor = theme.Text;
             }
 
-            opacityValue.BackColor = surfaceBack;
-            backgroundOpacityValue.BackColor = surfaceBack;
+            opacityValue.BackColor = theme.SurfaceBack;
+            backgroundOpacityValue.BackColor = theme.SurfaceBack;
 
             if (!_hasCustomBackgroundColor)
                 backgroundColor.BackColor = OsdColorHelper.GetDefaultBackground(light);
 
             foreach (Button button in new[] { orderUp, orderDown })
             {
-                button.BackColor = surfaceBack;
-                button.ForeColor = text;
-                button.FlatAppearance.BorderColor = border;
-                button.FlatAppearance.MouseOverBackColor = light
-                    ? Color.FromArgb(232, 238, 247)
-                    : Color.FromArgb(55, 55, 55);
-                button.FlatAppearance.MouseDownBackColor = light
-                    ? Color.FromArgb(210, 220, 234)
-                    : Color.FromArgb(70, 70, 70);
+                button.BackColor = theme.SurfaceBack;
+                button.ForeColor = theme.Text;
+                button.FlatAppearance.BorderColor = theme.Border;
+                button.FlatAppearance.MouseOverBackColor = theme.NavigationHover;
+                button.FlatAppearance.MouseDownBackColor = theme.NavigationDown;
             }
 
             foreach (Button button in new[] { metricsNavButton, appearanceNavButton, layoutNavButton })
             {
                 button.ForeColor = _navigationText;
-                button.FlatAppearance.MouseOverBackColor = navigationHover;
-                button.FlatAppearance.MouseDownBackColor = navigationDown;
+                button.FlatAppearance.MouseOverBackColor = theme.NavigationHover;
+                button.FlatAppearance.MouseDownBackColor = theme.NavigationDown;
             }
 
             foreach (Button button in new[] { backgroundColor, cpuFontColor, gpuFontColor, ramFontColor, vramFontColor, fpsFontColor })
             {
                 button.ForeColor = GetReadableForeground(button.BackColor);
-                button.FlatAppearance.BorderColor = border;
+                button.FlatAppearance.BorderColor = theme.Border;
             }
 
-            saveBtn.BackColor = accent;
-            saveBtn.ForeColor = Color.White;
-            saveBtn.FlatAppearance.BorderColor = border;
+            saveBtn.BackColor = theme.Accent;
+            saveBtn.ForeColor = theme.AccentButtonText;
+            saveBtn.FlatAppearance.BorderColor = theme.Border;
             saveBtn.FlatAppearance.MouseOverBackColor = light
                 ? Color.FromArgb(29, 78, 216)
                 : Color.FromArgb(0, 102, 184);
             saveBtn.FlatAppearance.MouseDownBackColor = light
                 ? Color.FromArgb(30, 64, 175)
                 : Color.FromArgb(0, 84, 153);
-            exitBtn.BackColor = barBack;
-            exitBtn.ForeColor = title;
-            exitBtn.FlatAppearance.BorderColor = barBack;
+            exitBtn.BackColor = theme.BarBack;
+            exitBtn.ForeColor = theme.TitleText;
+            exitBtn.FlatAppearance.BorderColor = theme.BarBack;
             exitBtn.FlatAppearance.MouseOverBackColor = Color.FromArgb(220, 38, 38);
             exitBtn.FlatAppearance.MouseDownBackColor = Color.DarkRed;
             ShowPage(_currentPage);
@@ -995,8 +999,8 @@ namespace TrayTemps
                 if (IsCombinedTemperatureUsage)
                 {
                     return Kind == OsdItemKind.CpuTemperature
-                        ? "CPU + Usage"
-                        : "GPU + Usage";
+                        ? "CPU Temperature + Usage"
+                        : "GPU Temperature + Usage";
                 }
 
                 return OsdItemOrderHelper.GetDisplayName(Kind);

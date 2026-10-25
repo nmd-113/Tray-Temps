@@ -165,6 +165,7 @@
       <DependentUpon>HardwareSelectionConfig.cs</DependentUpon>
     </Compile>
     <Compile Include="Helpers\UI\EmbeddedFonts.cs" />
+    <Compile Include="Helpers\UI\ThemePalette.cs" />
     <Compile Include="Helpers\UI\WindowCornerHelper.cs" />
     <Compile Include="Dialogs\HardwareDetailsDialog.cs">
       <SubType>Form</SubType>
@@ -250,9 +251,9 @@
   <ItemGroup>
     <EmbeddedResource Include="App.config" />
     <None Include="Resources\amd.png" />
-    <EmbeddedResource Include="Resources\Oxanium-Regular.ttf" />
-    <EmbeddedResource Include="Resources\Oxanium-ExtraBold.ttf" />
-    <None Include="Resources\OFL-Oxanium.txt" />
+    <EmbeddedResource Include="Resources\JetBrainsMono-Regular.ttf" />
+    <EmbeddedResource Include="Resources\JetBrainsMono-ExtraBold.ttf" />
+    <None Include="Resources\OFL-JetBrainsMono.txt" />
     <EmbeddedResource Include="Resources\PawnIO_setup.exe">
       <LogicalName>TrayTemps.Resources.PawnIO_setup.exe</LogicalName>
     </EmbeddedResource>

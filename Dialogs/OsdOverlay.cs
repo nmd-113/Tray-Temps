@@ -53,7 +53,8 @@ namespace TrayTemps
             get
             {
                 CreateParams parameters = base.CreateParams;
-                parameters.ExStyle |= WsExTransparent | WsExToolWindow | WsExLayered | WsExNoActivate;
+                if (!EmbeddedFonts.IsDesignTime(this))
+                    parameters.ExStyle |= WsExTransparent | WsExToolWindow | WsExLayered | WsExNoActivate;
                 return parameters;
             }
         }
@@ -61,6 +62,10 @@ namespace TrayTemps
         protected override void OnShown(EventArgs e)
         {
             base.OnShown(e);
+
+            if (EmbeddedFonts.IsDesignTime(this))
+                return;
+
             // A hidden per-monitor-DPI form can receive its final DPI only when shown.
             // Recalculate if that final DPI differs from the cached measurements.
             if (_layoutDpi != DeviceDpi)
@@ -71,7 +76,7 @@ namespace TrayTemps
 
         protected override void WndProc(ref Message message)
         {
-            if (message.Msg == WmNcHitTest)
+            if (!EmbeddedFonts.IsDesignTime(this) && message.Msg == WmNcHitTest)
             {
                 message.Result = HtTransparent;
                 return;
