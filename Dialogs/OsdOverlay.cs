@@ -30,6 +30,10 @@ namespace TrayTemps
         private readonly List<MetricLayout> _metricLayouts = new List<MetricLayout>();
         private readonly Dictionary<string, int> _valueTemplateWidthCache =
             new Dictionary<string, int>(StringComparer.Ordinal);
+        private Bitmap _presentationBitmap;
+        private Graphics _presentationGraphics;
+        private Size _presentationSize;
+        private int _presentationDpi;
         private Font _displayFont;
         private string _displayFontFamily;
         private float _displayFontSize;
@@ -87,8 +91,19 @@ namespace TrayTemps
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
+            DisposePresentationSurface();
             DisposeDisplayFont();
             base.OnFormClosed(e);
+        }
+
+        private void DisposePresentationSurface()
+        {
+            _presentationGraphics?.Dispose();
+            _presentationGraphics = null;
+            _presentationBitmap?.Dispose();
+            _presentationBitmap = null;
+            _presentationSize = Size.Empty;
+            _presentationDpi = 0;
         }
 
         private void DisposeDisplayFont()
@@ -113,7 +128,6 @@ namespace TrayTemps
                     workingArea,
                     out bool layoutChanged))
             {
-                EnsureTopMost();
                 return;
             }
 
@@ -613,7 +627,7 @@ namespace TrayTemps
             var path = new GraphicsPath();
             float emSize = graphics.DpiY * _displayFont.SizeInPoints / 72f;
 
-            using (var format = new StringFormat(StringFormat.GenericTypographic))
+            using (StringFormat format = StringFormat.GenericTypographic)
             {
                 format.FormatFlags |= StringFormatFlags.NoWrap;
                 path.AddString(
@@ -654,82 +668,93 @@ namespace TrayTemps
             if (IsDisposed || !IsHandleCreated || ClientSize.Width <= 0 || ClientSize.Height <= 0)
                 return;
 
-            using (var bitmap = new Bitmap(ClientSize.Width, ClientSize.Height, PixelFormat.Format32bppPArgb))
+            EnsurePresentationSurface();
+            Bitmap bitmap = _presentationBitmap;
+            Graphics graphics = _presentationGraphics;
+            graphics.Clear(Color.Transparent);
+
+            int backgroundOpacity = Math.Max(
+                0,
+                Math.Min(100, _configuration.BackgroundOpacityPercent));
+            if (backgroundOpacity > 0)
             {
-                bitmap.SetResolution(DeviceDpi, DeviceDpi);
-                using (Graphics graphics = Graphics.FromImage(bitmap))
-                {
-                    graphics.Clear(Color.Transparent);
-
-                    int backgroundOpacity = Math.Max(
-                        0,
-                        Math.Min(100, _configuration.BackgroundOpacityPercent));
-                    if (backgroundOpacity > 0)
-                    {
-                        int alpha = (int)Math.Round(255d * backgroundOpacity / 100d);
-                        using (var backgroundBrush = new SolidBrush(Color.FromArgb(alpha, _backgroundColor)))
-                            graphics.FillRectangle(backgroundBrush, 0, 0, bitmap.Width, bitmap.Height);
-                    }
-
-                    DrawOverlay(graphics);
-                }
-
-                IntPtr screenDc = GetDC(IntPtr.Zero);
-                if (screenDc == IntPtr.Zero)
-                    return;
-
-                IntPtr memoryDc = CreateCompatibleDC(screenDc);
-                if (memoryDc == IntPtr.Zero)
-                {
-                    ReleaseDC(IntPtr.Zero, screenDc);
-                    return;
-                }
-
-                IntPtr bitmapHandle = IntPtr.Zero;
-                IntPtr previousObject = IntPtr.Zero;
-
-                try
-                {
-                    bitmapHandle = bitmap.GetHbitmap(Color.FromArgb(0));
-                    previousObject = SelectObject(memoryDc, bitmapHandle);
-                    if (previousObject == IntPtr.Zero || previousObject == new IntPtr(-1))
-                        return;
-
-                    var destination = new NativePoint(Left, Top);
-                    var source = new NativePoint(0, 0);
-                    var size = new NativeSize(bitmap.Width, bitmap.Height);
-                    var blend = new BlendFunction
-                    {
-                        BlendOp = AcSrcOver,
-                        SourceConstantAlpha = (byte)Math.Round(
-                            255d * Math.Max(20, Math.Min(100, _configuration.OpacityPercent)) / 100d),
-                        AlphaFormat = AcSrcAlpha
-                    };
-
-                    UpdateLayeredWindow(
-                        Handle,
-                        screenDc,
-                        ref destination,
-                        ref size,
-                        memoryDc,
-                        ref source,
-                        0,
-                        ref blend,
-                        UlwAlpha);
-                    EnsureTopMost();
-                }
-                finally
-                {
-                    if (previousObject != IntPtr.Zero && previousObject != new IntPtr(-1))
-                        SelectObject(memoryDc, previousObject);
-                    if (bitmapHandle != IntPtr.Zero)
-                        DeleteObject(bitmapHandle);
-                    if (memoryDc != IntPtr.Zero)
-                        DeleteDC(memoryDc);
-                    if (screenDc != IntPtr.Zero)
-                        ReleaseDC(IntPtr.Zero, screenDc);
-                }
+                int alpha = (int)Math.Round(255d * backgroundOpacity / 100d);
+                using (var backgroundBrush = new SolidBrush(Color.FromArgb(alpha, _backgroundColor)))
+                    graphics.FillRectangle(backgroundBrush, 0, 0, bitmap.Width, bitmap.Height);
             }
+
+            DrawOverlay(graphics);
+
+            IntPtr screenDc = GetDC(IntPtr.Zero);
+            if (screenDc == IntPtr.Zero)
+                return;
+
+            IntPtr memoryDc = CreateCompatibleDC(screenDc);
+            if (memoryDc == IntPtr.Zero)
+            {
+                ReleaseDC(IntPtr.Zero, screenDc);
+                return;
+            }
+
+            IntPtr bitmapHandle = IntPtr.Zero;
+            IntPtr previousObject = IntPtr.Zero;
+
+            try
+            {
+                bitmapHandle = bitmap.GetHbitmap(Color.FromArgb(0));
+                previousObject = SelectObject(memoryDc, bitmapHandle);
+                if (previousObject == IntPtr.Zero || previousObject == new IntPtr(-1))
+                    return;
+
+                var destination = new NativePoint(Left, Top);
+                var source = new NativePoint(0, 0);
+                var size = new NativeSize(bitmap.Width, bitmap.Height);
+                var blend = new BlendFunction
+                {
+                    BlendOp = AcSrcOver,
+                    SourceConstantAlpha = (byte)Math.Round(
+                        255d * Math.Max(20, Math.Min(100, _configuration.OpacityPercent)) / 100d),
+                    AlphaFormat = AcSrcAlpha
+                };
+
+                UpdateLayeredWindow(
+                    Handle,
+                    screenDc,
+                    ref destination,
+                    ref size,
+                    memoryDc,
+                    ref source,
+                    0,
+                    ref blend,
+                    UlwAlpha);
+                EnsureTopMost();
+            }
+            finally
+            {
+                if (previousObject != IntPtr.Zero && previousObject != new IntPtr(-1))
+                    SelectObject(memoryDc, previousObject);
+                if (bitmapHandle != IntPtr.Zero)
+                    DeleteObject(bitmapHandle);
+                if (memoryDc != IntPtr.Zero)
+                    DeleteDC(memoryDc);
+                if (screenDc != IntPtr.Zero)
+                    ReleaseDC(IntPtr.Zero, screenDc);
+            }
+        }
+
+        private void EnsurePresentationSurface()
+        {
+            Size size = ClientSize;
+            if (_presentationBitmap != null && _presentationSize == size &&
+                _presentationDpi == DeviceDpi)
+                return;
+
+            DisposePresentationSurface();
+            _presentationBitmap = new Bitmap(size.Width, size.Height, PixelFormat.Format32bppPArgb);
+            _presentationBitmap.SetResolution(DeviceDpi, DeviceDpi);
+            _presentationGraphics = Graphics.FromImage(_presentationBitmap);
+            _presentationSize = size;
+            _presentationDpi = DeviceDpi;
         }
 
         private void EnsureTopMost()

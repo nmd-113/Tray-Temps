@@ -60,7 +60,8 @@ namespace TrayTemps
                     Arguments = arguments
                 };
 
-                return Process.Start(startInfo) != null;
+                using (Process process = Process.Start(startInfo))
+                    return process != null;
             }
             catch (Win32Exception ex)
             {
@@ -234,7 +235,9 @@ namespace TrayTemps
             string directory = Path.GetDirectoryName(configurationPath);
             Directory.CreateDirectory(directory);
 
-            string temporaryPath = configurationPath + "." + Process.GetCurrentProcess().Id + ".tmp";
+            string temporaryPath;
+            using (Process process = Process.GetCurrentProcess())
+                temporaryPath = configurationPath + "." + process.Id + ".tmp";
             try
             {
                 using (var output = new FileStream(
@@ -372,10 +375,11 @@ namespace TrayTemps
                     "TrayTemps",
                     "settings.json");
 
-                if (!File.Exists(settingsPath))
+                if (!SettingsFileHelper.HasSettingsFile(settingsPath))
                     return false;
 
-                AppSettings settings = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(settingsPath));
+                AppSettings settings = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(
+                    SettingsFileHelper.ReadSettingsJson(settingsPath));
                 return settings?.StartMinimizedToTray == true;
             }
             catch (Exception ex)

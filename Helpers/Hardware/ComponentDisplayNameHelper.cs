@@ -18,38 +18,6 @@ namespace TrayTemps
                 .ToList() ?? new List<string>();
         }
 
-        internal static List<string> MergeStorageDisplayNames(
-            IEnumerable<string> wmiNames,
-            IEnumerable<string> lhmNames)
-        {
-            List<string> reliableWmiNames = wmiNames?
-                .Where(name => !string.IsNullOrWhiteSpace(name))
-                .Select(HardwareReportFormatHelper.SanitizeSingleLineText)
-                .Where(name => !string.IsNullOrWhiteSpace(name))
-                .ToList() ?? new List<string>();
-
-            var mergedNames = new List<string>(reliableWmiNames);
-
-            if (lhmNames == null)
-                return mergedNames;
-
-            foreach (string lhmName in lhmNames.Where(name => !string.IsNullOrWhiteSpace(name)))
-            {
-                string cleanLhmName = HardwareReportFormatHelper.SanitizeSingleLineText(lhmName);
-                string normalizedLhmName = HardwareReportFormatHelper.NormalizeHardwareText(cleanLhmName);
-                bool alreadyRepresentedByWmi = reliableWmiNames.Any(wmiName =>
-                    string.Equals(
-                        HardwareReportFormatHelper.NormalizeHardwareText(wmiName),
-                        normalizedLhmName,
-                        StringComparison.OrdinalIgnoreCase));
-
-                if (!alreadyRepresentedByWmi)
-                    mergedNames.Add(cleanLhmName);
-            }
-
-            return mergedNames;
-        }
-
         internal static List<string> MergeComponentDisplayNames(
             IEnumerable<string> wmiNames,
             IEnumerable<string> lhmNames,

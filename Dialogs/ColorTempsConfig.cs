@@ -79,10 +79,14 @@ namespace TrayTemps
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
+            UnsubscribeFromThemeChanges();
+            base.OnFormClosed(e);
+        }
+
+        private void UnsubscribeFromThemeChanges()
+        {
             if (_mainForm != null)
                 _mainForm.ThemeChanged -= MainForm_ThemeChanged;
-
-            base.OnFormClosed(e);
         }
 
         private void MainForm_ThemeChanged(object sender, EventArgs e)

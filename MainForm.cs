@@ -1259,13 +1259,15 @@ namespace TrayTemps
                             UpdateHardwareRecursive(_selectedGpuHardware);
 
                         osdMemoryHardware?.Update();
-
-                        RefreshUnavailableTemperatureSensors();
                     }
                 });
 
                 if (_isShutdownInitiated || _resourcesDisposed || IsDisposed || !IsHandleCreated)
                     return;
+
+                // Sensor selection reads ComboBox.SelectedItem and must run on
+                // the UI thread after the worker finishes updating the hardware.
+                RefreshUnavailableTemperatureSensors();
 
                 float? cpuTemp = TemperatureFormatHelper.IsValidTemp(_cpuTempSensor?.Value)
                     ? _cpuTempSensor.Value
@@ -1490,7 +1492,7 @@ namespace TrayTemps
 
         private static float? ClampLoadPercent(float? value)
         {
-            if (!value.HasValue || float.IsNaN(value.Value))
+            if (!value.HasValue || float.IsNaN(value.Value) || float.IsInfinity(value.Value))
                 return null;
 
             return Math.Max(0f, Math.Min(100f, value.Value));
@@ -2323,13 +2325,16 @@ namespace TrayTemps
         private GraphicsPath CreateTrayTextPath(string text, Font font)
         {
             var path = new GraphicsPath();
-            path.AddString(
-                text,
-                font.FontFamily,
-                (int)font.Style,
-                font.Size,
-                new Point(0, 0),
-                StringFormat.GenericTypographic);
+            using (StringFormat format = StringFormat.GenericTypographic)
+            {
+                path.AddString(
+                    text,
+                    font.FontFamily,
+                    (int)font.Style,
+                    font.Size,
+                    new Point(0, 0),
+                    format);
+            }
 
             return path;
         }
@@ -2663,8 +2668,8 @@ namespace TrayTemps
             cpuColorValue.BackColor = ValueHelper.LoadColorOrDefault(settings.CpuColor, Color.Aqua);
             gpuColorValue.BackColor = ValueHelper.LoadColorOrDefault(settings.GpuColor, Color.Gold);
 
-            WarmTempMin = ValueHelper.ClampInt(settings.MinWarmTemp, 0, 130);
-            WarmTempMax = ValueHelper.ClampInt(settings.MaxWarmTemp, WarmTempMin, 130);
+            WarmTempMin = ValueHelper.ClampInt(settings.MinWarmTemp, 0, 230);
+            WarmTempMax = ValueHelper.ClampInt(settings.MaxWarmTemp, WarmTempMin, 230);
 
             NormalColor = ValueHelper.LoadColorOrDefault(settings.NormalTempColor, Color.FromArgb(240, 240, 255));
             WarningColor = ValueHelper.LoadColorOrDefault(settings.WarmTempColor, Color.Yellow);
@@ -3336,6 +3341,9 @@ namespace TrayTemps
             }
             catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException || ex is InvalidDataException || ex is System.Text.Json.JsonException)
             {
+                if (_isShutdownInitiated || IsDisposed || Disposing)
+                    return;
+
                 MessageBox.Show(
                     this,
                     "Unable to check for updates. Check your internet connection and try again.\n\n" + ex.Message,
@@ -3425,11 +3433,23 @@ namespace TrayTemps
 
         private void OpenUrl(string url)
         {
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            try
             {
-                FileName = url,
-                UseShellExecute = true
-            });
+                using (Process process = Process.Start(new ProcessStartInfo
+                {
+                    FileName = url,
+                    UseShellExecute = true
+                }))
+                {
+                    // The browser runs independently of the local Process handle.
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("Opening link failed: " + ex);
+                MessageBox.Show(this, "Could not open the link.\n\n" + ex.Message,
+                    "Open Link", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
 
         private void HideToTray()
@@ -4255,7 +4275,8 @@ namespace TrayTemps
 
         private static string FormatOsdPercent(float? value)
         {
-            return value.HasValue ? $"{Math.Max(0f, Math.Min(100f, value.Value)):F0}%" : "N/A";
+            float? percent = ClampLoadPercent(value);
+            return percent.HasValue ? $"{percent.Value:F0}%" : "N/A";
         }
 
         private static string FormatMemoryUsage(
@@ -4327,12 +4348,14 @@ namespace TrayTemps
 
         private static double? ToGigabytes(ISensor sensor)
         {
-            if (sensor == null || !sensor.Value.HasValue)
+            float? value = sensor?.Value;
+            if (!value.HasValue || float.IsNaN(value.Value) ||
+                float.IsInfinity(value.Value) || value.Value < 0)
                 return null;
 
             return sensor.SensorType == SensorType.SmallData
-                ? sensor.Value.Value / 1024d
-                : sensor.Value.Value;
+                ? value.Value / 1024d
+                : value.Value;
         }
 
         private static IEnumerable<ISensor> EnumerateSensorsRecursive(IHardware hardware)
@@ -4803,7 +4826,10 @@ namespace TrayTemps
             cpuName.Text = hardwareName;
 
             if (updateHardware)
-                UpdateHardwareRecursive(_selectedCpuHardware);
+            {
+                lock (_hardwareUpdateLock)
+                    UpdateHardwareRecursive(_selectedCpuHardware);
+            }
 
             PopulateTemperatureSensorSelector(cpuTempSensorSelect, _selectedCpuHardware, _savedCpuTemperatureSensorIdentifier);
             _cpuTempSensor = GetConfiguredTemperatureSensor(cpuTempSensorSelect, _selectedCpuHardware, isCpu: true);
@@ -4819,7 +4845,10 @@ namespace TrayTemps
             gpuName.Text = hardwareName;
 
             if (updateHardware)
-                UpdateHardwareRecursive(_selectedGpuHardware);
+            {
+                lock (_hardwareUpdateLock)
+                    UpdateHardwareRecursive(_selectedGpuHardware);
+            }
 
             PopulateTemperatureSensorSelector(gpuTempSensorSelect, _selectedGpuHardware, _savedGpuTemperatureSensorIdentifier);
             _gpuTempSensor = GetConfiguredTemperatureSensor(gpuTempSensorSelect, _selectedGpuHardware, isCpu: false);
@@ -4990,7 +5019,8 @@ namespace TrayTemps
             }
             else if (++_cpuInvalidSensorCycles >= RescanAfterInvalidCycles && _selectedCpuHardware != null)
             {
-                _cpuTempSensor = GetConfiguredTemperatureSensor(cpuTempSensorSelect, _selectedCpuHardware, isCpu: true);
+                lock (_hardwareUpdateLock)
+                    _cpuTempSensor = GetConfiguredTemperatureSensor(cpuTempSensorSelect, _selectedCpuHardware, isCpu: true);
                 _cpuInvalidSensorCycles = 0;
             }
 
@@ -5000,7 +5030,8 @@ namespace TrayTemps
             }
             else if (++_gpuInvalidSensorCycles >= RescanAfterInvalidCycles && _selectedGpuHardware != null)
             {
-                _gpuTempSensor = GetConfiguredTemperatureSensor(gpuTempSensorSelect, _selectedGpuHardware, isCpu: false);
+                lock (_hardwareUpdateLock)
+                    _gpuTempSensor = GetConfiguredTemperatureSensor(gpuTempSensorSelect, _selectedGpuHardware, isCpu: false);
                 _gpuInvalidSensorCycles = 0;
             }
         }
@@ -5567,7 +5598,7 @@ namespace TrayTemps
 
                 lock (_hardwareUpdateLock)
                 {
-                    if (_isShutdownInitiated || _resourcesDisposed || _computer == null)
+                    if (_isShutdownInitiated || _resourcesDisposed)
                         return string.Empty;
 
                     _storageHardwares = GetStorageHardwares(_computer);
@@ -6027,6 +6058,9 @@ namespace TrayTemps
             }
             catch (Exception ex)
             {
+                if (_isShutdownInitiated || IsDisposed || Disposing)
+                    return;
+
                 MessageBox.Show(this, ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 RevertCheckbox(control, !control.Checked);
             }
@@ -6407,8 +6441,8 @@ namespace TrayTemps
                     Arguments = "-elevated-restart"
                 };
 
-                Process process = Process.Start(startInfo);
-                return process != null;
+                using (Process process = Process.Start(startInfo))
+                    return process != null;
             }
             catch (Exception ex)
             {
@@ -6481,12 +6515,18 @@ namespace TrayTemps
             string batPath = Path.Combine(Path.GetTempPath(),
                                           $"DeleteTrayTemps_{Guid.NewGuid():N}.bat");
 
+            // Batch expands percent signs even inside quotes. Preserve literal
+            // paths, including user profiles containing percent signs or '!'.
+            string batchInstallDirectory = installDirectory.Replace("%", "%%");
+            string batchSettingsFolder = settingsFolder.Replace("%", "%%");
+            string batchShortcutPath = shortcutPath.Replace("%", "%%");
             string script = $@"@echo off
-setlocal
+setlocal DisableDelayedExpansion
+chcp 65001 > nul
 cd /d ""%~dp0""
 
-set ""install_folder={installDirectory}""
-set ""settings_folder={settingsFolder}""
+set ""install_folder={batchInstallDirectory}""
+set ""settings_folder={batchSettingsFolder}""
 set attempts=0
 
 :loop
@@ -6504,29 +6544,30 @@ goto loop
 if exist ""%settings_folder%"" rmdir /s /q ""%settings_folder%""
 
 :cleanup
-if exist ""{shortcutPath}"" del /f /q ""{shortcutPath}""
+if exist ""{batchShortcutPath}"" del /f /q ""{batchShortcutPath}""
 
 (goto) 2>nul & del ""%~f0""";
 
             File.WriteAllText(batPath, script);
 
-            Process process = Process.Start(new ProcessStartInfo(batPath)
+            using (Process process = Process.Start(new ProcessStartInfo(batPath)
             {
                 UseShellExecute = true,
                 CreateNoWindow = true,
                 WindowStyle = ProcessWindowStyle.Hidden
-            });
-
-            if (process == null)
+            }))
             {
-                MessageBox.Show(
-                    this,
-                    "Uninstall could not start.",
-                    "Uninstall Error",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
+                if (process == null)
+                {
+                    MessageBox.Show(
+                        this,
+                        "Uninstall could not start.",
+                        "Uninstall Error",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
 
-                return;
+                    return;
+                }
             }
 
             _settingsLoaded = false;

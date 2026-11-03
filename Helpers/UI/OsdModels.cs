@@ -173,6 +173,9 @@ namespace TrayTemps
                 return families
                     .Select(family => family.Name)
                     .Concat(new[] { EmbeddedJetBrainsMonoExtraBoldDisplayName, EmbeddedJetBrainsMonoRegularDisplayName, "Consolas" })
+                    .Where(name =>
+                        !string.Equals(name, EmbeddedFonts.Regular?.Name, StringComparison.OrdinalIgnoreCase) &&
+                        !string.Equals(name, EmbeddedFonts.ExtraBold?.Name, StringComparison.OrdinalIgnoreCase))
                     .Where(name => !string.IsNullOrWhiteSpace(name))
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
@@ -229,6 +232,7 @@ namespace TrayTemps
         internal static bool IsEmbeddedExtraBoldFamily(string familyName)
         {
             return string.Equals(familyName, EmbeddedJetBrainsMonoExtraBoldDisplayName, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(familyName, EmbeddedFonts.ExtraBold?.Name, StringComparison.OrdinalIgnoreCase) ||
                    string.Equals(familyName, "Oxanium ExtraBold", StringComparison.OrdinalIgnoreCase) ||
                    string.Equals(familyName, "Bunken Tech Sans Pro Bold", StringComparison.OrdinalIgnoreCase);
         }
@@ -345,7 +349,8 @@ namespace TrayTemps
             {
                 foreach (string part in value.Split(','))
                 {
-                    if (Enum.TryParse(part.Trim(), true, out OsdItemKind item) && !result.Contains(item))
+                    if (Enum.TryParse(part.Trim(), true, out OsdItemKind item) &&
+                        Enum.IsDefined(typeof(OsdItemKind), item) && !result.Contains(item))
                         result.Add(item);
                 }
             }

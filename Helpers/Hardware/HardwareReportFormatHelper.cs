@@ -198,6 +198,9 @@ namespace TrayTemps
 
         internal static string GetCpuArchitectureString(object value)
         {
+            if (value == null || value == DBNull.Value)
+                return "N/A";
+
             uint code = ToUInt(value);
 
             switch (code)
@@ -427,10 +430,13 @@ namespace TrayTemps
 
         internal static string FormatSensorValue(ISensor sensor)
         {
-            if (sensor == null || !sensor.Value.HasValue)
+            float? reading = sensor?.Value;
+            if (!reading.HasValue)
                 return "N/A";
 
-            float value = sensor.Value.Value;
+            float value = reading.Value;
+            if (float.IsNaN(value) || float.IsInfinity(value))
+                return "N/A";
 
             switch (sensor.SensorType)
             {

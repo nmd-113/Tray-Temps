@@ -14,6 +14,9 @@ namespace TrayTemps
     {
         private const string RegularResourceName = "TrayTemps.Resources.JetBrainsMono-Regular.ttf";
         private const string ExtraBoldResourceName = "TrayTemps.Resources.JetBrainsMono-ExtraBold.ttf";
+        private const string RegularFamilyName = "TrayTemps Mono";
+        private const string ExtraBoldFamilyName = "TrayTemps Mono ExtraBold";
+        private const string ExtraBoldFontTag = "TrayTemps.Font.ExtraBold";
 
         private static readonly object SyncRoot = new object();
         private static readonly PrivateFontCollection RegularFontCollection = new PrivateFontCollection();
@@ -48,8 +51,8 @@ namespace TrayTemps
                 if (_initialized)
                     return;
 
-                Regular = LoadFontFamily(RegularFontCollection, RegularResourceName, "JetBrains Mono");
-                ExtraBold = LoadFontFamily(ExtraBoldFontCollection, ExtraBoldResourceName, "JetBrains Mono ExtraBold");
+                Regular = LoadFontFamily(RegularFontCollection, RegularResourceName, RegularFamilyName);
+                ExtraBold = LoadFontFamily(ExtraBoldFontCollection, ExtraBoldResourceName, ExtraBoldFamilyName);
 
                 AppDomain.CurrentDomain.ProcessExit += (s, e) => ReleaseFontMemory();
                 AppDomain.CurrentDomain.DomainUnload += (s, e) => ReleaseFontMemory();
@@ -128,13 +131,17 @@ namespace TrayTemps
             bool preserveSystemFont = IsSystemSpecialCase(control);
             // Capture the old font, assign the replacement, then dispose the old font if it is safe to do so.
             Font oldFont = control.Font;
-            Font newFont = CreateReplacementFont(oldFont, preserveSystemFont);
+            bool forceExtraBold = string.Equals(
+                control.Tag as string,
+                ExtraBoldFontTag,
+                StringComparison.Ordinal);
+            Font newFont = CreateReplacementFont(oldFont, preserveSystemFont, forceExtraBold);
             control.Font = newFont;
             if (!preserveSystemFont && oldFont != null && !ReferenceEquals(oldFont, newFont) && !ReferenceEquals(oldFont, control.Parent?.Font))
                 oldFont.Dispose();
         }
 
-        private static Font CreateReplacementFont(Font source, bool preserveSystemFont)
+        private static Font CreateReplacementFont(Font source, bool preserveSystemFont, bool forceExtraBold = false)
         {
             if (source == null || source.FontFamily == null)
                 return source;
@@ -142,7 +149,11 @@ namespace TrayTemps
             if (preserveSystemFont)
                 return source;
 
-            FontFamily family = source.Style.HasFlag(FontStyle.Bold) ? ExtraBold : Regular;
+            bool useExtraBold = forceExtraBold ||
+                source.Style.HasFlag(FontStyle.Bold) ||
+                string.Equals(source.FontFamily.Name, ExtraBold.Name, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(source.FontFamily.Name, "JetBrains Mono ExtraBold", StringComparison.OrdinalIgnoreCase);
+            FontFamily family = useExtraBold ? ExtraBold : Regular;
             FontStyle style = source.Style & ~FontStyle.Bold;
 
             return new Font(

@@ -148,10 +148,12 @@ namespace TrayTemps
             {
                 string deviceId = HardwareReportFormatHelper.Safe(disk["DeviceID"]);
 
-                if (deviceId == "N/A" || !TryGetUInt64(disk["Size"], out ulong size))
+                if (deviceId == "N/A" ||
+                    !TryGetUInt64(disk["Size"], out ulong size) ||
+                    !TryGetUInt64(disk["FreeSpace"], out ulong freeSpace) ||
+                    freeSpace > size)
                     continue;
 
-                TryGetUInt64(disk["FreeSpace"], out ulong freeSpace);
                 result[deviceId] = new LogicalDiskSpace(size, freeSpace);
             }
 
@@ -250,6 +252,10 @@ namespace TrayTemps
 
         private static bool TryGetInt32(object value, out int result)
         {
+            result = 0;
+            if (value == null || value == DBNull.Value)
+                return false;
+
             try
             {
                 result = Convert.ToInt32(value, CultureInfo.InvariantCulture);
@@ -264,6 +270,10 @@ namespace TrayTemps
 
         private static bool TryGetUInt64(object value, out ulong result)
         {
+            result = 0;
+            if (value == null || value == DBNull.Value)
+                return false;
+
             try
             {
                 result = Convert.ToUInt64(value, CultureInfo.InvariantCulture);
@@ -278,6 +288,10 @@ namespace TrayTemps
 
         private static bool TryGetDouble(object value, out double result)
         {
+            result = 0;
+            if (value == null || value == DBNull.Value)
+                return false;
+
             try
             {
                 result = Convert.ToDouble(value, CultureInfo.InvariantCulture);

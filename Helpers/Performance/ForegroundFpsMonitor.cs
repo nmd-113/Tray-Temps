@@ -106,9 +106,6 @@ namespace TrayTemps
         private bool _running;
         private bool _disposed;
         private int _stopCleanupDeferred;
-#if DEBUG
-        private byte _debugPublishedBackend;
-#endif
 
         internal ForegroundFpsMonitor()
         {
@@ -168,9 +165,7 @@ namespace TrayTemps
                 if (_consumerHandle == InvalidProcessTraceHandle)
                     return FailStart();
 
-                _dxgKrnlFallbackEnabled = EnableDxgKrnlFallbackProvider(out uint fallbackStatus);
-                if (!_dxgKrnlFallbackEnabled)
-                    FpsDebug("DxgKrnl fallback provider unavailable: 0x" + fallbackStatus.ToString("X"));
+                _dxgKrnlFallbackEnabled = EnableDxgKrnlFallbackProvider(out _);
 
                 var consumerThread = new Thread(ConsumeEvents)
                 {
@@ -283,7 +278,6 @@ namespace TrayTemps
             if (lastPresent > 0 && now >= lastPresent &&
                 now - lastPresent <= _staleValueTicks && value >= 0)
             {
-                DebugPublishedResult(1, value);
                 return value;
             }
 
@@ -292,11 +286,9 @@ namespace TrayTemps
             if (fallbackLastPresent > 0 && now >= fallbackLastPresent &&
                 now - fallbackLastPresent <= _staleValueTicks && fallbackValue >= 0)
             {
-                DebugPublishedResult(2, fallbackValue);
                 return fallbackValue;
             }
 
-            DebugPublishedResult(0, -1);
             return null;
         }
 
@@ -587,7 +579,6 @@ namespace TrayTemps
                 {
                     _dxgKrnlFallbackEnabled = false;
                     ResetFallbackState(generation);
-                    FpsDebug("DxgKrnl fallback disabled after callback failure");
                 }
                 return;
             }
@@ -699,7 +690,7 @@ namespace TrayTemps
             model = 0;
             if (version != 0 && version != 2)
             {
-                RejectHistorySchema(eventId, version, "unknown version");
+                RejectHistorySchema(eventId, version);
                 return false;
             }
 
@@ -713,8 +704,6 @@ namespace TrayTemps
                 schemaStates[version] = (sbyte)(valid ? 1 : -1);
                 if (!valid)
                 {
-                    FpsDebug("DxgKrnl event " + eventId +
-                        " rejected TDH schema version " + version);
                     return false;
                 }
             }
@@ -727,7 +716,6 @@ namespace TrayTemps
             byte* userData = *(byte**)(header + EventRecordUserDataOffsetX64);
             if (userData == null || userDataLength < sizeof(uint))
             {
-                FpsDebug("DxgKrnl event " + eventId + " rejected short payload");
                 return false;
             }
 
@@ -748,8 +736,6 @@ namespace TrayTemps
                     out model);
                 if (status != ErrorSuccess)
                 {
-                    FpsDebug("DxgKrnl event " + eventId +
-                        " rejected TDH property status 0x" + status.ToString("X"));
                     model = 0;
                     return false;
                 }
@@ -758,7 +744,7 @@ namespace TrayTemps
             return true;
         }
 
-        private void RejectHistorySchema(ushort eventId, byte version, string reason)
+        private void RejectHistorySchema(ushort eventId, byte version)
         {
             sbyte[] schemaStates = eventId == DxgKrnlPresentHistoryStartEventId
                 ? _history171SchemaStates
@@ -766,8 +752,6 @@ namespace TrayTemps
             if (schemaStates[version] == 0)
             {
                 schemaStates[version] = -1;
-                FpsDebug("DxgKrnl event " + eventId + " rejected " + reason +
-                    " " + version);
             }
         }
 
@@ -1115,9 +1099,6 @@ namespace TrayTemps
             Volatile.Write(ref _fallbackLastPresentTimestamp, candidate.LastTimestamp);
             ClearFallbackCandidates();
 
-            FpsDebug("DxgKrnl fallback selected event " + candidate.EventId +
-                " model " + candidate.Model +
-                " thread " + candidate.ThreadId);
         }
 
         private void SampleFallbackTimestamp(long timestamp)
@@ -1184,28 +1165,6 @@ namespace TrayTemps
             _fallbackCandidateCount = 0;
             _fallbackCandidateOverflow = false;
             _fallbackQualificationStartTimestamp = 0;
-        }
-
-        [Conditional("DEBUG")]
-        private static void FpsDebug(string message)
-        {
-            Debug.WriteLine("ForegroundFpsMonitor: " + message);
-        }
-
-        [Conditional("DEBUG")]
-        private void DebugPublishedResult(byte backend, int fps)
-        {
-#if DEBUG
-            if (_debugPublishedBackend == backend)
-                return;
-
-            _debugPublishedBackend = backend;
-            string source = backend == 1
-                ? "primary"
-                : backend == 2 ? "fallback" : "none";
-            Debug.WriteLine("ForegroundFpsMonitor: publishing " + source +
-                (fps >= 0 ? " FPS " + fps : string.Empty));
-#endif
         }
 
         private static unsafe void ReadPresentData(

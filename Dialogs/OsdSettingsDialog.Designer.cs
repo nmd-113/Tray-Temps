@@ -160,13 +160,13 @@ namespace TrayTemps
             // 
             this.fpsRefreshIntervalValue.DropDownHeight = 200;
             this.fpsRefreshIntervalValue.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.fpsRefreshIntervalValue.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.fpsRefreshIntervalValue.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.fpsRefreshIntervalValue.FormattingEnabled = true;
             this.fpsRefreshIntervalValue.IntegralHeight = false;
             this.fpsRefreshIntervalValue.Location = new System.Drawing.Point(145, 166);
             this.fpsRefreshIntervalValue.Margin = new System.Windows.Forms.Padding(2);
             this.fpsRefreshIntervalValue.Name = "fpsRefreshIntervalValue";
-            this.fpsRefreshIntervalValue.Size = new System.Drawing.Size(110, 21);
+            this.fpsRefreshIntervalValue.Size = new System.Drawing.Size(110, 24);
             this.fpsRefreshIntervalValue.TabIndex = 9;
             this.settingsToolTip.SetToolTip(this.fpsRefreshIntervalValue, "Changes only FPS display refresh; hardware sensor polling is unaffected.");
             this.fpsRefreshIntervalValue.SelectedIndexChanged += new System.EventHandler(this.VisualSettingChanged);
@@ -174,11 +174,11 @@ namespace TrayTemps
             // fpsLabelValueSpacingLabel
             // 
             this.fpsLabelValueSpacingLabel.AutoSize = true;
-            this.fpsLabelValueSpacingLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.fpsLabelValueSpacingLabel.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.fpsLabelValueSpacingLabel.Location = new System.Drawing.Point(301, 170);
             this.fpsLabelValueSpacingLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.fpsLabelValueSpacingLabel.Name = "fpsLabelValueSpacingLabel";
-            this.fpsLabelValueSpacingLabel.Size = new System.Drawing.Size(69, 13);
+            this.fpsLabelValueSpacingLabel.Size = new System.Drawing.Size(79, 16);
             this.fpsLabelValueSpacingLabel.TabIndex = 10;
             this.fpsLabelValueSpacingLabel.Text = "FPS spacing:";
             this.settingsToolTip.SetToolTip(this.fpsLabelValueSpacingLabel, "Controls spacing between the FPS label and value only.");
@@ -187,13 +187,13 @@ namespace TrayTemps
             // 
             this.fpsLabelValueSpacing.DropDownHeight = 200;
             this.fpsLabelValueSpacing.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.fpsLabelValueSpacing.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.fpsLabelValueSpacing.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.fpsLabelValueSpacing.FormattingEnabled = true;
             this.fpsLabelValueSpacing.IntegralHeight = false;
             this.fpsLabelValueSpacing.Location = new System.Drawing.Point(410, 166);
             this.fpsLabelValueSpacing.Margin = new System.Windows.Forms.Padding(2);
             this.fpsLabelValueSpacing.Name = "fpsLabelValueSpacing";
-            this.fpsLabelValueSpacing.Size = new System.Drawing.Size(110, 21);
+            this.fpsLabelValueSpacing.Size = new System.Drawing.Size(110, 24);
             this.fpsLabelValueSpacing.TabIndex = 11;
             this.settingsToolTip.SetToolTip(this.fpsLabelValueSpacing, "Controls spacing between the FPS label and value only.");
             this.fpsLabelValueSpacing.SelectedIndexChanged += new System.EventHandler(this.VisualSettingChanged);
@@ -202,7 +202,7 @@ namespace TrayTemps
             // 
             this.combineTemperatureAndUsage.AutoSize = true;
             this.combineTemperatureAndUsage.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.combineTemperatureAndUsage.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.combineTemperatureAndUsage.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.combineTemperatureAndUsage.Location = new System.Drawing.Point(305, 83);
             this.combineTemperatureAndUsage.Margin = new System.Windows.Forms.Padding(2);
             this.combineTemperatureAndUsage.Name = "combineTemperatureAndUsage";
@@ -217,12 +217,12 @@ namespace TrayTemps
             // 
             this.columnsValue.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.columnsValue.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.columnsValue.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.columnsValue.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.columnsValue.FormattingEnabled = true;
             this.columnsValue.Location = new System.Drawing.Point(563, 44);
             this.columnsValue.Margin = new System.Windows.Forms.Padding(2);
             this.columnsValue.Name = "columnsValue";
-            this.columnsValue.Size = new System.Drawing.Size(54, 21);
+            this.columnsValue.Size = new System.Drawing.Size(54, 24);
             this.columnsValue.TabIndex = 1;
             this.settingsToolTip.SetToolTip(this.columnsValue, "Controls how enabled OSD metrics are distributed across columns.");
             this.columnsValue.SelectedIndexChanged += new System.EventHandler(this.VisualSettingChanged);
@@ -232,13 +232,13 @@ namespace TrayTemps
             this.labelValueSpacing.Dock = System.Windows.Forms.DockStyle.Fill;
             this.labelValueSpacing.DropDownHeight = 200;
             this.labelValueSpacing.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.labelValueSpacing.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.labelValueSpacing.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.labelValueSpacing.FormattingEnabled = true;
             this.labelValueSpacing.IntegralHeight = false;
             this.labelValueSpacing.Location = new System.Drawing.Point(435, 2);
             this.labelValueSpacing.Margin = new System.Windows.Forms.Padding(2);
             this.labelValueSpacing.Name = "labelValueSpacing";
-            this.labelValueSpacing.Size = new System.Drawing.Size(169, 21);
+            this.labelValueSpacing.Size = new System.Drawing.Size(169, 24);
             this.labelValueSpacing.TabIndex = 2;
             this.settingsToolTip.SetToolTip(this.labelValueSpacing, "Adjusts the gap between each metric label and its value.");
             this.labelValueSpacing.SelectedIndexChanged += new System.EventHandler(this.VisualSettingChanged);
@@ -247,13 +247,13 @@ namespace TrayTemps
             // 
             this.hotkeyValue.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.hotkeyValue.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.hotkeyValue.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.hotkeyValue.Location = new System.Drawing.Point(214, 51);
             this.hotkeyValue.Margin = new System.Windows.Forms.Padding(2);
             this.hotkeyValue.Name = "hotkeyValue";
             this.hotkeyValue.ReadOnly = true;
             this.hotkeyValue.ShortcutsEnabled = false;
-            this.hotkeyValue.Size = new System.Drawing.Size(402, 19);
+            this.hotkeyValue.Size = new System.Drawing.Size(402, 21);
             this.hotkeyValue.TabIndex = 1;
             this.hotkeyValue.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             this.settingsToolTip.SetToolTip(this.hotkeyValue, "Sets the shortcut that toggles OSD visibility.");
@@ -263,7 +263,7 @@ namespace TrayTemps
             // 
             this.spacingHeader.AutoSize = true;
             this.spacingHeader.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.spacingHeader.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.spacingHeader.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.spacingHeader.Location = new System.Drawing.Point(305, 2);
             this.spacingHeader.Margin = new System.Windows.Forms.Padding(2);
             this.spacingHeader.Name = "spacingHeader";
@@ -391,12 +391,13 @@ namespace TrayTemps
             // displayedHardwareLabel
             // 
             this.displayedHardwareLabel.AutoSize = true;
-            this.displayedHardwareLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.displayedHardwareLabel.Font = new System.Drawing.Font("TrayTemps Mono ExtraBold", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.displayedHardwareLabel.Location = new System.Drawing.Point(16, 14);
             this.displayedHardwareLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.displayedHardwareLabel.Name = "displayedHardwareLabel";
-            this.displayedHardwareLabel.Size = new System.Drawing.Size(121, 15);
+            this.displayedHardwareLabel.Size = new System.Drawing.Size(128, 19);
             this.displayedHardwareLabel.TabIndex = 0;
+            this.displayedHardwareLabel.Tag = "TrayTemps.Font.ExtraBold";
             this.displayedHardwareLabel.Text = "Displayed metrics";
             // 
             // metricsCheckboxLayout
@@ -432,7 +433,7 @@ namespace TrayTemps
             this.showCpu.Checked = true;
             this.showCpu.CheckState = System.Windows.Forms.CheckState.Checked;
             this.showCpu.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.showCpu.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.showCpu.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.showCpu.Location = new System.Drawing.Point(2, 2);
             this.showCpu.Margin = new System.Windows.Forms.Padding(2);
             this.showCpu.Name = "showCpu";
@@ -446,7 +447,7 @@ namespace TrayTemps
             // 
             this.showCpuUsage.AutoSize = true;
             this.showCpuUsage.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.showCpuUsage.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.showCpuUsage.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.showCpuUsage.Location = new System.Drawing.Point(305, 2);
             this.showCpuUsage.Margin = new System.Windows.Forms.Padding(2);
             this.showCpuUsage.Name = "showCpuUsage";
@@ -461,11 +462,12 @@ namespace TrayTemps
             this.showGpu.AutoSize = true;
             this.showGpu.Checked = true;
             this.showGpu.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.showGpu.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.showGpu.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.showGpu.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.showGpu.Location = new System.Drawing.Point(2, 29);
             this.showGpu.Margin = new System.Windows.Forms.Padding(2);
             this.showGpu.Name = "showGpu";
-            this.showGpu.Size = new System.Drawing.Size(137, 17);
+            this.showGpu.Size = new System.Drawing.Size(299, 23);
             this.showGpu.TabIndex = 2;
             this.showGpu.Text = "Show GPU temperature";
             this.showGpu.UseVisualStyleBackColor = true;
@@ -475,7 +477,7 @@ namespace TrayTemps
             // 
             this.showGpuUsage.AutoSize = true;
             this.showGpuUsage.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.showGpuUsage.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.showGpuUsage.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.showGpuUsage.Location = new System.Drawing.Point(305, 29);
             this.showGpuUsage.Margin = new System.Windows.Forms.Padding(2);
             this.showGpuUsage.Name = "showGpuUsage";
@@ -489,7 +491,7 @@ namespace TrayTemps
             // 
             this.showRamUsage.AutoSize = true;
             this.showRamUsage.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.showRamUsage.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.showRamUsage.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.showRamUsage.Location = new System.Drawing.Point(2, 56);
             this.showRamUsage.Margin = new System.Windows.Forms.Padding(2);
             this.showRamUsage.Name = "showRamUsage";
@@ -503,7 +505,7 @@ namespace TrayTemps
             // 
             this.showVramUsage.AutoSize = true;
             this.showVramUsage.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.showVramUsage.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.showVramUsage.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.showVramUsage.Location = new System.Drawing.Point(305, 56);
             this.showVramUsage.Margin = new System.Windows.Forms.Padding(2);
             this.showVramUsage.Name = "showVramUsage";
@@ -517,7 +519,7 @@ namespace TrayTemps
             // 
             this.showFps.AutoSize = true;
             this.showFps.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.showFps.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.showFps.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.showFps.Location = new System.Drawing.Point(2, 83);
             this.showFps.Margin = new System.Windows.Forms.Padding(2);
             this.showFps.Name = "showFps";
@@ -530,11 +532,11 @@ namespace TrayTemps
             // fpsRefreshIntervalLabel
             // 
             this.fpsRefreshIntervalLabel.AutoSize = true;
-            this.fpsRefreshIntervalLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.fpsRefreshIntervalLabel.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.fpsRefreshIntervalLabel.Location = new System.Drawing.Point(18, 170);
             this.fpsRefreshIntervalLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.fpsRefreshIntervalLabel.Name = "fpsRefreshIntervalLabel";
-            this.fpsRefreshIntervalLabel.Size = new System.Drawing.Size(79, 13);
+            this.fpsRefreshIntervalLabel.Size = new System.Drawing.Size(103, 16);
             this.fpsRefreshIntervalLabel.TabIndex = 8;
             this.fpsRefreshIntervalLabel.Text = "FPS refresh (s):";
             // 
@@ -554,22 +556,23 @@ namespace TrayTemps
             // labelsTitle
             // 
             this.labelsTitle.AutoSize = true;
-            this.labelsTitle.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.labelsTitle.Font = new System.Drawing.Font("TrayTemps Mono ExtraBold", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.labelsTitle.Location = new System.Drawing.Point(16, 14);
             this.labelsTitle.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.labelsTitle.Name = "labelsTitle";
-            this.labelsTitle.Size = new System.Drawing.Size(125, 15);
+            this.labelsTitle.Size = new System.Drawing.Size(121, 19);
             this.labelsTitle.TabIndex = 0;
+            this.labelsTitle.Tag = "TrayTemps.Font.ExtraBold";
             this.labelsTitle.Text = "Labels and names";
             // 
             // customLabelsEnabled
             // 
             this.customLabelsEnabled.AutoSize = true;
-            this.customLabelsEnabled.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.customLabelsEnabled.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.customLabelsEnabled.Location = new System.Drawing.Point(18, 41);
             this.customLabelsEnabled.Margin = new System.Windows.Forms.Padding(2);
             this.customLabelsEnabled.Name = "customLabelsEnabled";
-            this.customLabelsEnabled.Size = new System.Drawing.Size(91, 17);
+            this.customLabelsEnabled.Size = new System.Drawing.Size(104, 20);
             this.customLabelsEnabled.TabIndex = 0;
             this.customLabelsEnabled.Text = "Custom labels";
             this.customLabelsEnabled.UseVisualStyleBackColor = true;
@@ -612,168 +615,168 @@ namespace TrayTemps
             // customCpuLabelCaption
             // 
             this.customCpuLabelCaption.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.customCpuLabelCaption.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.customCpuLabelCaption.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.customCpuLabelCaption.Location = new System.Drawing.Point(2, 2);
             this.customCpuLabelCaption.Margin = new System.Windows.Forms.Padding(2);
             this.customCpuLabelCaption.Name = "customCpuLabelCaption";
             this.customCpuLabelCaption.Size = new System.Drawing.Size(86, 23);
             this.customCpuLabelCaption.TabIndex = 0;
             this.customCpuLabelCaption.Text = "CPU Temp:";
-            this.customCpuLabelCaption.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.customCpuLabelCaption.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // customCpuLabel
             // 
             this.customCpuLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.customCpuLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.customCpuLabel.Location = new System.Drawing.Point(92, 4);
+            this.customCpuLabel.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
+            this.customCpuLabel.Location = new System.Drawing.Point(92, 3);
             this.customCpuLabel.Margin = new System.Windows.Forms.Padding(2);
             this.customCpuLabel.MaxLength = 40;
             this.customCpuLabel.Name = "customCpuLabel";
-            this.customCpuLabel.Size = new System.Drawing.Size(208, 19);
+            this.customCpuLabel.Size = new System.Drawing.Size(208, 21);
             this.customCpuLabel.TabIndex = 1;
             this.customCpuLabel.TextChanged += new System.EventHandler(this.VisualSettingChanged);
             // 
             // customGpuLabelCaption
             // 
             this.customGpuLabelCaption.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.customGpuLabelCaption.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.customGpuLabelCaption.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.customGpuLabelCaption.Location = new System.Drawing.Point(304, 2);
             this.customGpuLabelCaption.Margin = new System.Windows.Forms.Padding(2);
             this.customGpuLabelCaption.Name = "customGpuLabelCaption";
             this.customGpuLabelCaption.Size = new System.Drawing.Size(86, 23);
             this.customGpuLabelCaption.TabIndex = 3;
             this.customGpuLabelCaption.Text = "GPU Temp:";
-            this.customGpuLabelCaption.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.customGpuLabelCaption.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // customGpuLabel
             // 
             this.customGpuLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.customGpuLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.customGpuLabel.Location = new System.Drawing.Point(394, 4);
+            this.customGpuLabel.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
+            this.customGpuLabel.Location = new System.Drawing.Point(394, 3);
             this.customGpuLabel.Margin = new System.Windows.Forms.Padding(2);
             this.customGpuLabel.MaxLength = 40;
             this.customGpuLabel.Name = "customGpuLabel";
-            this.customGpuLabel.Size = new System.Drawing.Size(210, 19);
+            this.customGpuLabel.Size = new System.Drawing.Size(210, 21);
             this.customGpuLabel.TabIndex = 3;
             this.customGpuLabel.TextChanged += new System.EventHandler(this.VisualSettingChanged);
             // 
             // customCpuUsageLabelCaption
             // 
             this.customCpuUsageLabelCaption.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.customCpuUsageLabelCaption.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.customCpuUsageLabelCaption.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.customCpuUsageLabelCaption.Location = new System.Drawing.Point(2, 29);
             this.customCpuUsageLabelCaption.Margin = new System.Windows.Forms.Padding(2);
             this.customCpuUsageLabelCaption.Name = "customCpuUsageLabelCaption";
             this.customCpuUsageLabelCaption.Size = new System.Drawing.Size(86, 23);
             this.customCpuUsageLabelCaption.TabIndex = 6;
             this.customCpuUsageLabelCaption.Text = "CPU Load:";
-            this.customCpuUsageLabelCaption.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.customCpuUsageLabelCaption.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // customCpuUsageLabel
             // 
             this.customCpuUsageLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.customCpuUsageLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.customCpuUsageLabel.Location = new System.Drawing.Point(92, 31);
+            this.customCpuUsageLabel.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
+            this.customCpuUsageLabel.Location = new System.Drawing.Point(92, 30);
             this.customCpuUsageLabel.Margin = new System.Windows.Forms.Padding(2);
             this.customCpuUsageLabel.MaxLength = 40;
             this.customCpuUsageLabel.Name = "customCpuUsageLabel";
-            this.customCpuUsageLabel.Size = new System.Drawing.Size(208, 19);
+            this.customCpuUsageLabel.Size = new System.Drawing.Size(208, 21);
             this.customCpuUsageLabel.TabIndex = 5;
             this.customCpuUsageLabel.TextChanged += new System.EventHandler(this.VisualSettingChanged);
             // 
             // customGpuUsageLabelCaption
             // 
             this.customGpuUsageLabelCaption.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.customGpuUsageLabelCaption.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.customGpuUsageLabelCaption.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.customGpuUsageLabelCaption.Location = new System.Drawing.Point(304, 29);
             this.customGpuUsageLabelCaption.Margin = new System.Windows.Forms.Padding(2);
             this.customGpuUsageLabelCaption.Name = "customGpuUsageLabelCaption";
             this.customGpuUsageLabelCaption.Size = new System.Drawing.Size(86, 23);
             this.customGpuUsageLabelCaption.TabIndex = 9;
             this.customGpuUsageLabelCaption.Text = "GPU Load:";
-            this.customGpuUsageLabelCaption.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.customGpuUsageLabelCaption.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // customGpuUsageLabel
             // 
             this.customGpuUsageLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.customGpuUsageLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.customGpuUsageLabel.Location = new System.Drawing.Point(394, 31);
+            this.customGpuUsageLabel.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
+            this.customGpuUsageLabel.Location = new System.Drawing.Point(394, 30);
             this.customGpuUsageLabel.Margin = new System.Windows.Forms.Padding(2);
             this.customGpuUsageLabel.MaxLength = 40;
             this.customGpuUsageLabel.Name = "customGpuUsageLabel";
-            this.customGpuUsageLabel.Size = new System.Drawing.Size(210, 19);
+            this.customGpuUsageLabel.Size = new System.Drawing.Size(210, 21);
             this.customGpuUsageLabel.TabIndex = 7;
             this.customGpuUsageLabel.TextChanged += new System.EventHandler(this.VisualSettingChanged);
             // 
             // customRamLabelCaption
             // 
             this.customRamLabelCaption.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.customRamLabelCaption.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.customRamLabelCaption.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.customRamLabelCaption.Location = new System.Drawing.Point(2, 56);
             this.customRamLabelCaption.Margin = new System.Windows.Forms.Padding(2);
             this.customRamLabelCaption.Name = "customRamLabelCaption";
             this.customRamLabelCaption.Size = new System.Drawing.Size(86, 23);
             this.customRamLabelCaption.TabIndex = 12;
             this.customRamLabelCaption.Text = "RAM Use:";
-            this.customRamLabelCaption.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.customRamLabelCaption.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // customRamLabel
             // 
             this.customRamLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.customRamLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.customRamLabel.Location = new System.Drawing.Point(92, 58);
+            this.customRamLabel.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
+            this.customRamLabel.Location = new System.Drawing.Point(92, 57);
             this.customRamLabel.Margin = new System.Windows.Forms.Padding(2);
             this.customRamLabel.MaxLength = 40;
             this.customRamLabel.Name = "customRamLabel";
-            this.customRamLabel.Size = new System.Drawing.Size(208, 19);
+            this.customRamLabel.Size = new System.Drawing.Size(208, 21);
             this.customRamLabel.TabIndex = 9;
             this.customRamLabel.TextChanged += new System.EventHandler(this.VisualSettingChanged);
             // 
             // customVramLabelCaption
             // 
             this.customVramLabelCaption.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.customVramLabelCaption.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.customVramLabelCaption.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.customVramLabelCaption.Location = new System.Drawing.Point(304, 56);
             this.customVramLabelCaption.Margin = new System.Windows.Forms.Padding(2);
             this.customVramLabelCaption.Name = "customVramLabelCaption";
             this.customVramLabelCaption.Size = new System.Drawing.Size(86, 23);
             this.customVramLabelCaption.TabIndex = 15;
             this.customVramLabelCaption.Text = "VRAM Use:";
-            this.customVramLabelCaption.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.customVramLabelCaption.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // customVramLabel
             // 
             this.customVramLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.customVramLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.customVramLabel.Location = new System.Drawing.Point(394, 58);
+            this.customVramLabel.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
+            this.customVramLabel.Location = new System.Drawing.Point(394, 57);
             this.customVramLabel.Margin = new System.Windows.Forms.Padding(2);
             this.customVramLabel.MaxLength = 40;
             this.customVramLabel.Name = "customVramLabel";
-            this.customVramLabel.Size = new System.Drawing.Size(210, 19);
+            this.customVramLabel.Size = new System.Drawing.Size(210, 21);
             this.customVramLabel.TabIndex = 11;
             this.customVramLabel.TextChanged += new System.EventHandler(this.VisualSettingChanged);
             // 
             // customFpsLabelCaption
             // 
             this.customFpsLabelCaption.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.customFpsLabelCaption.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.customFpsLabelCaption.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.customFpsLabelCaption.Location = new System.Drawing.Point(2, 83);
             this.customFpsLabelCaption.Margin = new System.Windows.Forms.Padding(2);
             this.customFpsLabelCaption.Name = "customFpsLabelCaption";
             this.customFpsLabelCaption.Size = new System.Drawing.Size(86, 23);
             this.customFpsLabelCaption.TabIndex = 18;
             this.customFpsLabelCaption.Text = "FPS:";
-            this.customFpsLabelCaption.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.customFpsLabelCaption.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // customFpsLabel
             // 
             this.customFpsLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.customFpsLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.customFpsLabel.Location = new System.Drawing.Point(92, 85);
+            this.customFpsLabel.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
+            this.customFpsLabel.Location = new System.Drawing.Point(92, 84);
             this.customFpsLabel.Margin = new System.Windows.Forms.Padding(2);
             this.customFpsLabel.MaxLength = 40;
             this.customFpsLabel.Name = "customFpsLabel";
-            this.customFpsLabel.Size = new System.Drawing.Size(208, 19);
+            this.customFpsLabel.Size = new System.Drawing.Size(208, 21);
             this.customFpsLabel.TabIndex = 13;
             this.customFpsLabel.TextChanged += new System.EventHandler(this.VisualSettingChanged);
             // 
@@ -813,33 +816,34 @@ namespace TrayTemps
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.label1.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.label1.Location = new System.Drawing.Point(16, 218);
             this.label1.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(90, 13);
+            this.label1.Size = new System.Drawing.Size(103, 16);
             this.label1.TabIndex = 13;
             this.label1.Text = "BG Transparency:";
             // 
             // fontColorsLabel
             // 
             this.fontColorsLabel.AutoSize = true;
-            this.fontColorsLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.fontColorsLabel.Font = new System.Drawing.Font("TrayTemps Mono ExtraBold", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.fontColorsLabel.Location = new System.Drawing.Point(16, 14);
             this.fontColorsLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.fontColorsLabel.Name = "fontColorsLabel";
-            this.fontColorsLabel.Size = new System.Drawing.Size(83, 15);
+            this.fontColorsLabel.Size = new System.Drawing.Size(79, 19);
             this.fontColorsLabel.TabIndex = 0;
+            this.fontColorsLabel.Tag = "TrayTemps.Font.ExtraBold";
             this.fontColorsLabel.Text = "Appearance";
             // 
             // fontFamilyLabel
             // 
             this.fontFamilyLabel.AutoSize = true;
-            this.fontFamilyLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.fontFamilyLabel.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.fontFamilyLabel.Location = new System.Drawing.Point(16, 46);
             this.fontFamilyLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.fontFamilyLabel.Name = "fontFamilyLabel";
-            this.fontFamilyLabel.Size = new System.Drawing.Size(60, 13);
+            this.fontFamilyLabel.Size = new System.Drawing.Size(79, 16);
             this.fontFamilyLabel.TabIndex = 1;
             this.fontFamilyLabel.Text = "Font family:";
             // 
@@ -849,13 +853,13 @@ namespace TrayTemps
             | System.Windows.Forms.AnchorStyles.Right)));
             this.fontFamilyValue.DropDownHeight = 200;
             this.fontFamilyValue.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.fontFamilyValue.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.fontFamilyValue.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.fontFamilyValue.FormattingEnabled = true;
             this.fontFamilyValue.IntegralHeight = false;
             this.fontFamilyValue.Location = new System.Drawing.Point(145, 42);
             this.fontFamilyValue.Margin = new System.Windows.Forms.Padding(2);
             this.fontFamilyValue.Name = "fontFamilyValue";
-            this.fontFamilyValue.Size = new System.Drawing.Size(305, 21);
+            this.fontFamilyValue.Size = new System.Drawing.Size(305, 24);
             this.fontFamilyValue.TabIndex = 0;
             this.fontFamilyValue.SelectedIndexChanged += new System.EventHandler(this.VisualSettingChanged);
             // 
@@ -863,11 +867,11 @@ namespace TrayTemps
             // 
             this.fontLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.fontLabel.AutoSize = true;
-            this.fontLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.fontLabel.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.fontLabel.Location = new System.Drawing.Point(495, 46);
             this.fontLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.fontLabel.Name = "fontLabel";
-            this.fontLabel.Size = new System.Drawing.Size(30, 13);
+            this.fontLabel.Size = new System.Drawing.Size(37, 16);
             this.fontLabel.TabIndex = 2;
             this.fontLabel.Text = "Size:";
             // 
@@ -876,24 +880,24 @@ namespace TrayTemps
             this.fontSizeValue.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.fontSizeValue.DropDownHeight = 200;
             this.fontSizeValue.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.fontSizeValue.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.fontSizeValue.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.fontSizeValue.FormattingEnabled = true;
             this.fontSizeValue.IntegralHeight = false;
             this.fontSizeValue.Location = new System.Drawing.Point(548, 42);
             this.fontSizeValue.Margin = new System.Windows.Forms.Padding(2);
             this.fontSizeValue.Name = "fontSizeValue";
-            this.fontSizeValue.Size = new System.Drawing.Size(69, 21);
+            this.fontSizeValue.Size = new System.Drawing.Size(69, 24);
             this.fontSizeValue.TabIndex = 1;
             this.fontSizeValue.SelectedIndexChanged += new System.EventHandler(this.VisualSettingChanged);
             // 
             // opacityLabel
             // 
             this.opacityLabel.AutoSize = true;
-            this.opacityLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.opacityLabel.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.opacityLabel.Location = new System.Drawing.Point(16, 82);
             this.opacityLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.opacityLabel.Name = "opacityLabel";
-            this.opacityLabel.Size = new System.Drawing.Size(92, 13);
+            this.opacityLabel.Size = new System.Drawing.Size(115, 16);
             this.opacityLabel.TabIndex = 3;
             this.opacityLabel.Text = "Text transparency:";
             // 
@@ -913,7 +917,7 @@ namespace TrayTemps
             // 
             // opacityValueLabel
             // 
-            this.opacityValueLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.opacityValueLabel.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.opacityValueLabel.Location = new System.Drawing.Point(147, 77);
             this.opacityValueLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.opacityValueLabel.Name = "opacityValueLabel";
@@ -937,7 +941,7 @@ namespace TrayTemps
             // 
             // backgroundOpacityValueLabel
             // 
-            this.backgroundOpacityValueLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.backgroundOpacityValueLabel.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.backgroundOpacityValueLabel.Location = new System.Drawing.Point(147, 213);
             this.backgroundOpacityValueLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.backgroundOpacityValueLabel.Name = "backgroundOpacityValueLabel";
@@ -951,12 +955,12 @@ namespace TrayTemps
             this.fontColorsLayout.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.fontColorsLayout.ColumnCount = 6;
-            this.fontColorsLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 12.5F));
-            this.fontColorsLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 20.83333F));
-            this.fontColorsLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 12.5F));
-            this.fontColorsLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 20.83333F));
-            this.fontColorsLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 12.5F));
-            this.fontColorsLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 20.83333F));
+            this.fontColorsLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 13.95349F));
+            this.fontColorsLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 19.37984F));
+            this.fontColorsLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 13.95349F));
+            this.fontColorsLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 19.37984F));
+            this.fontColorsLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 13.95349F));
+            this.fontColorsLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 19.37984F));
             this.fontColorsLayout.Controls.Add(this.cpuFontColorLabel, 0, 0);
             this.fontColorsLayout.Controls.Add(this.cpuFontColor, 1, 0);
             this.fontColorsLayout.Controls.Add(this.gpuFontColorLabel, 2, 0);
@@ -981,11 +985,11 @@ namespace TrayTemps
             // cpuFontColorLabel
             // 
             this.cpuFontColorLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.cpuFontColorLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.cpuFontColorLabel.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.cpuFontColorLabel.Location = new System.Drawing.Point(2, 2);
             this.cpuFontColorLabel.Margin = new System.Windows.Forms.Padding(2);
             this.cpuFontColorLabel.Name = "cpuFontColorLabel";
-            this.cpuFontColorLabel.Size = new System.Drawing.Size(71, 39);
+            this.cpuFontColorLabel.Size = new System.Drawing.Size(80, 39);
             this.cpuFontColorLabel.TabIndex = 5;
             this.cpuFontColorLabel.Text = "CPU color:";
             this.cpuFontColorLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -995,11 +999,11 @@ namespace TrayTemps
             this.cpuFontColor.BackColor = System.Drawing.Color.Aqua;
             this.cpuFontColor.Dock = System.Windows.Forms.DockStyle.Fill;
             this.cpuFontColor.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.cpuFontColor.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.cpuFontColor.Location = new System.Drawing.Point(77, 2);
+            this.cpuFontColor.Font = new System.Drawing.Font("TrayTemps Mono", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.cpuFontColor.Location = new System.Drawing.Point(86, 2);
             this.cpuFontColor.Margin = new System.Windows.Forms.Padding(2);
             this.cpuFontColor.Name = "cpuFontColor";
-            this.cpuFontColor.Size = new System.Drawing.Size(121, 39);
+            this.cpuFontColor.Size = new System.Drawing.Size(112, 39);
             this.cpuFontColor.TabIndex = 3;
             this.cpuFontColor.Text = "🎨";
             this.cpuFontColor.UseVisualStyleBackColor = false;
@@ -1008,11 +1012,11 @@ namespace TrayTemps
             // gpuFontColorLabel
             // 
             this.gpuFontColorLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.gpuFontColorLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.gpuFontColorLabel.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.gpuFontColorLabel.Location = new System.Drawing.Point(202, 2);
             this.gpuFontColorLabel.Margin = new System.Windows.Forms.Padding(2);
             this.gpuFontColorLabel.Name = "gpuFontColorLabel";
-            this.gpuFontColorLabel.Size = new System.Drawing.Size(71, 39);
+            this.gpuFontColorLabel.Size = new System.Drawing.Size(80, 39);
             this.gpuFontColorLabel.TabIndex = 6;
             this.gpuFontColorLabel.Text = "GPU color:";
             this.gpuFontColorLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -1022,11 +1026,11 @@ namespace TrayTemps
             this.gpuFontColor.BackColor = System.Drawing.Color.Gold;
             this.gpuFontColor.Dock = System.Windows.Forms.DockStyle.Fill;
             this.gpuFontColor.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.gpuFontColor.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.gpuFontColor.Location = new System.Drawing.Point(277, 2);
+            this.gpuFontColor.Font = new System.Drawing.Font("TrayTemps Mono", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.gpuFontColor.Location = new System.Drawing.Point(286, 2);
             this.gpuFontColor.Margin = new System.Windows.Forms.Padding(2);
             this.gpuFontColor.Name = "gpuFontColor";
-            this.gpuFontColor.Size = new System.Drawing.Size(121, 39);
+            this.gpuFontColor.Size = new System.Drawing.Size(112, 39);
             this.gpuFontColor.TabIndex = 4;
             this.gpuFontColor.Text = "🎨";
             this.gpuFontColor.UseVisualStyleBackColor = false;
@@ -1035,11 +1039,11 @@ namespace TrayTemps
             // fpsFontColorLabel
             // 
             this.fpsFontColorLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.fpsFontColorLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.fpsFontColorLabel.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.fpsFontColorLabel.Location = new System.Drawing.Point(402, 2);
             this.fpsFontColorLabel.Margin = new System.Windows.Forms.Padding(2);
             this.fpsFontColorLabel.Name = "fpsFontColorLabel";
-            this.fpsFontColorLabel.Size = new System.Drawing.Size(71, 39);
+            this.fpsFontColorLabel.Size = new System.Drawing.Size(80, 39);
             this.fpsFontColorLabel.TabIndex = 11;
             this.fpsFontColorLabel.Text = "FPS color:";
             this.fpsFontColorLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -1049,11 +1053,11 @@ namespace TrayTemps
             this.fpsFontColor.BackColor = System.Drawing.Color.WhiteSmoke;
             this.fpsFontColor.Dock = System.Windows.Forms.DockStyle.Fill;
             this.fpsFontColor.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.fpsFontColor.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.fpsFontColor.Location = new System.Drawing.Point(477, 2);
+            this.fpsFontColor.Font = new System.Drawing.Font("TrayTemps Mono", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.fpsFontColor.Location = new System.Drawing.Point(486, 2);
             this.fpsFontColor.Margin = new System.Windows.Forms.Padding(2);
             this.fpsFontColor.Name = "fpsFontColor";
-            this.fpsFontColor.Size = new System.Drawing.Size(124, 39);
+            this.fpsFontColor.Size = new System.Drawing.Size(115, 39);
             this.fpsFontColor.TabIndex = 12;
             this.fpsFontColor.Text = "🎨";
             this.fpsFontColor.UseVisualStyleBackColor = false;
@@ -1062,11 +1066,11 @@ namespace TrayTemps
             // ramFontColorLabel
             // 
             this.ramFontColorLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.ramFontColorLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.ramFontColorLabel.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.ramFontColorLabel.Location = new System.Drawing.Point(2, 45);
             this.ramFontColorLabel.Margin = new System.Windows.Forms.Padding(2);
             this.ramFontColorLabel.Name = "ramFontColorLabel";
-            this.ramFontColorLabel.Size = new System.Drawing.Size(71, 39);
+            this.ramFontColorLabel.Size = new System.Drawing.Size(80, 39);
             this.ramFontColorLabel.TabIndex = 7;
             this.ramFontColorLabel.Text = "RAM color:";
             this.ramFontColorLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -1076,11 +1080,11 @@ namespace TrayTemps
             this.ramFontColor.BackColor = System.Drawing.Color.LightGreen;
             this.ramFontColor.Dock = System.Windows.Forms.DockStyle.Fill;
             this.ramFontColor.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.ramFontColor.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.ramFontColor.Location = new System.Drawing.Point(77, 45);
+            this.ramFontColor.Font = new System.Drawing.Font("TrayTemps Mono", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.ramFontColor.Location = new System.Drawing.Point(86, 45);
             this.ramFontColor.Margin = new System.Windows.Forms.Padding(2);
             this.ramFontColor.Name = "ramFontColor";
-            this.ramFontColor.Size = new System.Drawing.Size(121, 39);
+            this.ramFontColor.Size = new System.Drawing.Size(112, 39);
             this.ramFontColor.TabIndex = 5;
             this.ramFontColor.Text = "🎨";
             this.ramFontColor.UseVisualStyleBackColor = false;
@@ -1089,11 +1093,11 @@ namespace TrayTemps
             // vramFontColorLabel
             // 
             this.vramFontColorLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.vramFontColorLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.vramFontColorLabel.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.vramFontColorLabel.Location = new System.Drawing.Point(202, 45);
             this.vramFontColorLabel.Margin = new System.Windows.Forms.Padding(2);
             this.vramFontColorLabel.Name = "vramFontColorLabel";
-            this.vramFontColorLabel.Size = new System.Drawing.Size(71, 39);
+            this.vramFontColorLabel.Size = new System.Drawing.Size(80, 39);
             this.vramFontColorLabel.TabIndex = 8;
             this.vramFontColorLabel.Text = "VRAM color:";
             this.vramFontColorLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -1103,11 +1107,11 @@ namespace TrayTemps
             this.vramFontColor.BackColor = System.Drawing.Color.Violet;
             this.vramFontColor.Dock = System.Windows.Forms.DockStyle.Fill;
             this.vramFontColor.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.vramFontColor.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.vramFontColor.Location = new System.Drawing.Point(277, 45);
+            this.vramFontColor.Font = new System.Drawing.Font("TrayTemps Mono", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.vramFontColor.Location = new System.Drawing.Point(286, 45);
             this.vramFontColor.Margin = new System.Windows.Forms.Padding(2);
             this.vramFontColor.Name = "vramFontColor";
-            this.vramFontColor.Size = new System.Drawing.Size(121, 39);
+            this.vramFontColor.Size = new System.Drawing.Size(112, 39);
             this.vramFontColor.TabIndex = 6;
             this.vramFontColor.Text = "🎨";
             this.vramFontColor.UseVisualStyleBackColor = false;
@@ -1116,11 +1120,11 @@ namespace TrayTemps
             // backgroundColorLabel
             // 
             this.backgroundColorLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.backgroundColorLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.backgroundColorLabel.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.backgroundColorLabel.Location = new System.Drawing.Point(402, 45);
             this.backgroundColorLabel.Margin = new System.Windows.Forms.Padding(2);
             this.backgroundColorLabel.Name = "backgroundColorLabel";
-            this.backgroundColorLabel.Size = new System.Drawing.Size(71, 39);
+            this.backgroundColorLabel.Size = new System.Drawing.Size(80, 39);
             this.backgroundColorLabel.TabIndex = 9;
             this.backgroundColorLabel.Text = "BG Color:";
             this.backgroundColorLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -1130,11 +1134,11 @@ namespace TrayTemps
             this.backgroundColor.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(24)))), ((int)(((byte)(24)))), ((int)(((byte)(24)))));
             this.backgroundColor.Dock = System.Windows.Forms.DockStyle.Fill;
             this.backgroundColor.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.backgroundColor.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.backgroundColor.Location = new System.Drawing.Point(477, 45);
+            this.backgroundColor.Font = new System.Drawing.Font("TrayTemps Mono", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.backgroundColor.Location = new System.Drawing.Point(486, 45);
             this.backgroundColor.Margin = new System.Windows.Forms.Padding(2);
             this.backgroundColor.Name = "backgroundColor";
-            this.backgroundColor.Size = new System.Drawing.Size(124, 39);
+            this.backgroundColor.Size = new System.Drawing.Size(115, 39);
             this.backgroundColor.TabIndex = 7;
             this.backgroundColor.Text = "🎨";
             this.backgroundColor.UseVisualStyleBackColor = false;
@@ -1193,34 +1197,35 @@ namespace TrayTemps
             // orderLabel
             // 
             this.orderLabel.AutoSize = true;
-            this.orderLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.orderLabel.Font = new System.Drawing.Font("TrayTemps Mono ExtraBold", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.orderLabel.Location = new System.Drawing.Point(16, 16);
             this.orderLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.orderLabel.Name = "orderLabel";
-            this.orderLabel.Size = new System.Drawing.Size(129, 15);
+            this.orderLabel.Size = new System.Drawing.Size(142, 19);
             this.orderLabel.TabIndex = 0;
+            this.orderLabel.Tag = "TrayTemps.Font.ExtraBold";
             this.orderLabel.Text = "Position and layout";
             // 
             // positionLabel
             // 
             this.positionLabel.AutoSize = true;
-            this.positionLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.positionLabel.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.positionLabel.Location = new System.Drawing.Point(16, 48);
             this.positionLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.positionLabel.Name = "positionLabel";
-            this.positionLabel.Size = new System.Drawing.Size(47, 13);
+            this.positionLabel.Size = new System.Drawing.Size(61, 16);
             this.positionLabel.TabIndex = 1;
             this.positionLabel.Text = "Position:";
             // 
             // positionValue
             // 
             this.positionValue.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.positionValue.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.positionValue.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.positionValue.FormattingEnabled = true;
             this.positionValue.Location = new System.Drawing.Point(98, 44);
             this.positionValue.Margin = new System.Windows.Forms.Padding(2);
             this.positionValue.Name = "positionValue";
-            this.positionValue.Size = new System.Drawing.Size(176, 21);
+            this.positionValue.Size = new System.Drawing.Size(176, 24);
             this.positionValue.TabIndex = 0;
             this.positionValue.SelectedIndexChanged += new System.EventHandler(this.VisualSettingChanged);
             // 
@@ -1228,22 +1233,22 @@ namespace TrayTemps
             // 
             this.columnsLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.columnsLabel.AutoSize = true;
-            this.columnsLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.columnsLabel.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.columnsLabel.Location = new System.Drawing.Point(442, 48);
             this.columnsLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.columnsLabel.Name = "columnsLabel";
-            this.columnsLabel.Size = new System.Drawing.Size(79, 13);
+            this.columnsLabel.Size = new System.Drawing.Size(97, 16);
             this.columnsLabel.TabIndex = 2;
             this.columnsLabel.Text = "No. of columns:";
             // 
             // displayOrderLabel
             // 
             this.displayOrderLabel.AutoSize = true;
-            this.displayOrderLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.displayOrderLabel.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.displayOrderLabel.Location = new System.Drawing.Point(16, 77);
             this.displayOrderLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.displayOrderLabel.Name = "displayOrderLabel";
-            this.displayOrderLabel.Size = new System.Drawing.Size(110, 13);
+            this.displayOrderLabel.Size = new System.Drawing.Size(157, 16);
             this.displayOrderLabel.TabIndex = 3;
             this.displayOrderLabel.Text = "Display order / priority:";
             // 
@@ -1252,19 +1257,20 @@ namespace TrayTemps
             this.itemOrder.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.itemOrder.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.itemOrder.Font = new System.Drawing.Font("TrayTemps Mono", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.itemOrder.FormattingEnabled = true;
+            this.itemOrder.ItemHeight = 17;
             this.itemOrder.Location = new System.Drawing.Point(18, 100);
             this.itemOrder.Margin = new System.Windows.Forms.Padding(2);
             this.itemOrder.Name = "itemOrder";
-            this.itemOrder.Size = new System.Drawing.Size(502, 108);
+            this.itemOrder.Size = new System.Drawing.Size(502, 89);
             this.itemOrder.TabIndex = 2;
             // 
             // orderUp
             // 
             this.orderUp.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.orderUp.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.orderUp.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.orderUp.Font = new System.Drawing.Font("TrayTemps Mono", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.orderUp.Location = new System.Drawing.Point(531, 100);
             this.orderUp.Margin = new System.Windows.Forms.Padding(2);
             this.orderUp.Name = "orderUp";
@@ -1278,7 +1284,7 @@ namespace TrayTemps
             // 
             this.orderDown.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.orderDown.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.orderDown.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.orderDown.Font = new System.Drawing.Font("TrayTemps Mono", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.orderDown.Location = new System.Drawing.Point(531, 138);
             this.orderDown.Margin = new System.Windows.Forms.Padding(2);
             this.orderDown.Name = "orderDown";
@@ -1303,11 +1309,12 @@ namespace TrayTemps
             // spacingTitle
             // 
             this.spacingTitle.AutoSize = true;
-            this.spacingTitle.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.spacingTitle.Font = new System.Drawing.Font("TrayTemps Mono ExtraBold", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.spacingTitle.Location = new System.Drawing.Point(16, 14);
             this.spacingTitle.Name = "spacingTitle";
-            this.spacingTitle.Size = new System.Drawing.Size(59, 15);
+            this.spacingTitle.Size = new System.Drawing.Size(58, 19);
             this.spacingTitle.TabIndex = 0;
+            this.spacingTitle.Tag = "TrayTemps.Font.ExtraBold";
             this.spacingTitle.Text = "Spacing";
             // 
             // spacingLayout
@@ -1340,7 +1347,7 @@ namespace TrayTemps
             // 
             this.screenMarginLabel.AutoSize = true;
             this.screenMarginLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.screenMarginLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.screenMarginLabel.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.screenMarginLabel.Location = new System.Drawing.Point(2, 0);
             this.screenMarginLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.screenMarginLabel.Name = "screenMarginLabel";
@@ -1354,13 +1361,13 @@ namespace TrayTemps
             this.screenMarginValue.Dock = System.Windows.Forms.DockStyle.Fill;
             this.screenMarginValue.DropDownHeight = 200;
             this.screenMarginValue.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.screenMarginValue.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.screenMarginValue.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.screenMarginValue.FormattingEnabled = true;
             this.screenMarginValue.IntegralHeight = false;
             this.screenMarginValue.Location = new System.Drawing.Point(132, 2);
             this.screenMarginValue.Margin = new System.Windows.Forms.Padding(2);
             this.screenMarginValue.Name = "screenMarginValue";
-            this.screenMarginValue.Size = new System.Drawing.Size(169, 21);
+            this.screenMarginValue.Size = new System.Drawing.Size(169, 24);
             this.screenMarginValue.TabIndex = 9;
             this.screenMarginValue.SelectedIndexChanged += new System.EventHandler(this.VisualSettingChanged);
             // 
@@ -1368,7 +1375,7 @@ namespace TrayTemps
             // 
             this.rowsGapHeader.AutoSize = true;
             this.rowsGapHeader.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.rowsGapHeader.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.rowsGapHeader.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.rowsGapHeader.Location = new System.Drawing.Point(2, 31);
             this.rowsGapHeader.Margin = new System.Windows.Forms.Padding(2);
             this.rowsGapHeader.Name = "rowsGapHeader";
@@ -1382,13 +1389,13 @@ namespace TrayTemps
             this.rowsSpacing.Dock = System.Windows.Forms.DockStyle.Fill;
             this.rowsSpacing.DropDownHeight = 200;
             this.rowsSpacing.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.rowsSpacing.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.rowsSpacing.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.rowsSpacing.FormattingEnabled = true;
             this.rowsSpacing.IntegralHeight = false;
             this.rowsSpacing.Location = new System.Drawing.Point(132, 31);
             this.rowsSpacing.Margin = new System.Windows.Forms.Padding(2);
             this.rowsSpacing.Name = "rowsSpacing";
-            this.rowsSpacing.Size = new System.Drawing.Size(169, 21);
+            this.rowsSpacing.Size = new System.Drawing.Size(169, 24);
             this.rowsSpacing.TabIndex = 20;
             this.rowsSpacing.SelectedIndexChanged += new System.EventHandler(this.VisualSettingChanged);
             // 
@@ -1396,7 +1403,7 @@ namespace TrayTemps
             // 
             this.columnsGapHeader.AutoSize = true;
             this.columnsGapHeader.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.columnsGapHeader.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.columnsGapHeader.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.columnsGapHeader.Location = new System.Drawing.Point(305, 31);
             this.columnsGapHeader.Margin = new System.Windows.Forms.Padding(2);
             this.columnsGapHeader.Name = "columnsGapHeader";
@@ -1410,13 +1417,13 @@ namespace TrayTemps
             this.columnsSpacing.Dock = System.Windows.Forms.DockStyle.Fill;
             this.columnsSpacing.DropDownHeight = 200;
             this.columnsSpacing.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.columnsSpacing.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.columnsSpacing.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.columnsSpacing.FormattingEnabled = true;
             this.columnsSpacing.IntegralHeight = false;
             this.columnsSpacing.Location = new System.Drawing.Point(435, 31);
             this.columnsSpacing.Margin = new System.Windows.Forms.Padding(2);
             this.columnsSpacing.Name = "columnsSpacing";
-            this.columnsSpacing.Size = new System.Drawing.Size(169, 21);
+            this.columnsSpacing.Size = new System.Drawing.Size(169, 24);
             this.columnsSpacing.TabIndex = 23;
             this.columnsSpacing.SelectedIndexChanged += new System.EventHandler(this.VisualSettingChanged);
             // 
@@ -1436,22 +1443,23 @@ namespace TrayTemps
             // hotkeyLabel
             // 
             this.hotkeyLabel.AutoSize = true;
-            this.hotkeyLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.hotkeyLabel.Font = new System.Drawing.Font("TrayTemps Mono ExtraBold", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.hotkeyLabel.Location = new System.Drawing.Point(16, 14);
             this.hotkeyLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.hotkeyLabel.Name = "hotkeyLabel";
-            this.hotkeyLabel.Size = new System.Drawing.Size(296, 15);
+            this.hotkeyLabel.Size = new System.Drawing.Size(352, 19);
             this.hotkeyLabel.TabIndex = 0;
+            this.hotkeyLabel.Tag = "TrayTemps.Font.ExtraBold";
             this.hotkeyLabel.Text = "Global hotkey (press Ctrl, Shift, or Alt + a key)";
             // 
             // hotkeyEnabled
             // 
             this.hotkeyEnabled.AutoSize = true;
-            this.hotkeyEnabled.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.hotkeyEnabled.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
             this.hotkeyEnabled.Location = new System.Drawing.Point(18, 52);
             this.hotkeyEnabled.Margin = new System.Windows.Forms.Padding(2);
             this.hotkeyEnabled.Name = "hotkeyEnabled";
-            this.hotkeyEnabled.Size = new System.Drawing.Size(122, 17);
+            this.hotkeyEnabled.Size = new System.Drawing.Size(134, 20);
             this.hotkeyEnabled.TabIndex = 0;
             this.hotkeyEnabled.Text = "Enable OSD hotkey:";
             this.hotkeyEnabled.UseVisualStyleBackColor = true;
@@ -1472,13 +1480,14 @@ namespace TrayTemps
             this.saveBtn.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(120)))), ((int)(((byte)(212)))));
             this.saveBtn.Dock = System.Windows.Forms.DockStyle.Right;
             this.saveBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.saveBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.saveBtn.Font = new System.Drawing.Font("TrayTemps Mono ExtraBold", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.saveBtn.ForeColor = System.Drawing.Color.White;
             this.saveBtn.Location = new System.Drawing.Point(506, 10);
             this.saveBtn.Margin = new System.Windows.Forms.Padding(0);
             this.saveBtn.Name = "saveBtn";
             this.saveBtn.Size = new System.Drawing.Size(132, 30);
             this.saveBtn.TabIndex = 2;
+            this.saveBtn.Tag = "TrayTemps.Font.ExtraBold";
             this.saveBtn.Text = "SAVE";
             this.saveBtn.UseVisualStyleBackColor = false;
             this.saveBtn.Click += new System.EventHandler(this.SaveBtn_Click);
@@ -1501,7 +1510,7 @@ namespace TrayTemps
             // subtitleLabel
             // 
             this.subtitleLabel.Dock = System.Windows.Forms.DockStyle.Top;
-            this.subtitleLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F);
+            this.subtitleLabel.Font = new System.Drawing.Font("TrayTemps Mono", 8.25F);
             this.subtitleLabel.ForeColor = System.Drawing.Color.DarkGray;
             this.subtitleLabel.Location = new System.Drawing.Point(14, 0);
             this.subtitleLabel.Margin = new System.Windows.Forms.Padding(0);
@@ -1521,7 +1530,7 @@ namespace TrayTemps
             this.exitBtn.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.exitBtn.FlatAppearance.MouseOverBackColor = System.Drawing.Color.Red;
             this.exitBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.exitBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold);
+            this.exitBtn.Font = new System.Drawing.Font("TrayTemps Mono ExtraBold", 9.75F);
             this.exitBtn.ForeColor = System.Drawing.Color.White;
             this.exitBtn.Location = new System.Drawing.Point(618, 0);
             this.exitBtn.Margin = new System.Windows.Forms.Padding(0);
@@ -1529,6 +1538,7 @@ namespace TrayTemps
             this.exitBtn.Size = new System.Drawing.Size(50, 55);
             this.exitBtn.TabIndex = 3;
             this.exitBtn.TabStop = false;
+            this.exitBtn.Tag = "TrayTemps.Font.ExtraBold";
             this.exitBtn.Text = "✖";
             this.exitBtn.UseVisualStyleBackColor = false;
             this.exitBtn.Click += new System.EventHandler(this.ExitBtn_Click);
@@ -1557,12 +1567,13 @@ namespace TrayTemps
             this.layoutNavButton.Dock = System.Windows.Forms.DockStyle.Top;
             this.layoutNavButton.FlatAppearance.BorderSize = 0;
             this.layoutNavButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.layoutNavButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.layoutNavButton.Font = new System.Drawing.Font("TrayTemps Mono ExtraBold", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.layoutNavButton.Location = new System.Drawing.Point(0, 145);
             this.layoutNavButton.Name = "layoutNavButton";
             this.layoutNavButton.Padding = new System.Windows.Forms.Padding(18, 0, 0, 0);
             this.layoutNavButton.Size = new System.Drawing.Size(130, 45);
             this.layoutNavButton.TabIndex = 3;
+            this.layoutNavButton.Tag = "TrayTemps.Font.ExtraBold";
             this.layoutNavButton.Text = "Layout";
             this.layoutNavButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.layoutNavButton.UseVisualStyleBackColor = false;
@@ -1574,12 +1585,13 @@ namespace TrayTemps
             this.appearanceNavButton.Dock = System.Windows.Forms.DockStyle.Top;
             this.appearanceNavButton.FlatAppearance.BorderSize = 0;
             this.appearanceNavButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.appearanceNavButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.appearanceNavButton.Font = new System.Drawing.Font("TrayTemps Mono ExtraBold", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.appearanceNavButton.Location = new System.Drawing.Point(0, 100);
             this.appearanceNavButton.Name = "appearanceNavButton";
             this.appearanceNavButton.Padding = new System.Windows.Forms.Padding(18, 0, 0, 0);
             this.appearanceNavButton.Size = new System.Drawing.Size(130, 45);
             this.appearanceNavButton.TabIndex = 2;
+            this.appearanceNavButton.Tag = "TrayTemps.Font.ExtraBold";
             this.appearanceNavButton.Text = "Appearance";
             this.appearanceNavButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.appearanceNavButton.UseVisualStyleBackColor = false;
@@ -1591,12 +1603,13 @@ namespace TrayTemps
             this.metricsNavButton.Dock = System.Windows.Forms.DockStyle.Top;
             this.metricsNavButton.FlatAppearance.BorderSize = 0;
             this.metricsNavButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.metricsNavButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.metricsNavButton.Font = new System.Drawing.Font("TrayTemps Mono ExtraBold", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.metricsNavButton.Location = new System.Drawing.Point(0, 55);
             this.metricsNavButton.Name = "metricsNavButton";
             this.metricsNavButton.Padding = new System.Windows.Forms.Padding(18, 0, 0, 0);
             this.metricsNavButton.Size = new System.Drawing.Size(130, 45);
             this.metricsNavButton.TabIndex = 1;
+            this.metricsNavButton.Tag = "TrayTemps.Font.ExtraBold";
             this.metricsNavButton.Text = "Metrics";
             this.metricsNavButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.metricsNavButton.UseVisualStyleBackColor = false;
@@ -1605,13 +1618,14 @@ namespace TrayTemps
             // navigationTitle
             // 
             this.navigationTitle.Dock = System.Windows.Forms.DockStyle.Top;
-            this.navigationTitle.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.navigationTitle.Font = new System.Drawing.Font("TrayTemps Mono ExtraBold", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.navigationTitle.ForeColor = System.Drawing.Color.DarkGray;
             this.navigationTitle.Location = new System.Drawing.Point(0, 0);
             this.navigationTitle.Name = "navigationTitle";
             this.navigationTitle.Padding = new System.Windows.Forms.Padding(15, 18, 0, 0);
             this.navigationTitle.Size = new System.Drawing.Size(130, 55);
             this.navigationTitle.TabIndex = 0;
+            this.navigationTitle.Tag = "TrayTemps.Font.ExtraBold";
             this.navigationTitle.Text = "OSD Settings";
             this.navigationTitle.MouseDown += new System.Windows.Forms.MouseEventHandler(this.DragSurface_MouseDown);
             this.navigationTitle.MouseMove += new System.Windows.Forms.MouseEventHandler(this.DragSurface_MouseMove);
@@ -1632,7 +1646,7 @@ namespace TrayTemps
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(21)))), ((int)(((byte)(21)))), ((int)(((byte)(21)))));
             this.ClientSize = new System.Drawing.Size(800, 590);
             this.Controls.Add(this.outerBorder);
-            this.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F);
+            this.Font = new System.Drawing.Font("TrayTemps Mono", 9.75F);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Margin = new System.Windows.Forms.Padding(2);
