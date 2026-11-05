@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Globalization;
 using System.Linq;
+using System.Text;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
 namespace TrayTemps
@@ -35,7 +38,8 @@ namespace TrayTemps
         GpuUsage,
         RamUsage,
         VramUsage,
-        Fps
+        Fps,
+        CurrentTime
     }
 
     [Flags]
@@ -73,6 +77,7 @@ namespace TrayTemps
         public bool ShowRamUsage { get; set; }
         public bool ShowVramUsage { get; set; }
         public bool ShowFps { get; set; }
+        public bool ShowCurrentTime { get; set; }
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public decimal? FpsRefreshIntervalSeconds { get; set; }
         public bool CombineTemperatureAndUsage { get; set; }
@@ -84,6 +89,7 @@ namespace TrayTemps
         public string CustomRamLabel { get; set; } = "RAM Use";
         public string CustomVramLabel { get; set; } = "VRAM Use";
         public string CustomFpsLabel { get; set; } = "FPS";
+        public string CustomTimeLabel { get; set; } = "Time";
         public int LabelValueSpacing
         {
             get => _labelValueSpacing;
@@ -118,7 +124,7 @@ namespace TrayTemps
         public int ScreenMargin { get; set; } = 10;
         public int Columns { get; set; } = 1;
         public string ItemOrder { get; set; } =
-            "CpuTemperature,GpuTemperature,CpuUsage,GpuUsage,RamUsage,VramUsage,Fps";
+            "CpuTemperature,GpuTemperature,CpuUsage,GpuUsage,RamUsage,VramUsage,Fps,CurrentTime";
         public bool HotkeyEnabled { get; set; }
         public int HotkeyModifiers { get; set; } =
             (int)(OsdHotkeyModifiers.Control | OsdHotkeyModifiers.Shift);
@@ -265,9 +271,64 @@ namespace TrayTemps
         internal string Value { get; }
         internal string TrailingValue { get; }
         internal string ValueWidthTemplate { get; set; }
+        internal string AlternateValueWidthTemplate { get; set; }
         internal int? LabelValueSpacingOverride { get; set; }
         internal bool ValueFollowsLabel { get; set; }
         internal Color? TextColor { get; }
+    }
+
+    internal static class OsdClockHelper
+    {
+        internal static OsdMetric CreateMetric(DateTime localTime, CultureInfo culture, string label)
+        {
+            // CurrentCulture includes Windows regional overrides, including its short-time pattern.
+            string pattern = GetTimePattern(culture.DateTimeFormat.ShortTimePattern);
+            return new OsdMetric(label, localTime.ToString(pattern, culture))
+            {
+                ValueWidthTemplate = GetWidthTemplate(new DateTime(2000, 1, 1, 1, 11, 0), pattern, culture),
+                AlternateValueWidthTemplate = GetWidthTemplate(new DateTime(2000, 1, 1, 13, 11, 0), pattern, culture)
+            };
+        }
+
+        private static string GetWidthTemplate(DateTime time, string pattern, CultureInfo culture)
+        {
+            return Regex.Replace(time.ToString(pattern, culture), "[0-9]", "#");
+        }
+
+        private static string GetTimePattern(string shortTimePattern)
+        {
+            var result = new StringBuilder();
+            int lastFieldEnd = 0;
+            // Keep quoted/escaped literals and regional separators; pad hours/minutes and omit seconds.
+            foreach (Match match in Regex.Matches(shortTimePattern,
+                @"'(?:\\.|[^'\\])*'|""(?:\\.|[^""\\])*""|\\.|%[hHmstfF]|[hHmstfF]+|."))
+            {
+                string token = match.Value;
+                char field = token[0] == '%' && token.Length > 1 ? token[1] : token[0];
+                switch (field)
+                {
+                    case 'h':
+                    case 'H':
+                    case 'm':
+                        result.Append(field, 2);
+                        lastFieldEnd = result.Length;
+                        break;
+                    case 't':
+                        result.Append(token);
+                        lastFieldEnd = result.Length;
+                        break;
+                    case 's':
+                    case 'f':
+                    case 'F':
+                        result.Length = lastFieldEnd;
+                        break;
+                    default:
+                        result.Append(token);
+                        break;
+                }
+            }
+            return result.ToString().Trim();
+        }
     }
 
     internal static class OsdHotkeyHelper
@@ -338,7 +399,8 @@ namespace TrayTemps
             OsdItemKind.GpuUsage,
             OsdItemKind.RamUsage,
             OsdItemKind.VramUsage,
-            OsdItemKind.Fps
+            OsdItemKind.Fps,
+            OsdItemKind.CurrentTime
         };
 
         internal static List<OsdItemKind> Parse(string value)
@@ -380,6 +442,7 @@ namespace TrayTemps
                 case OsdItemKind.RamUsage: return "RAM usage";
                 case OsdItemKind.VramUsage: return "VRAM usage";
                 case OsdItemKind.Fps: return "FPS";
+                case OsdItemKind.CurrentTime: return "Current time";
                 default: return item.ToString();
             }
         }

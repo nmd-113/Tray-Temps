@@ -50,6 +50,7 @@ namespace TrayTemps
             this.showRamUsage = new System.Windows.Forms.CheckBox();
             this.showVramUsage = new System.Windows.Forms.CheckBox();
             this.showFps = new System.Windows.Forms.CheckBox();
+            this.showCurrentTime = new System.Windows.Forms.CheckBox();
             this.fpsRefreshIntervalLabel = new System.Windows.Forms.Label();
             this.labelsCard = new System.Windows.Forms.Panel();
             this.labelsTitle = new System.Windows.Forms.Label();
@@ -69,6 +70,8 @@ namespace TrayTemps
             this.customVramLabel = new System.Windows.Forms.TextBox();
             this.customFpsLabelCaption = new System.Windows.Forms.Label();
             this.customFpsLabel = new System.Windows.Forms.TextBox();
+            this.customTimeLabelCaption = new System.Windows.Forms.Label();
+            this.customTimeLabel = new System.Windows.Forms.TextBox();
             this.appearancePage = new System.Windows.Forms.TabPage();
             this.appearanceCard = new System.Windows.Forms.Panel();
             this.label1 = new System.Windows.Forms.Label();
@@ -203,10 +206,10 @@ namespace TrayTemps
             this.combineTemperatureAndUsage.AutoSize = true;
             this.combineTemperatureAndUsage.Dock = System.Windows.Forms.DockStyle.Fill;
             this.combineTemperatureAndUsage.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
-            this.combineTemperatureAndUsage.Location = new System.Drawing.Point(305, 83);
+            this.combineTemperatureAndUsage.Location = new System.Drawing.Point(204, 83);
             this.combineTemperatureAndUsage.Margin = new System.Windows.Forms.Padding(2);
             this.combineTemperatureAndUsage.Name = "combineTemperatureAndUsage";
-            this.combineTemperatureAndUsage.Size = new System.Drawing.Size(299, 26);
+            this.combineTemperatureAndUsage.Size = new System.Drawing.Size(198, 26);
             this.combineTemperatureAndUsage.TabIndex = 2;
             this.combineTemperatureAndUsage.Text = "Combine temps + usage";
             this.settingsToolTip.SetToolTip(this.combineTemperatureAndUsage, "Places each CPU/GPU temperature and usage value together in one OSD entry.");
@@ -405,9 +408,10 @@ namespace TrayTemps
             this.metricsCheckboxLayout.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.metricsCheckboxLayout.BackColor = System.Drawing.Color.Transparent;
-            this.metricsCheckboxLayout.ColumnCount = 2;
-            this.metricsCheckboxLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
-            this.metricsCheckboxLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
+            this.metricsCheckboxLayout.ColumnCount = 3;
+            this.metricsCheckboxLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
+            this.metricsCheckboxLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
+            this.metricsCheckboxLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33334F));
             this.metricsCheckboxLayout.Controls.Add(this.showCpu, 0, 0);
             this.metricsCheckboxLayout.Controls.Add(this.showCpuUsage, 1, 0);
             this.metricsCheckboxLayout.Controls.Add(this.combineTemperatureAndUsage, 1, 3);
@@ -416,6 +420,7 @@ namespace TrayTemps
             this.metricsCheckboxLayout.Controls.Add(this.showRamUsage, 0, 2);
             this.metricsCheckboxLayout.Controls.Add(this.showVramUsage, 1, 2);
             this.metricsCheckboxLayout.Controls.Add(this.showFps, 0, 3);
+            this.metricsCheckboxLayout.Controls.Add(this.showCurrentTime, 2, 0);
             this.metricsCheckboxLayout.Location = new System.Drawing.Point(16, 36);
             this.metricsCheckboxLayout.Margin = new System.Windows.Forms.Padding(0);
             this.metricsCheckboxLayout.Name = "metricsCheckboxLayout";
@@ -437,7 +442,7 @@ namespace TrayTemps
             this.showCpu.Location = new System.Drawing.Point(2, 2);
             this.showCpu.Margin = new System.Windows.Forms.Padding(2);
             this.showCpu.Name = "showCpu";
-            this.showCpu.Size = new System.Drawing.Size(299, 23);
+            this.showCpu.Size = new System.Drawing.Size(198, 23);
             this.showCpu.TabIndex = 0;
             this.showCpu.Text = "Show CPU temperature";
             this.showCpu.UseVisualStyleBackColor = true;
@@ -448,10 +453,10 @@ namespace TrayTemps
             this.showCpuUsage.AutoSize = true;
             this.showCpuUsage.Dock = System.Windows.Forms.DockStyle.Fill;
             this.showCpuUsage.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
-            this.showCpuUsage.Location = new System.Drawing.Point(305, 2);
+            this.showCpuUsage.Location = new System.Drawing.Point(204, 2);
             this.showCpuUsage.Margin = new System.Windows.Forms.Padding(2);
             this.showCpuUsage.Name = "showCpuUsage";
-            this.showCpuUsage.Size = new System.Drawing.Size(299, 23);
+            this.showCpuUsage.Size = new System.Drawing.Size(198, 23);
             this.showCpuUsage.TabIndex = 1;
             this.showCpuUsage.Text = "Show CPU usage";
             this.showCpuUsage.UseVisualStyleBackColor = true;
@@ -467,7 +472,7 @@ namespace TrayTemps
             this.showGpu.Location = new System.Drawing.Point(2, 29);
             this.showGpu.Margin = new System.Windows.Forms.Padding(2);
             this.showGpu.Name = "showGpu";
-            this.showGpu.Size = new System.Drawing.Size(299, 23);
+            this.showGpu.Size = new System.Drawing.Size(198, 23);
             this.showGpu.TabIndex = 2;
             this.showGpu.Text = "Show GPU temperature";
             this.showGpu.UseVisualStyleBackColor = true;
@@ -478,10 +483,10 @@ namespace TrayTemps
             this.showGpuUsage.AutoSize = true;
             this.showGpuUsage.Dock = System.Windows.Forms.DockStyle.Fill;
             this.showGpuUsage.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
-            this.showGpuUsage.Location = new System.Drawing.Point(305, 29);
+            this.showGpuUsage.Location = new System.Drawing.Point(204, 29);
             this.showGpuUsage.Margin = new System.Windows.Forms.Padding(2);
             this.showGpuUsage.Name = "showGpuUsage";
-            this.showGpuUsage.Size = new System.Drawing.Size(299, 23);
+            this.showGpuUsage.Size = new System.Drawing.Size(198, 23);
             this.showGpuUsage.TabIndex = 3;
             this.showGpuUsage.Text = "Show GPU usage";
             this.showGpuUsage.UseVisualStyleBackColor = true;
@@ -495,7 +500,7 @@ namespace TrayTemps
             this.showRamUsage.Location = new System.Drawing.Point(2, 56);
             this.showRamUsage.Margin = new System.Windows.Forms.Padding(2);
             this.showRamUsage.Name = "showRamUsage";
-            this.showRamUsage.Size = new System.Drawing.Size(299, 23);
+            this.showRamUsage.Size = new System.Drawing.Size(198, 23);
             this.showRamUsage.TabIndex = 4;
             this.showRamUsage.Text = "Show RAM usage";
             this.showRamUsage.UseVisualStyleBackColor = true;
@@ -506,10 +511,10 @@ namespace TrayTemps
             this.showVramUsage.AutoSize = true;
             this.showVramUsage.Dock = System.Windows.Forms.DockStyle.Fill;
             this.showVramUsage.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
-            this.showVramUsage.Location = new System.Drawing.Point(305, 56);
+            this.showVramUsage.Location = new System.Drawing.Point(204, 56);
             this.showVramUsage.Margin = new System.Windows.Forms.Padding(2);
             this.showVramUsage.Name = "showVramUsage";
-            this.showVramUsage.Size = new System.Drawing.Size(299, 23);
+            this.showVramUsage.Size = new System.Drawing.Size(198, 23);
             this.showVramUsage.TabIndex = 5;
             this.showVramUsage.Text = "Show VRAM usage";
             this.showVramUsage.UseVisualStyleBackColor = true;
@@ -523,12 +528,26 @@ namespace TrayTemps
             this.showFps.Location = new System.Drawing.Point(2, 83);
             this.showFps.Margin = new System.Windows.Forms.Padding(2);
             this.showFps.Name = "showFps";
-            this.showFps.Size = new System.Drawing.Size(299, 26);
+            this.showFps.Size = new System.Drawing.Size(198, 26);
             this.showFps.TabIndex = 6;
             this.showFps.Text = "Show FPS";
             this.showFps.UseVisualStyleBackColor = true;
             this.showFps.CheckedChanged += new System.EventHandler(this.HardwareVisibility_CheckedChanged);
-            // 
+            //
+            // showCurrentTime
+            //
+            this.showCurrentTime.AutoSize = true;
+            this.showCurrentTime.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.showCurrentTime.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
+            this.showCurrentTime.Location = new System.Drawing.Point(406, 2);
+            this.showCurrentTime.Margin = new System.Windows.Forms.Padding(2);
+            this.showCurrentTime.Name = "showCurrentTime";
+            this.showCurrentTime.Size = new System.Drawing.Size(198, 23);
+            this.showCurrentTime.TabIndex = 8;
+            this.showCurrentTime.Text = "Show current time";
+            this.showCurrentTime.UseVisualStyleBackColor = true;
+            this.showCurrentTime.CheckedChanged += new System.EventHandler(this.HardwareVisibility_CheckedChanged);
+            //
             // fpsRefreshIntervalLabel
             // 
             this.fpsRefreshIntervalLabel.AutoSize = true;
@@ -601,6 +620,8 @@ namespace TrayTemps
             this.customLabelsLayout.Controls.Add(this.customVramLabel, 3, 2);
             this.customLabelsLayout.Controls.Add(this.customFpsLabelCaption, 0, 3);
             this.customLabelsLayout.Controls.Add(this.customFpsLabel, 1, 3);
+            this.customLabelsLayout.Controls.Add(this.customTimeLabelCaption, 2, 3);
+            this.customLabelsLayout.Controls.Add(this.customTimeLabel, 3, 3);
             this.customLabelsLayout.Location = new System.Drawing.Point(16, 65);
             this.customLabelsLayout.Margin = new System.Windows.Forms.Padding(2);
             this.customLabelsLayout.Name = "customLabelsLayout";
@@ -779,6 +800,30 @@ namespace TrayTemps
             this.customFpsLabel.Size = new System.Drawing.Size(208, 21);
             this.customFpsLabel.TabIndex = 13;
             this.customFpsLabel.TextChanged += new System.EventHandler(this.VisualSettingChanged);
+            //
+            // customTimeLabelCaption
+            //
+            this.customTimeLabelCaption.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.customTimeLabelCaption.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
+            this.customTimeLabelCaption.Location = new System.Drawing.Point(304, 83);
+            this.customTimeLabelCaption.Margin = new System.Windows.Forms.Padding(2);
+            this.customTimeLabelCaption.Name = "customTimeLabelCaption";
+            this.customTimeLabelCaption.Size = new System.Drawing.Size(86, 23);
+            this.customTimeLabelCaption.TabIndex = 14;
+            this.customTimeLabelCaption.Text = "Time:";
+            this.customTimeLabelCaption.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            //
+            // customTimeLabel
+            //
+            this.customTimeLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.customTimeLabel.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
+            this.customTimeLabel.Location = new System.Drawing.Point(394, 84);
+            this.customTimeLabel.Margin = new System.Windows.Forms.Padding(2);
+            this.customTimeLabel.MaxLength = 40;
+            this.customTimeLabel.Name = "customTimeLabel";
+            this.customTimeLabel.Size = new System.Drawing.Size(210, 21);
+            this.customTimeLabel.TabIndex = 15;
+            this.customTimeLabel.TextChanged += new System.EventHandler(this.VisualSettingChanged);
             // 
             // appearancePage
             // 
@@ -1752,6 +1797,7 @@ namespace TrayTemps
         private System.Windows.Forms.CheckBox showRamUsage;
         private System.Windows.Forms.CheckBox showVramUsage;
         private System.Windows.Forms.CheckBox showFps;
+        private System.Windows.Forms.CheckBox showCurrentTime;
         private System.Windows.Forms.Label fpsRefreshIntervalLabel;
         private System.Windows.Forms.ComboBox fpsRefreshIntervalValue;
         private System.Windows.Forms.Label fpsLabelValueSpacingLabel;
@@ -1774,6 +1820,8 @@ namespace TrayTemps
         private System.Windows.Forms.TextBox customVramLabel;
         private System.Windows.Forms.Label customFpsLabelCaption;
         private System.Windows.Forms.TextBox customFpsLabel;
+        private System.Windows.Forms.Label customTimeLabelCaption;
+        private System.Windows.Forms.TextBox customTimeLabel;
         private System.Windows.Forms.Label columnsLabel;
         private System.Windows.Forms.ComboBox columnsValue;
         private System.Windows.Forms.Label orderLabel;

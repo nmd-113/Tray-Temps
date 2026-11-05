@@ -4000,7 +4000,7 @@ namespace TrayTemps
                     .ToArgb();
             }
             result.ScreenMargin = ValueHelper.ClampInt(result.ScreenMargin, 0, 100);
-            result.Columns = ValueHelper.ClampInt(result.Columns, 1, 4);
+            result.Columns = ValueHelper.ClampInt(result.Columns, 1, 8);
             result.RowsSpacing = ValueHelper.ClampInt(result.RowsSpacing, 0, 100);
             result.ColumnsSpacing = ValueHelper.ClampInt(result.ColumnsSpacing, 0, 100);
             if (result.FpsRefreshIntervalSeconds.HasValue)
@@ -4012,6 +4012,7 @@ namespace TrayTemps
             result.CustomRamLabel = NormalizeOsdLabel(result.CustomRamLabel, "RAM Use");
             result.CustomVramLabel = NormalizeOsdLabel(result.CustomVramLabel, "VRAM Use");
             result.CustomFpsLabel = NormalizeOsdLabel(result.CustomFpsLabel, "FPS");
+            result.CustomTimeLabel = NormalizeOsdLabel(result.CustomTimeLabel, "Time");
             int labelValueSpacing = result.HasExplicitLabelValueSpacing
                 ? result.LabelValueSpacing
                 : result.CpuTemperatureSpacing ??
@@ -4036,7 +4037,7 @@ namespace TrayTemps
             result.ItemOrder = OsdItemOrderHelper.Serialize(OsdItemOrderHelper.Parse(result.ItemOrder));
             if (!result.ShowCpu && !result.ShowGpu &&
                 !result.ShowCpuUsage && !result.ShowGpuUsage &&
-                !result.ShowRamUsage && !result.ShowVramUsage && !result.ShowFps)
+                !result.ShowRamUsage && !result.ShowVramUsage && !result.ShowFps && !result.ShowCurrentTime)
                 result.ShowCpu = true;
             OsdHotkeyModifiers modifiers =
                 (OsdHotkeyModifiers)result.HotkeyModifiers & OsdHotkeyHelper.AllowedModifiers;
@@ -4217,6 +4218,10 @@ namespace TrayTemps
                 fpsMetric = CreateFpsMetric(configuration);
                 availableMetrics[OsdItemKind.Fps] = fpsMetric;
             }
+
+            if (configuration.ShowCurrentTime)
+                availableMetrics[OsdItemKind.CurrentTime] = OsdClockHelper.CreateMetric(
+                    DateTime.Now, CultureInfo.CurrentCulture, GetOsdLabel(configuration, configuration.CustomTimeLabel, "Time"));
 
             return OsdItemOrderHelper.Parse(configuration.ItemOrder)
                 .Where(availableMetrics.ContainsKey)

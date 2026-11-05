@@ -63,6 +63,36 @@ namespace TrayTemps
             }
         }
 
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            if (EmbeddedFonts.IsDesignTime(this))
+                return;
+
+            ApplyPassiveUpdateMode(Handle);
+        }
+
+        private static void ApplyPassiveUpdateMode(IntPtr windowHandle)
+        {
+            try
+            {
+                // Native BOOL is four bytes, not the size of a managed bool.
+                int enabled = 1;
+                int result = DwmSetWindowAttribute(windowHandle, 16, ref enabled, sizeof(int));
+                System.Diagnostics.Trace.WriteLine(
+                    "OSD passive update: HWND=0x" + windowHandle.ToInt64().ToString("X") +
+                    " HRESULT=0x" + result.ToString("X8") +
+                    (result < 0 ? " failed; continuing with existing renderer." : " accepted; game effect unverified."));
+            }
+            catch (Exception ex) when (ex is DllNotFoundException ||
+                                       ex is EntryPointNotFoundException ||
+                                       ex is ExternalException)
+            {
+                System.Diagnostics.Trace.WriteLine(
+                    "OSD passive update unavailable: HWND=0x" + windowHandle.ToInt64().ToString("X") + " " + ex);
+            }
+        }
+
         protected override void OnShown(EventArgs e)
         {
             base.OnShown(e);
@@ -193,6 +223,7 @@ namespace TrayTemps
                 bool metricLayoutChanged =
                     !string.Equals(current.Label, next.Label, StringComparison.Ordinal) ||
                     !string.Equals(current.ValueWidthTemplate, next.ValueWidthTemplate, StringComparison.Ordinal) ||
+                    !string.Equals(current.AlternateValueWidthTemplate, next.AlternateValueWidthTemplate, StringComparison.Ordinal) ||
                     current.LabelValueSpacingOverride != next.LabelValueSpacingOverride ||
                     current.ValueFollowsLabel != next.ValueFollowsLabel ||
                     (current.TrailingValue == null) != (next.TrailingValue == null) ||
@@ -241,7 +272,7 @@ namespace TrayTemps
 
             _metricLayouts.Clear();
             int itemCount = Math.Max(1, _metrics.Count);
-            int columns = Math.Max(1, Math.Min(_configuration.Columns, itemCount));
+            int columns = Math.Max(1, Math.Min(8, Math.Min(_configuration.Columns, itemCount)));
             int rows = (int)Math.Ceiling(itemCount / (double)columns);
             int padding = GetConfiguredPadding();
             int rowGap = GetRowsSpacing();
@@ -575,7 +606,10 @@ namespace TrayTemps
 
             return Math.Max(
                 measuredValueWidth,
-                MeasureStableValueTemplateWidth(graphics, metric.ValueWidthTemplate));
+                Math.Max(
+                    MeasureStableValueTemplateWidth(graphics, metric.ValueWidthTemplate),
+                    string.IsNullOrEmpty(metric.AlternateValueWidthTemplate) ? 0 :
+                        MeasureStableValueTemplateWidth(graphics, metric.AlternateValueWidthTemplate)));
         }
 
         private int MeasureStableValueTemplateWidth(Graphics graphics, string template)
@@ -884,6 +918,10 @@ namespace TrayTemps
             internal byte SourceConstantAlpha;
             internal byte AlphaFormat;
         }
+
+        [DllImport("dwmapi.dll", ExactSpelling = true)]
+        private static extern int DwmSetWindowAttribute(
+            IntPtr windowHandle, int attribute, ref int value, int valueSize);
 
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool UpdateLayeredWindow(

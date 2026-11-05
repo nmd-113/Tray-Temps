@@ -177,7 +177,7 @@ namespace TrayTemps
             PopulateNumericOptions(labelValueSpacing, 0m, 100m, 1m);
             PopulateNumericOptions(rowsSpacing, 0m, 100m, 1m);
             PopulateNumericOptions(columnsSpacing, 0m, 100m, 1m);
-            PopulateNumericOptions(columnsValue, 1m, 4m, 1m);
+            PopulateNumericOptions(columnsValue, 1m, 8m, 1m);
             PopulateNumericOptions(fpsRefreshIntervalValue, 0.25m, 10m, 0.25m);
             PopulateNumericOptions(fpsLabelValueSpacing, 0m, 100m, 1m);
 
@@ -196,12 +196,13 @@ namespace TrayTemps
             customLabelsEnabled.Checked = _configuration.LabelMode == OsdLabelMode.Custom;
             opacityValue.Value = ValueHelper.ClampInt(_configuration.OpacityPercent, opacityValue.Minimum, opacityValue.Maximum);
             SelectNumericOption(screenMarginValue, ValueHelper.ClampInt(_configuration.ScreenMargin, 0, 100));
-            SelectNumericOption(columnsValue, ValueHelper.ClampInt(_configuration.Columns, 1, 4));
+            SelectNumericOption(columnsValue, ValueHelper.ClampInt(_configuration.Columns, 1, 8));
             showCpuUsage.Checked = _configuration.ShowCpuUsage;
             showGpuUsage.Checked = _configuration.ShowGpuUsage;
             showRamUsage.Checked = _configuration.ShowRamUsage;
             showVramUsage.Checked = _configuration.ShowVramUsage;
             showFps.Checked = _configuration.ShowFps;
+            showCurrentTime.Checked = _configuration.ShowCurrentTime;
             SelectNumericOption(
                 fpsRefreshIntervalValue,
                 ValueHelper.ClampDecimal(
@@ -240,6 +241,7 @@ namespace TrayTemps
             customRamLabel.Text = NormalizeCustomLabel(_configuration.CustomRamLabel, "RAM Use");
             customVramLabel.Text = NormalizeCustomLabel(_configuration.CustomVramLabel, "VRAM Use");
             customFpsLabel.Text = NormalizeCustomLabel(_configuration.CustomFpsLabel, "FPS");
+            customTimeLabel.Text = NormalizeCustomLabel(_configuration.CustomTimeLabel, "Time");
             SelectNumericOption(
                 labelValueSpacing,
                 ValueHelper.ClampInt(_configuration.LabelValueSpacing, 0, 100));
@@ -274,11 +276,11 @@ namespace TrayTemps
         {
             if (!showCpu.Checked && !showGpu.Checked &&
                 !showCpuUsage.Checked && !showGpuUsage.Checked &&
-                !showRamUsage.Checked && !showVramUsage.Checked && !showFps.Checked)
+                !showRamUsage.Checked && !showVramUsage.Checked && !showFps.Checked && !showCurrentTime.Checked)
             {
                 MessageBox.Show(
                     this,
-                    "Select at least one temperature, usage, RAM, VRAM, or FPS item to display in the OSD.",
+                    "Select at least one metric to display in the OSD.",
                     "OSD Settings",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
@@ -330,6 +332,7 @@ namespace TrayTemps
                 ShowRamUsage = showRamUsage.Checked,
                 ShowVramUsage = showVramUsage.Checked,
                 ShowFps = showFps.Checked,
+                ShowCurrentTime = showCurrentTime.Checked,
                 FpsRefreshIntervalSeconds = GetNumericOptionValue(fpsRefreshIntervalValue, 0.5m),
                 FpsLabelValueSpacing = (int)GetNumericOptionValue(fpsLabelValueSpacing, 15m),
                 CombineTemperatureAndUsage = combineTemperatureAndUsage.Checked,
@@ -343,6 +346,7 @@ namespace TrayTemps
                 CustomRamLabel = NormalizeCustomLabel(customRamLabel.Text, "RAM Use"),
                 CustomVramLabel = NormalizeCustomLabel(customVramLabel.Text, "VRAM Use"),
                 CustomFpsLabel = NormalizeCustomLabel(customFpsLabel.Text, "FPS"),
+                CustomTimeLabel = NormalizeCustomLabel(customTimeLabel.Text, "Time"),
                 LabelValueSpacing = (int)GetNumericOptionValue(labelValueSpacing, 15m),
                 RowsSpacing = (int)GetNumericOptionValue(rowsSpacing, 5m),
                 ColumnsSpacing = (int)GetNumericOptionValue(columnsSpacing, 20m),
@@ -533,6 +537,7 @@ namespace TrayTemps
             customRamLabel.Enabled = enabled && showRamUsage.Checked;
             customVramLabel.Enabled = enabled && showVramUsage.Checked;
             customFpsLabel.Enabled = enabled && showFps.Checked;
+            customTimeLabel.Enabled = enabled && showCurrentTime.Checked;
 
         }
 
@@ -863,6 +868,7 @@ namespace TrayTemps
                 customRamLabelCaption,
                 customVramLabelCaption,
                 customFpsLabelCaption,
+                customTimeLabelCaption,
                 spacingHeader,
                 rowsGapHeader,
                 columnsGapHeader
@@ -883,7 +889,7 @@ namespace TrayTemps
             {
                 positionValue, fontFamilyValue,
                 customCpuLabel, customGpuLabel, customCpuUsageLabel, customGpuUsageLabel,
-                customRamLabel, customVramLabel, customFpsLabel, labelValueSpacing, rowsSpacing, columnsSpacing,
+                customRamLabel, customVramLabel, customFpsLabel, customTimeLabel, labelValueSpacing, rowsSpacing, columnsSpacing,
                 columnsValue, fontSizeValue, screenMarginValue, fpsRefreshIntervalValue,
                 fpsLabelValueSpacing, itemOrder, hotkeyValue
             })
