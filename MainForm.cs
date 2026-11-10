@@ -3982,6 +3982,15 @@ namespace TrayTemps
             result.LabelMode = result.LabelMode == OsdLabelMode.Custom
                 ? OsdLabelMode.Custom
                 : OsdLabelMode.Short;
+            if (!result.MetricGroupingMode.HasValue ||
+                (int)result.MetricGroupingMode.Value < 0 ||
+                (int)result.MetricGroupingMode.Value > 2)
+            {
+                result.MetricGroupingMode = result.CombineTemperatureAndUsage
+                    ? OsdMetricGroupingMode.LoadAndTemps
+                    : OsdMetricGroupingMode.Disabled;
+            }
+            result.CombineTemperatureAndUsage = result.MetricGroupingMode != OsdMetricGroupingMode.Disabled;
             result.FontFamily = HardwareReportFormatHelper.SanitizeSingleLineText(result.FontFamily);
             if (string.IsNullOrWhiteSpace(result.FontFamily))
                 result.FontFamily = OsdFontHelper.DefaultFamily;
@@ -3992,6 +4001,7 @@ namespace TrayTemps
             result.BackgroundOpacityPercent = result.TransparentBackground
                 ? 0
                 : ValueHelper.ClampInt(result.BackgroundOpacityPercent, 0, 100);
+            result.BackgroundCornerRoundness = ValueHelper.ClampInt(result.BackgroundCornerRoundness, 0, 50);
             result.TransparentBackground = result.BackgroundOpacityPercent == 0;
             if (!result.BackgroundColor.HasValue)
             {
@@ -4000,6 +4010,7 @@ namespace TrayTemps
                     .ToArgb();
             }
             result.ScreenMargin = ValueHelper.ClampInt(result.ScreenMargin, 0, 100);
+            result.ExternalSpacing = ValueHelper.ClampInt(result.ExternalSpacing, 0, 100);
             result.Columns = ValueHelper.ClampInt(result.Columns, 1, 8);
             result.RowsSpacing = ValueHelper.ClampInt(result.RowsSpacing, 0, 100);
             result.ColumnsSpacing = ValueHelper.ClampInt(result.ColumnsSpacing, 0, 100);
@@ -4100,10 +4111,14 @@ namespace TrayTemps
             out OsdMetric fpsMetric)
         {
             fpsMetric = null;
-            bool combineCpu = configuration.CombineTemperatureAndUsage &&
-                configuration.ShowCpu && configuration.ShowCpuUsage;
-            bool combineGpu = configuration.CombineTemperatureAndUsage &&
-                configuration.ShowGpu && configuration.ShowGpuUsage;
+            OsdMetricGroupingMode groupingMode = configuration.MetricGroupingMode ??
+                (configuration.CombineTemperatureAndUsage
+                    ? OsdMetricGroupingMode.LoadAndTemps
+                    : OsdMetricGroupingMode.Disabled);
+            bool combineCpu = groupingMode != OsdMetricGroupingMode.Disabled && configuration.ShowCpu &&
+                (configuration.ShowCpuUsage || (groupingMode == OsdMetricGroupingMode.LoadTempsAndUsedMemory && configuration.ShowRamUsage));
+            bool combineGpu = groupingMode != OsdMetricGroupingMode.Disabled && configuration.ShowGpu &&
+                (configuration.ShowGpuUsage || (groupingMode == OsdMetricGroupingMode.LoadTempsAndUsedMemory && configuration.ShowVramUsage));
             string cpuLabel = GetOsdLabel(
                 configuration,
                 configuration.CustomCpuLabel,
@@ -4134,20 +4149,43 @@ namespace TrayTemps
             string gpuUsage = configuration.ShowGpuUsage
                 ? FormatOsdPercent(GetPreferredLoadValue(_selectedGpuHardware, isCpu: false))
                 : null;
+            string ramWidthTemplate = null;
+            string ramUsage = configuration.ShowRamUsage
+                ? FormatMemoryUsage(GetCompletedMemoryHardware(), "Memory", out ramWidthTemplate)
+                : null;
+            string vramWidthTemplate = null;
+            string vramUsage = configuration.ShowVramUsage
+                ? FormatMemoryUsage(_selectedGpuHardware, "GPU Memory", out vramWidthTemplate)
+                : null;
+            bool combineCpuUsage = combineCpu && configuration.ShowCpuUsage;
+            bool combineGpuUsage = combineGpu && configuration.ShowGpuUsage;
+            bool combineCpuMemory = combineCpu && groupingMode == OsdMetricGroupingMode.LoadTempsAndUsedMemory && configuration.ShowRamUsage;
+            bool combineGpuMemory = combineGpu && groupingMode == OsdMetricGroupingMode.LoadTempsAndUsedMemory && configuration.ShowVramUsage;
 
             if (configuration.ShowCpu)
             {
                 var metric = new OsdMetric(
                     cpuLabel,
                     cpuTemperature,
-                    combineCpu ? cpuUsage : null,
+                    combineCpuUsage ? cpuUsage : (combineCpuMemory ? ramUsage : null),
                     cpuDisplayColor)
                 {
-                    ValueWidthTemplate = temperatureWidthTemplate
+                    ValueWidthTemplate = temperatureWidthTemplate,
+                    TrailingValueWidthTemplate = combineCpuMemory && !combineCpuUsage
+                        ? ramWidthTemplate
+                        : (combineCpuUsage ? "###%" : null),
+                    TrailingValueColor = combineCpuMemory && !combineCpuUsage
+                        ? Color.FromArgb(configuration.RamFontColor)
+                        : cpuDisplayColor,
+                    SecondTrailingValue = combineCpuUsage && combineCpuMemory ? ramUsage : null,
+                    SecondTrailingValueWidthTemplate = combineCpuUsage && combineCpuMemory ? ramWidthTemplate : null,
+                    SecondTrailingValueColor = Color.FromArgb(configuration.RamFontColor)
                 };
                 availableMetrics[OsdItemKind.CpuTemperature] = metric;
-                if (combineCpu && cpuUsage != null)
+                if (combineCpuUsage)
                     availableMetrics[OsdItemKind.CpuUsage] = metric;
+                if (combineCpuMemory)
+                    availableMetrics[OsdItemKind.RamUsage] = metric;
             }
 
             if (configuration.ShowGpu)
@@ -4155,17 +4193,28 @@ namespace TrayTemps
                 var metric = new OsdMetric(
                     gpuLabel,
                     gpuTemperature,
-                    combineGpu ? gpuUsage : null,
+                    combineGpuUsage ? gpuUsage : (combineGpuMemory ? vramUsage : null),
                     gpuDisplayColor)
                 {
-                    ValueWidthTemplate = temperatureWidthTemplate
+                    ValueWidthTemplate = temperatureWidthTemplate,
+                    TrailingValueWidthTemplate = combineGpuMemory && !combineGpuUsage
+                        ? vramWidthTemplate
+                        : (combineGpuUsage ? "###%" : null),
+                    TrailingValueColor = combineGpuMemory && !combineGpuUsage
+                        ? Color.FromArgb(configuration.VramFontColor)
+                        : gpuDisplayColor,
+                    SecondTrailingValue = combineGpuUsage && combineGpuMemory ? vramUsage : null,
+                    SecondTrailingValueWidthTemplate = combineGpuUsage && combineGpuMemory ? vramWidthTemplate : null,
+                    SecondTrailingValueColor = Color.FromArgb(configuration.VramFontColor)
                 };
                 availableMetrics[OsdItemKind.GpuTemperature] = metric;
-                if (combineGpu && gpuUsage != null)
+                if (combineGpuUsage)
                     availableMetrics[OsdItemKind.GpuUsage] = metric;
+                if (combineGpuMemory)
+                    availableMetrics[OsdItemKind.VramUsage] = metric;
             }
 
-            if (cpuUsage != null && !combineCpu)
+            if (cpuUsage != null && !combineCpuUsage)
                 availableMetrics[OsdItemKind.CpuUsage] = new OsdMetric(
                     cpuUsageLabel,
                     cpuUsage,
@@ -4174,7 +4223,7 @@ namespace TrayTemps
                     ValueWidthTemplate = "###%"
                 };
 
-            if (gpuUsage != null && !combineGpu)
+            if (gpuUsage != null && !combineGpuUsage)
                 availableMetrics[OsdItemKind.GpuUsage] = new OsdMetric(
                     gpuUsageLabel,
                     gpuUsage,
@@ -4185,32 +4234,30 @@ namespace TrayTemps
 
             if (configuration.ShowRamUsage)
             {
-                string ramUsage = FormatMemoryUsage(
-                    GetCompletedMemoryHardware(),
-                    "Memory",
-                    out string ramWidthTemplate);
-                availableMetrics[OsdItemKind.RamUsage] = new OsdMetric(
-                    ramLabel,
-                    ramUsage,
-                    Color.FromArgb(configuration.RamFontColor))
+                if (!combineCpuMemory)
                 {
-                    ValueWidthTemplate = ramWidthTemplate
-                };
+                    availableMetrics[OsdItemKind.RamUsage] = new OsdMetric(
+                        ramLabel,
+                        ramUsage,
+                        Color.FromArgb(configuration.RamFontColor))
+                    {
+                        ValueWidthTemplate = ramWidthTemplate
+                    };
+                }
             }
 
             if (configuration.ShowVramUsage)
             {
-                string vramUsage = FormatMemoryUsage(
-                    _selectedGpuHardware,
-                    "GPU Memory",
-                    out string vramWidthTemplate);
-                availableMetrics[OsdItemKind.VramUsage] = new OsdMetric(
-                    vramLabel,
-                    vramUsage,
-                    Color.FromArgb(configuration.VramFontColor))
+                if (!combineGpuMemory)
                 {
-                    ValueWidthTemplate = vramWidthTemplate
-                };
+                    availableMetrics[OsdItemKind.VramUsage] = new OsdMetric(
+                        vramLabel,
+                        vramUsage,
+                        Color.FromArgb(configuration.VramFontColor))
+                    {
+                        ValueWidthTemplate = vramWidthTemplate
+                    };
+                }
             }
 
             if (configuration.ShowFps)

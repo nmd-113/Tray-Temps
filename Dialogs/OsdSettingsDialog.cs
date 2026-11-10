@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 namespace TrayTemps
@@ -10,6 +11,7 @@ namespace TrayTemps
     public partial class OsdSettingsDialog : Form
     {
         private const int CsDropShadow = 0x00020000;
+        private const int EmReplaceSel = 0x00C2;
         private readonly MainForm _mainForm;
         private readonly OsdConfiguration _configuration;
         private bool _dragging;
@@ -21,6 +23,11 @@ namespace TrayTemps
         private bool _configurationLoaded;
         private bool _hasCustomBackgroundColor;
         private List<OsdItemKind> _separateItemOrder;
+        private readonly Dictionary<string, ToolStripMenuItem> _iconCategoryMenus =
+            new Dictionary<string, ToolStripMenuItem>(StringComparer.Ordinal);
+        private readonly List<string> _iconCategoryOrder = new List<string>();
+        private TextBox _activeCustomLabelTextBox;
+        private ToolStripMenuItem _insertIconMenu;
         private OsdSettingsPage _currentPage = OsdSettingsPage.Metrics;
         private Color _navigationBack = Color.FromArgb(30, 30, 30);
         private Color _navigationSelected = Color.FromArgb(50, 50, 50);
@@ -43,6 +50,7 @@ namespace TrayTemps
 
             PopulateOptions();
             LoadConfiguration();
+            InitializeCustomLabelContextMenu();
             _configurationLoaded = true;
             ApplyTheme();
             _mainForm.ThemeChanged += MainForm_ThemeChanged;
@@ -180,6 +188,12 @@ namespace TrayTemps
             PopulateNumericOptions(columnsValue, 1m, 8m, 1m);
             PopulateNumericOptions(fpsRefreshIntervalValue, 0.25m, 10m, 0.25m);
             PopulateNumericOptions(fpsLabelValueSpacing, 0m, 100m, 1m);
+            PopulateNumericOptions(externalSpacingValue, 0m, 100m, 1m);
+            PopulateNumericOptions(cornerRoundnessValue, 0m, 50m, 1m);
+            metricGroupingMode.Items.AddRange(new object[]
+            {
+                "Disabled", "Load + Temps", "Load + Temps + Used Memory"
+            });
 
             foreach (OsdItemKind item in OsdItemOrderHelper.Parse(_configuration.ItemOrder))
                 itemOrder.Items.Add(new OsdItemOption(item));
@@ -196,6 +210,8 @@ namespace TrayTemps
             customLabelsEnabled.Checked = _configuration.LabelMode == OsdLabelMode.Custom;
             opacityValue.Value = ValueHelper.ClampInt(_configuration.OpacityPercent, opacityValue.Minimum, opacityValue.Maximum);
             SelectNumericOption(screenMarginValue, ValueHelper.ClampInt(_configuration.ScreenMargin, 0, 100));
+            SelectNumericOption(externalSpacingValue, ValueHelper.ClampInt(_configuration.ExternalSpacing, 0, 100));
+            SelectNumericOption(cornerRoundnessValue, ValueHelper.ClampInt(_configuration.BackgroundCornerRoundness, 0, 50));
             SelectNumericOption(columnsValue, ValueHelper.ClampInt(_configuration.Columns, 1, 8));
             showCpuUsage.Checked = _configuration.ShowCpuUsage;
             showGpuUsage.Checked = _configuration.ShowGpuUsage;
@@ -215,7 +231,10 @@ namespace TrayTemps
                     _configuration.FpsLabelValueSpacing ?? _configuration.LabelValueSpacing,
                     0,
                     100));
-            combineTemperatureAndUsage.Checked = _configuration.CombineTemperatureAndUsage;
+            int groupingMode = _configuration.MetricGroupingMode.HasValue
+                ? (int)_configuration.MetricGroupingMode.Value
+                : (_configuration.CombineTemperatureAndUsage ? 1 : 0);
+            metricGroupingMode.SelectedIndex = ValueHelper.ClampInt(groupingMode, 0, 2);
             showCpu.Checked = _configuration.ShowCpu;
             showGpu.Checked = _configuration.ShowGpu;
             SelectFontFamily(_configuration.FontFamily);
@@ -325,6 +344,7 @@ namespace TrayTemps
                     ? backgroundColor.BackColor.ToArgb()
                     : (int?)null,
                 BackgroundOpacityPercent = backgroundOpacityValue.Value,
+                BackgroundCornerRoundness = (int)GetNumericOptionValue(cornerRoundnessValue, 0m),
                 TransparentBackground = backgroundOpacityValue.Value == 0,
                 OpacityPercent = opacityValue.Value,
                 ShowCpuUsage = showCpuUsage.Checked,
@@ -335,7 +355,8 @@ namespace TrayTemps
                 ShowCurrentTime = showCurrentTime.Checked,
                 FpsRefreshIntervalSeconds = GetNumericOptionValue(fpsRefreshIntervalValue, 0.5m),
                 FpsLabelValueSpacing = (int)GetNumericOptionValue(fpsLabelValueSpacing, 15m),
-                CombineTemperatureAndUsage = combineTemperatureAndUsage.Checked,
+                CombineTemperatureAndUsage = metricGroupingMode.SelectedIndex > 0,
+                MetricGroupingMode = (OsdMetricGroupingMode)Math.Max(0, metricGroupingMode.SelectedIndex),
                 LabelMode = customLabelsEnabled.Checked
                     ? OsdLabelMode.Custom
                     : OsdLabelMode.Short,
@@ -351,6 +372,7 @@ namespace TrayTemps
                 RowsSpacing = (int)GetNumericOptionValue(rowsSpacing, 5m),
                 ColumnsSpacing = (int)GetNumericOptionValue(columnsSpacing, 20m),
                 ScreenMargin = (int)GetNumericOptionValue(screenMarginValue, 10m),
+                ExternalSpacing = (int)GetNumericOptionValue(externalSpacingValue, 0m),
                 Columns = (int)GetNumericOptionValue(columnsValue, 1m),
                 ItemOrder = OsdItemOrderHelper.Serialize(_separateItemOrder),
                 HotkeyEnabled = hotkeyEnabled.Checked,
@@ -370,6 +392,214 @@ namespace TrayTemps
         private void VisualSettingChanged(object sender, EventArgs e)
         {
             PreviewVisualSettings();
+        }
+
+        private void InitializeCustomLabelContextMenu()
+        {
+            var undoItem = new ToolStripMenuItem("Undo", null, (sender, e) =>
+            {
+                if (CanEditActiveCustomLabel() && _activeCustomLabelTextBox.CanUndo)
+                    _activeCustomLabelTextBox.Undo();
+            });
+            var cutItem = new ToolStripMenuItem("Cut", null, (sender, e) =>
+            {
+                if (CanEditActiveCustomLabel() && _activeCustomLabelTextBox.SelectionLength > 0)
+                    _activeCustomLabelTextBox.Cut();
+            });
+            var copyItem = new ToolStripMenuItem("Copy", null, (sender, e) =>
+            {
+                if (_activeCustomLabelTextBox != null && _activeCustomLabelTextBox.SelectionLength > 0)
+                    _activeCustomLabelTextBox.Copy();
+            });
+            var pasteItem = new ToolStripMenuItem("Paste", null, (sender, e) =>
+            {
+                if (CanEditActiveCustomLabel())
+                    _activeCustomLabelTextBox.Paste();
+            });
+            var deleteItem = new ToolStripMenuItem("Delete", null, (sender, e) =>
+            {
+                if (CanEditActiveCustomLabel() && _activeCustomLabelTextBox.SelectionLength > 0)
+                    ReplaceCustomLabelSelection(_activeCustomLabelTextBox, string.Empty);
+            });
+            var selectAllItem = new ToolStripMenuItem("Select All", null, (sender, e) =>
+            {
+                if (_activeCustomLabelTextBox != null && _activeCustomLabelTextBox.Enabled)
+                    _activeCustomLabelTextBox.SelectAll();
+            });
+
+            customLabelContextMenu.Items.AddRange(new ToolStripItem[]
+            {
+                undoItem,
+                new ToolStripSeparator(),
+                cutItem,
+                copyItem,
+                pasteItem,
+                deleteItem,
+                new ToolStripSeparator(),
+                selectAllItem
+            });
+
+            _insertIconMenu = new ToolStripMenuItem("Insert icon");
+            AddIconCategory("cpu", "CPU / Processor",
+                "⚙|Gear", "⚡|Lightning", "♨|Hot springs", "🧠|Brain", "💻|Laptop", "🖥|Desktop", "🖧|Network", "🔧|Wrench", "🔥|Fire", "⏣|Hexagon");
+            AddIconCategory("gpu", "GPU / Graphics",
+                "🎮|Gamepad", "🕹|Joystick", "🖥|Desktop", "🎨|Palette", "🖼|Picture", "◈|Diamond outline", "◆|Diamond", "✦|Sparkle", "⚡|Lightning", "🚀|Rocket", "👁️|Eye");
+            AddIconCategory("ram", "RAM / System Memory",
+                "▣|Square with fill", "▤|Bars", "▥|Bars", "▦|Grid", "▧|Shaded grid", "▨|Shaded grid", "💾|Floppy disk", "🗃|Card file", "📦|Package", "🧠|Brain", "🛢|Storage");
+            AddIconCategory("vram", "VRAM / Video Memory",
+                "🎮|Gamepad", "▣|Square with fill", "▦|Grid", "▧|Shaded grid", "◈|Diamond outline", "◉|Bullseye", "💾|Floppy disk", "🖼|Picture", "⚡|Lightning", "◆|Diamond");
+            AddIconCategory("fps", "FPS / Performance",
+                "◉|Bullseye", "◎|Double circle", "◌|Dotted circle", "◍|Shaded circle", "↗|Rising arrow", "↟|Up arrow", "↑|Up", "⇧|Shift arrow", "⚡|Lightning", "🚀|Rocket", "📈|Rising chart", "📊|Bar chart", "🎯|Target");
+            AddIconCategory("temperature", "Temperature / Cooling",
+                "🌡|Thermometer", "♨|Hot springs", "☀|Sun", "❄|Snowflake", "❅|Snowflake", "🔥|Fire", "💧|Droplet", "🌊|Wave", "🌀|Cyclone", "⚡|Lightning");
+            AddIconCategory("clock", "Clock / Time",
+                "◷|Clock", "◴|Clock", "◵|Clock", "◶|Clock", "◰|Clock", "◱|Clock", "⏱|Stopwatch", "⏲|Timer", "⏰|Alarm clock", "⌚|Watch", "🕒|Clock face", "⧖|Hourglass");
+            AddIconCategory("general", "General / Status",
+                "●|Filled circle", "○|Circle", "◉|Bullseye", "◎|Double circle", "★|Star", "☆|Outline star", "✓|Check", "✔|Heavy check", "✕|Cross", "✖|Heavy cross", "▲|Up triangle", "▼|Down triangle", "◆|Diamond", "◇|Outline diamond", "■|Square", "□|Outline square", "▶|Play", "▷|Outline play");
+
+            customLabelContextMenu.Items.Add(new ToolStripSeparator());
+            customLabelContextMenu.Items.Add(_insertIconMenu);
+            customLabelContextMenu.ShowItemToolTips = true;
+            _insertIconMenu.DropDown.ShowItemToolTips = true;
+            customLabelContextMenu.Opening += CustomLabelContextMenu_Opening;
+        }
+
+        private bool CanEditActiveCustomLabel()
+        {
+            return _activeCustomLabelTextBox != null && _activeCustomLabelTextBox.Enabled &&
+                   !_activeCustomLabelTextBox.ReadOnly;
+        }
+
+        private void AddIconCategory(string key, string title, params string[] entries)
+        {
+            var categoryMenu = new ToolStripMenuItem(title) { Tag = key };
+            var seenIcons = new HashSet<string>(StringComparer.Ordinal);
+            foreach (string entry in entries)
+            {
+                int separator = entry.IndexOf('|');
+                if (separator <= 0)
+                    continue;
+
+                string icon = entry.Substring(0, separator);
+                if (!seenIcons.Add(icon))
+                    continue;
+
+                string name = entry.Substring(separator + 1);
+                var iconItem = new ToolStripMenuItem(icon + "  " + name)
+                {
+                    ToolTipText = "Insert " + name + " (" + icon + ")",
+                    Tag = icon
+                };
+                iconItem.Click += InsertIcon_Click;
+                categoryMenu.DropDownItems.Add(iconItem);
+            }
+
+            _iconCategoryMenus.Add(key, categoryMenu);
+            _iconCategoryOrder.Add(key);
+            _insertIconMenu.DropDownItems.Add(categoryMenu);
+        }
+
+        private void CustomLabelContextMenu_Opening(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            _activeCustomLabelTextBox = customLabelContextMenu.SourceControl as TextBox;
+            if (_activeCustomLabelTextBox == null)
+            {
+                e.Cancel = true;
+                return;
+            }
+
+            TextBox textBox = _activeCustomLabelTextBox;
+            bool hasSelection = textBox.SelectionLength > 0;
+            bool editable = textBox.Enabled && !textBox.ReadOnly;
+            if (customLabelContextMenu.Items[0] is ToolStripMenuItem undoItem)
+                undoItem.Enabled = editable && textBox.CanUndo;
+            if (customLabelContextMenu.Items[2] is ToolStripMenuItem cutItem)
+                cutItem.Enabled = editable && hasSelection;
+            if (customLabelContextMenu.Items[3] is ToolStripMenuItem copyItem)
+                copyItem.Enabled = hasSelection;
+            if (customLabelContextMenu.Items[4] is ToolStripMenuItem pasteItem)
+                pasteItem.Enabled = editable;
+            if (customLabelContextMenu.Items[5] is ToolStripMenuItem deleteItem)
+                deleteItem.Enabled = editable && hasSelection;
+            if (customLabelContextMenu.Items[7] is ToolStripMenuItem selectAllItem)
+                selectAllItem.Enabled = textBox.TextLength > 0;
+
+            ReorderIconCategories(GetPrioritizedIconCategories(textBox.Name));
+        }
+
+        private void ReorderIconCategories(IEnumerable<string> prioritizedCategories)
+        {
+            _insertIconMenu.DropDownItems.Clear();
+            var orderedKeys = new List<string>(prioritizedCategories);
+            foreach (string key in _iconCategoryOrder)
+            {
+                if (!orderedKeys.Contains(key))
+                    orderedKeys.Add(key);
+            }
+
+            foreach (string key in orderedKeys)
+                _insertIconMenu.DropDownItems.Add(_iconCategoryMenus[key]);
+
+            int availableLength = _activeCustomLabelTextBox.MaxLength == 0
+                ? int.MaxValue
+                : _activeCustomLabelTextBox.MaxLength -
+                    (_activeCustomLabelTextBox.TextLength - _activeCustomLabelTextBox.SelectionLength);
+            foreach (ToolStripMenuItem category in _iconCategoryMenus.Values)
+            {
+                foreach (ToolStripMenuItem iconItem in category.DropDownItems.OfType<ToolStripMenuItem>())
+                    iconItem.Enabled = iconItem.Tag is string icon && icon.Length <= availableLength;
+            }
+        }
+
+        private static IEnumerable<string> GetPrioritizedIconCategories(string textBoxName)
+        {
+            switch (textBoxName)
+            {
+                case "customCpuLabel": return new[] { "cpu", "temperature" };
+                case "customGpuLabel": return new[] { "gpu", "temperature" };
+                case "customCpuUsageLabel": return new[] { "cpu", "fps" };
+                case "customGpuUsageLabel": return new[] { "gpu", "fps" };
+                case "customRamLabel": return new[] { "ram" };
+                case "customVramLabel": return new[] { "vram" };
+                case "customFpsLabel": return new[] { "fps" };
+                case "customTimeLabel": return new[] { "clock" };
+                default: return Array.Empty<string>();
+            }
+        }
+
+        private void InsertIcon_Click(object sender, EventArgs e)
+        {
+            if (_activeCustomLabelTextBox == null || !_activeCustomLabelTextBox.Enabled ||
+                _activeCustomLabelTextBox.ReadOnly || !(sender is ToolStripMenuItem item) ||
+                !(item.Tag is string icon))
+                return;
+
+            int availableLength = _activeCustomLabelTextBox.MaxLength == 0
+                ? int.MaxValue
+                : _activeCustomLabelTextBox.MaxLength -
+                    (_activeCustomLabelTextBox.TextLength - _activeCustomLabelTextBox.SelectionLength);
+            if (icon.Length > availableLength)
+                return;
+
+            ReplaceCustomLabelSelection(_activeCustomLabelTextBox, icon);
+            _activeCustomLabelTextBox.Focus();
+        }
+
+        private static void ReplaceCustomLabelSelection(TextBox textBox, string value)
+        {
+            if (!textBox.IsHandleCreated)
+                textBox.CreateControl();
+
+            IntPtr textPointer = Marshal.StringToHGlobalUni(value);
+            try
+            {
+                // TRUE asks the native edit control to retain the previous text for Undo.
+                SendMessageW(textBox.Handle, EmReplaceSel, new IntPtr(1), textPointer);
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(textPointer);
+            }
         }
 
         private void SelectFontFamily(string familyName)
@@ -527,6 +757,8 @@ namespace TrayTemps
             bool gpuTemperatureVisible = showGpu.Checked;
             bool cpuUsageCombined = CombineCpuTemperatureAndUsage;
             bool gpuUsageCombined = CombineGpuTemperatureAndUsage;
+            bool cpuMemoryCombined = CombineCpuMemory;
+            bool gpuMemoryCombined = CombineGpuMemory;
             bool cpuUsageVisible = showCpuUsage.Checked && !cpuUsageCombined;
             bool gpuUsageVisible = showGpuUsage.Checked && !gpuUsageCombined;
 
@@ -534,8 +766,8 @@ namespace TrayTemps
             customGpuLabel.Enabled = enabled && gpuTemperatureVisible;
             customCpuUsageLabel.Enabled = enabled && cpuUsageVisible;
             customGpuUsageLabel.Enabled = enabled && gpuUsageVisible;
-            customRamLabel.Enabled = enabled && showRamUsage.Checked;
-            customVramLabel.Enabled = enabled && showVramUsage.Checked;
+            customRamLabel.Enabled = enabled && showRamUsage.Checked && !cpuMemoryCombined;
+            customVramLabel.Enabled = enabled && showVramUsage.Checked && !gpuMemoryCombined;
             customFpsLabel.Enabled = enabled && showFps.Checked;
             customTimeLabel.Enabled = enabled && showCurrentTime.Checked;
 
@@ -543,10 +775,15 @@ namespace TrayTemps
 
         private bool CanCombineCpuTemperatureAndUsage => showCpu.Checked && showCpuUsage.Checked;
         private bool CanCombineGpuTemperatureAndUsage => showGpu.Checked && showGpuUsage.Checked;
+        private OsdMetricGroupingMode SelectedGroupingMode => (OsdMetricGroupingMode)Math.Max(0, metricGroupingMode.SelectedIndex);
         private bool CombineCpuTemperatureAndUsage =>
-            combineTemperatureAndUsage.Checked && CanCombineCpuTemperatureAndUsage;
+            SelectedGroupingMode != OsdMetricGroupingMode.Disabled && CanCombineCpuTemperatureAndUsage;
         private bool CombineGpuTemperatureAndUsage =>
-            combineTemperatureAndUsage.Checked && CanCombineGpuTemperatureAndUsage;
+            SelectedGroupingMode != OsdMetricGroupingMode.Disabled && CanCombineGpuTemperatureAndUsage;
+        private bool CombineCpuMemory => showCpu.Checked && showRamUsage.Checked &&
+            SelectedGroupingMode == OsdMetricGroupingMode.LoadTempsAndUsedMemory;
+        private bool CombineGpuMemory => showGpu.Checked && showVramUsage.Checked &&
+            SelectedGroupingMode == OsdMetricGroupingMode.LoadTempsAndUsedMemory;
 
         private void HardwareVisibility_CheckedChanged(object sender, EventArgs e)
         {
@@ -560,34 +797,36 @@ namespace TrayTemps
         {
             OsdItemOption selectedItem = itemOrder.SelectedItem as OsdItemOption;
             OsdItemKind? selectedKind = selectedItem?.Kind;
-            bool selectedCombined = selectedItem != null && selectedItem.IsCombinedTemperatureUsage;
+            OsdMetricGroupingMode selectedGrouping = selectedItem?.GroupingMode ?? OsdMetricGroupingMode.Disabled;
             var updatedItems = new List<OsdItemOption>();
             bool cpuAdded = false;
             bool gpuAdded = false;
-            bool combineCpu = CombineCpuTemperatureAndUsage;
-            bool combineGpu = CombineGpuTemperatureAndUsage;
+            bool combineCpu = CombineCpuTemperatureAndUsage || CombineCpuMemory;
+            bool combineGpu = CombineGpuTemperatureAndUsage || CombineGpuMemory;
 
             foreach (OsdItemKind item in _separateItemOrder)
             {
-                if (combineCpu && IsCpuTemperatureOrUsage(item))
+                if (combineCpu && IsCpuGroupedItem(item) &&
+                    (item != OsdItemKind.RamUsage || CombineCpuMemory))
                 {
                     if (!cpuAdded)
                     {
                         updatedItems.Add(new OsdItemOption(
                             OsdItemKind.CpuTemperature,
-                            isCombinedTemperatureUsage: true));
+                            SelectedGroupingMode));
                         cpuAdded = true;
                     }
                     continue;
                 }
 
-                if (combineGpu && IsGpuTemperatureOrUsage(item))
+                if (combineGpu && IsGpuGroupedItem(item) &&
+                    (item != OsdItemKind.VramUsage || CombineGpuMemory))
                 {
                     if (!gpuAdded)
                     {
                         updatedItems.Add(new OsdItemOption(
                             OsdItemKind.GpuTemperature,
-                            isCombinedTemperatureUsage: true));
+                            SelectedGroupingMode));
                         gpuAdded = true;
                     }
                     continue;
@@ -604,7 +843,7 @@ namespace TrayTemps
             {
                 itemOrder.Items.Clear();
                 itemOrder.Items.AddRange(updatedItems.Cast<object>().ToArray());
-                SelectUpdatedOrderItem(selectedKind, selectedCombined);
+                SelectUpdatedOrderItem(selectedKind, selectedGrouping);
             }
             finally
             {
@@ -612,15 +851,11 @@ namespace TrayTemps
             }
         }
 
-        private static bool IsCpuTemperatureOrUsage(OsdItemKind item)
-        {
-            return item == OsdItemKind.CpuTemperature || item == OsdItemKind.CpuUsage;
-        }
+        private static bool IsCpuGroupedItem(OsdItemKind item) =>
+            item == OsdItemKind.CpuTemperature || item == OsdItemKind.CpuUsage || item == OsdItemKind.RamUsage;
 
-        private static bool IsGpuTemperatureOrUsage(OsdItemKind item)
-        {
-            return item == OsdItemKind.GpuTemperature || item == OsdItemKind.GpuUsage;
-        }
+        private static bool IsGpuGroupedItem(OsdItemKind item) =>
+            item == OsdItemKind.GpuTemperature || item == OsdItemKind.GpuUsage || item == OsdItemKind.VramUsage;
 
         private bool ItemOrderMatches(
             IList<OsdItemOption> updatedItems)
@@ -632,7 +867,7 @@ namespace TrayTemps
             {
                 OsdItemOption updated = updatedItems[index];
                 if (!(itemOrder.Items[index] is OsdItemOption current) || current.Kind != updated.Kind ||
-                    current.IsCombinedTemperatureUsage != updated.IsCombinedTemperatureUsage)
+                    current.GroupingMode != updated.GroupingMode)
                 {
                     return false;
                 }
@@ -641,7 +876,7 @@ namespace TrayTemps
             return true;
         }
 
-        private void SelectUpdatedOrderItem(OsdItemKind? selectedKind, bool selectedCombined)
+        private void SelectUpdatedOrderItem(OsdItemKind? selectedKind, OsdMetricGroupingMode selectedGrouping)
         {
             if (!selectedKind.HasValue || itemOrder.Items.Count == 0)
                 return;
@@ -652,11 +887,10 @@ namespace TrayTemps
                     continue;
 
                 bool sameMetricGroup = option.Kind == selectedKind.Value ||
-                    (IsCpuTemperatureOrUsage(option.Kind) && IsCpuTemperatureOrUsage(selectedKind.Value)) ||
-                    (IsGpuTemperatureOrUsage(option.Kind) && IsGpuTemperatureOrUsage(selectedKind.Value));
+                    (IsCpuGroupedItem(option.Kind) && IsCpuGroupedItem(selectedKind.Value)) ||
+                    (IsGpuGroupedItem(option.Kind) && IsGpuGroupedItem(selectedKind.Value));
                 if (sameMetricGroup &&
-                    (option.IsCombinedTemperatureUsage == selectedCombined ||
-                     option.IsCombinedTemperatureUsage == combineTemperatureAndUsage.Checked))
+                    (option.GroupingMode == selectedGrouping || option.GroupingMode == SelectedGroupingMode))
                 {
                     itemOrder.SelectedIndex = index;
                     return;
@@ -677,8 +911,7 @@ namespace TrayTemps
             fpsRefreshIntervalValue.Enabled = showFps.Checked;
             fpsLabelValueSpacingLabel.Enabled = showFps.Checked;
             fpsLabelValueSpacing.Enabled = showFps.Checked;
-            combineTemperatureAndUsage.Enabled =
-                CanCombineCpuTemperatureAndUsage || CanCombineGpuTemperatureAndUsage;
+            metricGroupingMode.Enabled = showCpu.Checked || showGpu.Checked;
         }
 
         private void FontColor_Click(object sender, EventArgs e)
@@ -728,12 +961,13 @@ namespace TrayTemps
 
             foreach (OsdItemOption option in itemOrder.Items.Cast<OsdItemOption>())
             {
-                if (option.IsCombinedTemperatureUsage)
+                if (option.GroupingMode != OsdMetricGroupingMode.Disabled)
                 {
                     updatedOrder.Add(option.Kind);
-                    updatedOrder.Add(option.Kind == OsdItemKind.CpuTemperature
-                        ? OsdItemKind.CpuUsage
-                        : OsdItemKind.GpuUsage);
+                    bool cpu = option.Kind == OsdItemKind.CpuTemperature;
+                    updatedOrder.Add(cpu ? OsdItemKind.CpuUsage : OsdItemKind.GpuUsage);
+                    if (option.GroupingMode == OsdMetricGroupingMode.LoadTempsAndUsedMemory)
+                        updatedOrder.Add(cpu ? OsdItemKind.RamUsage : OsdItemKind.VramUsage);
                 }
                 else
                 {
@@ -806,6 +1040,39 @@ namespace TrayTemps
             accentLine.BringToFront();
         }
 
+        private void ApplyCustomLabelContextMenuTheme(ThemePalette theme)
+        {
+            ToolStripRenderer renderer = new ToolStripProfessionalRenderer(new OsdContextMenuColorTable(theme));
+            Font menuFont = Font;
+            customLabelContextMenu.BackColor = theme.SurfaceBack;
+            customLabelContextMenu.ForeColor = theme.Text;
+            customLabelContextMenu.Font = menuFont;
+            customLabelContextMenu.Renderer = renderer;
+
+            foreach (ToolStripItem item in customLabelContextMenu.Items)
+                ApplyContextMenuItemTheme(item, theme, renderer, menuFont);
+        }
+
+        private static void ApplyContextMenuItemTheme(
+            ToolStripItem item,
+            ThemePalette theme,
+            ToolStripRenderer renderer,
+            Font menuFont)
+        {
+            item.BackColor = theme.SurfaceBack;
+            item.ForeColor = theme.Text;
+            item.Font = menuFont;
+            if (!(item is ToolStripMenuItem menuItem))
+                return;
+
+            menuItem.DropDown.BackColor = theme.SurfaceBack;
+            menuItem.DropDown.ForeColor = theme.Text;
+            menuItem.DropDown.Font = menuFont;
+            menuItem.DropDown.Renderer = renderer;
+            foreach (ToolStripItem child in menuItem.DropDownItems)
+                ApplyContextMenuItemTheme(child, theme, renderer, menuFont);
+        }
+
         private void ApplyTheme()
         {
             bool light = _mainForm != null && _mainForm.IsLightModeEnabled;
@@ -814,6 +1081,7 @@ namespace TrayTemps
             _navigationBack = theme.NavBack;
             _navigationSelected = theme.NavSelected;
             _navigationText = theme.TitleText;
+            ApplyCustomLabelContextMenuTheme(theme);
 
             BackColor = theme.WindowBack;
             ForeColor = theme.Text;
@@ -858,6 +1126,8 @@ namespace TrayTemps
             }
 
             customLabelsLayout.BackColor = theme.SurfaceBack;
+            customLabelsInfoIconLabel.BackColor = theme.SurfaceBack;
+            customLabelsInfoIconLabel.ForeColor = theme.MutedText;
             spacingLayout.BackColor = theme.SurfaceBack;
             foreach (Label label in new[]
             {
@@ -871,7 +1141,11 @@ namespace TrayTemps
                 customTimeLabelCaption,
                 spacingHeader,
                 rowsGapHeader,
-                columnsGapHeader
+                columnsGapHeader,
+                fpsRefreshIntervalLabel,
+                fpsLabelValueSpacingLabel,
+                externalSpacingLabel,
+                cornerRoundnessLabel
             })
             {
                 label.BackColor = theme.SurfaceBack;
@@ -891,7 +1165,8 @@ namespace TrayTemps
                 customCpuLabel, customGpuLabel, customCpuUsageLabel, customGpuUsageLabel,
                 customRamLabel, customVramLabel, customFpsLabel, customTimeLabel, labelValueSpacing, rowsSpacing, columnsSpacing,
                 columnsValue, fontSizeValue, screenMarginValue, fpsRefreshIntervalValue,
-                fpsLabelValueSpacing, itemOrder, hotkeyValue
+                metricGroupingMode,
+                fpsLabelValueSpacing, externalSpacingValue, cornerRoundnessValue, itemOrder, hotkeyValue
             })
             {
                 input.BackColor = theme.InputBack;
@@ -987,26 +1262,58 @@ namespace TrayTemps
             Close();
         }
 
+        private sealed class OsdContextMenuColorTable : ProfessionalColorTable
+        {
+            private readonly ThemePalette _theme;
+
+            internal OsdContextMenuColorTable(ThemePalette theme)
+            {
+                _theme = theme;
+            }
+
+            public override Color ToolStripDropDownBackground => _theme.SurfaceBack;
+            public override Color MenuItemSelected => _theme.NavSelected;
+            public override Color MenuItemSelectedGradientBegin => _theme.NavSelected;
+            public override Color MenuItemSelectedGradientEnd => _theme.NavSelected;
+            public override Color MenuItemPressedGradientBegin => _theme.NavSelected;
+            public override Color MenuItemPressedGradientMiddle => _theme.NavSelected;
+            public override Color MenuItemPressedGradientEnd => _theme.NavSelected;
+            public override Color MenuItemBorder => _theme.Border;
+            public override Color ToolStripBorder => _theme.Border;
+            public override Color ImageMarginGradientBegin => _theme.SurfaceBack;
+            public override Color ImageMarginGradientMiddle => _theme.SurfaceBack;
+            public override Color ImageMarginGradientEnd => _theme.SurfaceBack;
+            public override Color SeparatorDark => _theme.Border;
+            public override Color SeparatorLight => _theme.SurfaceBack;
+            public override Color CheckBackground => _theme.NavSelected;
+            public override Color CheckSelectedBackground => _theme.NavSelected;
+            public override Color CheckPressedBackground => _theme.NavSelected;
+        }
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode, ExactSpelling = true)]
+        private static extern IntPtr SendMessageW(IntPtr windowHandle, int message, IntPtr wParam, IntPtr lParam);
+
         private sealed class OsdItemOption
         {
             internal OsdItemOption(
                 OsdItemKind kind,
-                bool isCombinedTemperatureUsage = false)
+                OsdMetricGroupingMode groupingMode = OsdMetricGroupingMode.Disabled)
             {
                 Kind = kind;
-                IsCombinedTemperatureUsage = isCombinedTemperatureUsage;
+                GroupingMode = groupingMode;
             }
 
             internal OsdItemKind Kind { get; }
-            internal bool IsCombinedTemperatureUsage { get; }
+            internal OsdMetricGroupingMode GroupingMode { get; }
 
             public override string ToString()
             {
-                if (IsCombinedTemperatureUsage)
+                if (GroupingMode != OsdMetricGroupingMode.Disabled)
                 {
-                    return Kind == OsdItemKind.CpuTemperature
-                        ? "CPU Temperature + Usage"
-                        : "GPU Temperature + Usage";
+                    string group = Kind == OsdItemKind.CpuTemperature ? "CPU" : "GPU";
+                    return GroupingMode == OsdMetricGroupingMode.LoadTempsAndUsedMemory
+                        ? group + " Temperature + Load + Used Memory"
+                        : group + " Temperature + Usage";
                 }
 
                 return OsdItemOrderHelper.GetDisplayName(Kind);

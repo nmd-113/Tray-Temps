@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
+using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Windows.Forms;
 
 namespace TrayTemps
@@ -30,10 +32,23 @@ namespace TrayTemps
         private readonly List<MetricLayout> _metricLayouts = new List<MetricLayout>();
         private readonly Dictionary<string, int> _valueTemplateWidthCache =
             new Dictionary<string, int>(StringComparer.Ordinal);
+        private readonly Dictionary<string, FontFamily> _unicodeFallbackFamilies =
+            new Dictionary<string, FontFamily>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, Font> _unicodeFallbackFonts =
+            new Dictionary<string, Font>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, FontFamily> _unicodeFontChoiceCache =
+            new Dictionary<string, FontFamily>(StringComparer.Ordinal);
+        private readonly Dictionary<string, byte[]> _unicodeFontCmapCache =
+            new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, UnicodeTextRun[]> _unicodeTextRunCache =
+            new Dictionary<string, UnicodeTextRun[]>(StringComparer.Ordinal);
         private Bitmap _presentationBitmap;
         private Graphics _presentationGraphics;
+        private GraphicsPath _backgroundPath;
         private Size _presentationSize;
+        private Size _backgroundPathSize;
         private int _presentationDpi;
+        private int _backgroundPathRadius = -1;
         private Font _displayFont;
         private string _displayFontFamily;
         private float _displayFontSize;
@@ -42,7 +57,9 @@ namespace TrayTemps
         private Color _textColor = Color.WhiteSmoke;
         private Color _backgroundColor = Color.FromArgb(24, 24, 24);
         private int _trailingValueSlotWidth;
-        private int _trailingValueSlotDpi;
+        private int _secondTrailingValueSlotWidth;
+        private int _stablePercentSlotWidth;
+        private int _stablePercentSlotDpi;
         private int _layoutDpi;
 
         public OsdOverlay()
@@ -123,6 +140,13 @@ namespace TrayTemps
         {
             DisposePresentationSurface();
             DisposeDisplayFont();
+            DisposeUnicodeFallbackFonts();
+            _unicodeTextRunCache.Clear();
+            _unicodeFontChoiceCache.Clear();
+            _unicodeFontCmapCache.Clear();
+            foreach (FontFamily family in _unicodeFallbackFamilies.Values)
+                family.Dispose();
+            _unicodeFallbackFamilies.Clear();
             base.OnFormClosed(e);
         }
 
@@ -132,7 +156,11 @@ namespace TrayTemps
             _presentationGraphics = null;
             _presentationBitmap?.Dispose();
             _presentationBitmap = null;
+            _backgroundPath?.Dispose();
+            _backgroundPath = null;
             _presentationSize = Size.Empty;
+            _backgroundPathSize = Size.Empty;
+            _backgroundPathRadius = -1;
             _presentationDpi = 0;
         }
 
@@ -162,10 +190,12 @@ namespace TrayTemps
             }
 
             bool visualSettingsChanged = layoutChanged ||
-                _configuration.BackgroundColor != nextConfiguration.BackgroundColor;
+                _configuration.BackgroundColor != nextConfiguration.BackgroundColor ||
+                _configuration.BackgroundCornerRoundness != nextConfiguration.BackgroundCornerRoundness;
             bool positionChanged = layoutChanged ||
                 _workingArea != workingArea ||
-                _configuration.Position != nextConfiguration.Position;
+                _configuration.Position != nextConfiguration.Position ||
+                _configuration.ExternalSpacing != nextConfiguration.ExternalSpacing;
             _configuration = nextConfiguration.Clone();
             _workingArea = workingArea;
             _metrics.Clear();
@@ -210,6 +240,8 @@ namespace TrayTemps
                 _workingArea != workingArea ||
                 _configuration.Position != configuration.Position ||
                 _configuration.BackgroundColor != configuration.BackgroundColor ||
+                _configuration.BackgroundCornerRoundness != configuration.BackgroundCornerRoundness ||
+                _configuration.ExternalSpacing != configuration.ExternalSpacing ||
                 _configuration.BackgroundOpacityPercent != configuration.BackgroundOpacityPercent ||
                 _configuration.OpacityPercent != configuration.OpacityPercent;
 
@@ -224,15 +256,22 @@ namespace TrayTemps
                     !string.Equals(current.Label, next.Label, StringComparison.Ordinal) ||
                     !string.Equals(current.ValueWidthTemplate, next.ValueWidthTemplate, StringComparison.Ordinal) ||
                     !string.Equals(current.AlternateValueWidthTemplate, next.AlternateValueWidthTemplate, StringComparison.Ordinal) ||
+                    !string.Equals(current.TrailingValueWidthTemplate, next.TrailingValueWidthTemplate, StringComparison.Ordinal) ||
+                    !string.Equals(current.SecondTrailingValueWidthTemplate, next.SecondTrailingValueWidthTemplate, StringComparison.Ordinal) ||
+                    current.TrailingValueColor != next.TrailingValueColor ||
+                    current.SecondTrailingValueColor != next.SecondTrailingValueColor ||
                     current.LabelValueSpacingOverride != next.LabelValueSpacingOverride ||
                     current.ValueFollowsLabel != next.ValueFollowsLabel ||
                     (current.TrailingValue == null) != (next.TrailingValue == null) ||
+                    (current.SecondTrailingValue == null) != (next.SecondTrailingValue == null) ||
                     (string.IsNullOrEmpty(next.ValueWidthTemplate) && valueChanged);
                 if (metricLayoutChanged)
                     layoutChanged = true;
                 if (metricLayoutChanged ||
                     valueChanged ||
                     !string.Equals(current.TrailingValue, next.TrailingValue, StringComparison.Ordinal) ||
+                    !string.Equals(current.SecondTrailingValue, next.SecondTrailingValue, StringComparison.Ordinal) ||
+                    !string.Equals(current.TrailingValueWidthTemplate, next.TrailingValueWidthTemplate, StringComparison.Ordinal) ||
                     current.TextColor != next.TextColor)
                     displayChanged = true;
             }
@@ -260,7 +299,14 @@ namespace TrayTemps
                 _displayFont = nextFont;
                 _displayFontFamily = fontFamily;
                 _displayFontSize = fontSize;
+                DisposeUnicodeFallbackFonts();
+                _unicodeFontChoiceCache.Clear();
+                _unicodeFontCmapCache.Clear();
+                _unicodeTextRunCache.Clear();
                 _trailingValueSlotWidth = 0;
+                _secondTrailingValueSlotWidth = 0;
+                _stablePercentSlotWidth = 0;
+                _stablePercentSlotDpi = 0;
                 _valueTemplateWidthCache.Clear();
             }
         }
@@ -291,12 +337,58 @@ namespace TrayTemps
                 measurementBitmap.SetResolution(DeviceDpi, DeviceDpi);
                 using (Graphics graphics = Graphics.FromImage(measurementBitmap))
                 {
-                    if (_metrics.Any(metric => metric.TrailingValue != null) &&
-                        (_trailingValueSlotWidth <= 0 ||
-                         _trailingValueSlotDpi != DeviceDpi))
+                    if (_metrics.Any(metric => metric.TrailingValue != null))
                     {
-                        _trailingValueSlotWidth = MeasureStablePercentSlotWidth(graphics);
-                        _trailingValueSlotDpi = DeviceDpi;
+                        bool percentValuesOnly = true;
+                        foreach (OsdMetric metric in _metrics)
+                        {
+                            if (metric.TrailingValue == null)
+                                continue;
+
+                            percentValuesOnly &= metric.TrailingValueWidthTemplate == "###%";
+                        }
+
+                        if (percentValuesOnly)
+                        {
+                            if (_stablePercentSlotWidth <= 0 || _stablePercentSlotDpi != DeviceDpi)
+                            {
+                                _stablePercentSlotWidth = MeasureStablePercentSlotWidth(graphics);
+                                _stablePercentSlotDpi = DeviceDpi;
+                            }
+                            _trailingValueSlotWidth = _stablePercentSlotWidth;
+                        }
+                        else
+                        {
+                            int trailingValueWidth = 0;
+                            foreach (OsdMetric metric in _metrics)
+                            {
+                                if (metric.TrailingValue == null)
+                                    continue;
+
+                                trailingValueWidth = Math.Max(
+                                    trailingValueWidth,
+                                    string.IsNullOrEmpty(metric.TrailingValueWidthTemplate)
+                                        ? MeasureDisplayTextWidth(graphics, metric.TrailingValue)
+                                        : MeasureStableValueTemplateWidth(graphics, metric.TrailingValueWidthTemplate));
+                            }
+                            _trailingValueSlotWidth = trailingValueWidth;
+                        }
+                    }
+                    if (_metrics.Any(metric => metric.SecondTrailingValue != null))
+                    {
+                        int secondTrailingValueWidth = 0;
+                        foreach (OsdMetric metric in _metrics)
+                        {
+                            if (metric.SecondTrailingValue == null)
+                                continue;
+
+                            secondTrailingValueWidth = Math.Max(
+                                secondTrailingValueWidth,
+                                string.IsNullOrEmpty(metric.SecondTrailingValueWidthTemplate)
+                                    ? MeasureDisplayTextWidth(graphics, metric.SecondTrailingValue)
+                                    : MeasureStableValueTemplateWidth(graphics, metric.SecondTrailingValueWidthTemplate));
+                        }
+                        _secondTrailingValueSlotWidth = secondTrailingValueWidth;
                     }
 
                     MeasureLayoutMetrics(
@@ -373,10 +465,18 @@ namespace TrayTemps
                 int trailingValueWidth = metric.TrailingValue != null
                     ? Math.Min(_trailingValueSlotWidth, valueBlockWidth)
                     : 0;
+                int secondTrailingValueWidth = metric.SecondTrailingValue != null
+                    ? Math.Min(_secondTrailingValueSlotWidth, Math.Max(0, valueBlockWidth - trailingValueWidth))
+                    : 0;
                 int combinedGap = trailingValueWidth > 0
-                    ? Math.Min(combinedValueGap, valueBlockWidth - trailingValueWidth)
+                    ? Math.Min(combinedValueGap, valueBlockWidth - trailingValueWidth - secondTrailingValueWidth)
+                    : 0;
+                int secondCombinedGap = secondTrailingValueWidth > 0
+                    ? Math.Min(combinedValueGap, valueBlockWidth - trailingValueWidth - secondTrailingValueWidth - combinedGap)
                     : 0;
                 int primaryValueRight = valueBlockX + valueBlockWidth;
+                if (metric.SecondTrailingValue != null)
+                    primaryValueRight -= secondCombinedGap + secondTrailingValueWidth;
                 if (metric.TrailingValue != null)
                     primaryValueRight -= combinedGap + trailingValueWidth;
 
@@ -393,10 +493,13 @@ namespace TrayTemps
                         rowHeights[row]),
                     metric.TrailingValue != null
                         ? new Rectangle(
-                            valueBlockX + valueBlockWidth - trailingValueWidth,
+                            valueBlockX + valueBlockWidth - trailingValueWidth - secondTrailingValueWidth - secondCombinedGap,
                             y,
                             trailingValueWidth,
                             rowHeights[row])
+                        : Rectangle.Empty,
+                    metric.SecondTrailingValue != null
+                        ? new Rectangle(valueBlockX + valueBlockWidth - secondTrailingValueWidth, y, secondTrailingValueWidth, rowHeights[row])
                         : Rectangle.Empty));
             }
 
@@ -445,7 +548,16 @@ namespace TrayTemps
                             graphics,
                             metric.TrailingValue,
                             layout.TrailingValueBounds,
-                            textColor,
+                            metric.TrailingValueColor ?? textColor,
+                            StringAlignment.Far);
+                    }
+                    if (metric.SecondTrailingValue != null)
+                    {
+                        DrawDisplayText(
+                            graphics,
+                            metric.SecondTrailingValue,
+                            layout.SecondTrailingValueBounds,
+                            metric.SecondTrailingValueColor ?? textColor,
                             StringAlignment.Far);
                     }
                 }
@@ -489,6 +601,11 @@ namespace TrayTemps
                     metricHeight = Math.Max(
                         metricHeight,
                         MeasureDisplayTextSize(graphics, metric.TrailingValue).Height);
+                }
+                if (metric.SecondTrailingValue != null)
+                {
+                    valueBlockWidth += combinedValueGap + _secondTrailingValueSlotWidth;
+                    metricHeight = Math.Max(metricHeight, MeasureDisplayTextSize(graphics, metric.SecondTrailingValue).Height);
                 }
 
                 valueBlockWidths[index] = valueBlockWidth;
@@ -632,6 +749,24 @@ namespace TrayTemps
             if (MeasureTextPathWidth(graphics, ellipsis) > maximumWidth)
                 return string.Empty;
 
+            if (!IsAscii(text))
+            {
+                List<string> textElements = GetUnicodeTextElements(text);
+                int lowElementCount = 0;
+                int highElementCount = textElements.Count;
+                while (lowElementCount < highElementCount)
+                {
+                    int elementCount = lowElementCount + ((highElementCount - lowElementCount + 1) / 2);
+                    string candidate = string.Concat(textElements.Take(elementCount)).TrimEnd() + ellipsis;
+                    if (MeasureTextPathWidth(graphics, candidate) <= maximumWidth)
+                        lowElementCount = elementCount;
+                    else
+                        highElementCount = elementCount - 1;
+                }
+
+                return string.Concat(textElements.Take(lowElementCount)).TrimEnd() + ellipsis;
+            }
+
             int low = 0;
             int high = text.Length;
             while (low < high)
@@ -660,20 +795,494 @@ namespace TrayTemps
         {
             var path = new GraphicsPath();
             float emSize = graphics.DpiY * _displayFont.SizeInPoints / 72f;
+            if (IsAscii(text))
+            {
+                AddTextPathRun(path, graphics, text ?? string.Empty, _displayFont.FontFamily, _displayFont, emSize, 0f, null);
+                return path;
+            }
 
+            UnicodeTextRun[] runs = GetUnicodeTextRuns(graphics, text ?? string.Empty, emSize);
+            if (runs.Length == 0)
+                return path;
+
+            float x = 0f;
             using (StringFormat format = StringFormat.GenericTypographic)
             {
                 format.FormatFlags |= StringFormatFlags.NoWrap;
-                path.AddString(
-                    text ?? string.Empty,
-                    _displayFont.FontFamily,
-                    (int)_displayFont.Style,
-                    emSize,
-                    PointF.Empty,
-                    format);
+                foreach (UnicodeTextRun run in runs)
+                {
+                    path.AddString(
+                        run.Text,
+                        run.Family,
+                        (int)run.Font.Style,
+                        emSize,
+                        new PointF(x, run.BaselineOffset),
+                        format);
+                    x += run.Advance;
+                }
             }
 
             return path;
+        }
+
+        private UnicodeTextRun[] GetUnicodeTextRuns(
+            Graphics graphics,
+            string text,
+            float emSize)
+        {
+            string cacheKey = DeviceDpi.ToString(CultureInfo.InvariantCulture) + "\0" + text;
+            if (_unicodeTextRunCache.TryGetValue(cacheKey, out UnicodeTextRun[] cachedRuns))
+                return cachedRuns;
+
+            List<string> textElements = GetUnicodeTextElements(text);
+            if (textElements.Count == 0)
+                return Array.Empty<UnicodeTextRun>();
+
+            var runs = new List<UnicodeTextRun>();
+            float primaryBaseline = GetFontBaseline(_displayFont.FontFamily, _displayFont.Style, emSize);
+            FontFamily runFamily = GetFontFamilyForTextElement(graphics, textElements[0]);
+            var runText = new StringBuilder();
+            using (StringFormat format = StringFormat.GenericTypographic)
+            {
+                format.FormatFlags |= StringFormatFlags.NoWrap | StringFormatFlags.MeasureTrailingSpaces;
+                foreach (string element in textElements)
+                {
+                    FontFamily elementFamily = GetFontFamilyForTextElement(graphics, element);
+                    if (!SameFontFamily(runFamily, elementFamily))
+                    {
+                        AddUnicodeTextRun(runs, graphics, runText.ToString(), runFamily, primaryBaseline, emSize, format);
+                        runText.Clear();
+                        runFamily = elementFamily;
+                    }
+
+                    runText.Append(element);
+                }
+
+                AddUnicodeTextRun(runs, graphics, runText.ToString(), runFamily, primaryBaseline, emSize, format);
+            }
+
+            UnicodeTextRun[] result = runs.ToArray();
+            if (_unicodeTextRunCache.Count >= 128)
+                _unicodeTextRunCache.Clear();
+            _unicodeTextRunCache[cacheKey] = result;
+            return result;
+        }
+
+        private void AddUnicodeTextRun(
+            IList<UnicodeTextRun> runs,
+            Graphics graphics,
+            string text,
+            FontFamily family,
+            float primaryBaseline,
+            float emSize,
+            StringFormat format)
+        {
+            if (string.IsNullOrEmpty(text))
+                return;
+
+            Font font = GetFontForFamily(family);
+            float advance = graphics.MeasureString(text, font, int.MaxValue, format).Width;
+            float baselineOffset = primaryBaseline - GetFontBaseline(family, font.Style, emSize);
+            runs.Add(new UnicodeTextRun(text, family, font, advance, baselineOffset));
+        }
+
+        private float AddTextPathRun(
+            GraphicsPath path,
+            Graphics graphics,
+            string text,
+            FontFamily family,
+            Font font,
+            float emSize,
+            float y,
+            StringFormat format,
+            float x = 0f)
+        {
+            if (string.IsNullOrEmpty(text))
+                return 0f;
+
+            bool measureAdvance = format != null;
+            StringFormat runFormat = format;
+            bool disposeFormat = false;
+            if (runFormat == null)
+            {
+                runFormat = StringFormat.GenericTypographic;
+                runFormat.FormatFlags |= StringFormatFlags.NoWrap | StringFormatFlags.MeasureTrailingSpaces;
+                disposeFormat = true;
+            }
+
+            try
+            {
+                path.AddString(
+                    text,
+                    family,
+                    (int)font.Style,
+                    emSize,
+                    new PointF(x, y),
+                    runFormat);
+                return measureAdvance
+                    ? graphics.MeasureString(text, font, int.MaxValue, runFormat).Width
+                    : 0f;
+            }
+            finally
+            {
+                if (disposeFormat)
+                    runFormat.Dispose();
+            }
+        }
+
+        private FontFamily GetFontFamilyForTextElement(Graphics graphics, string textElement)
+        {
+            if (IsAscii(textElement))
+                return _displayFont.FontFamily;
+
+            if (_unicodeFontChoiceCache.TryGetValue(textElement, out FontFamily cachedFamily))
+                return cachedFamily;
+
+            FontFamily selectedFamily = _displayFont.FontFamily;
+            if (FontSupportsTextElement(graphics, _displayFont, textElement))
+            {
+                CacheUnicodeFontChoice(textElement, selectedFamily);
+                return selectedFamily;
+            }
+
+            bool hasSurrogatePair = textElement.Any(char.IsSurrogate);
+            string[] fallbackNames = hasSurrogatePair
+                ? new[] { "Segoe UI Emoji", "Segoe UI Symbol", "Segoe UI" }
+                : new[] { "Segoe UI Symbol", "Segoe UI", "Segoe UI Emoji" };
+            foreach (string fallbackName in fallbackNames)
+            {
+                FontFamily fallbackFamily = GetUnicodeFallbackFamily(fallbackName);
+                if (fallbackFamily == null)
+                    continue;
+
+                Font fallbackFont = GetFontForFamily(fallbackFamily);
+                if (FontSupportsTextElement(graphics, fallbackFont, textElement))
+                {
+                    CacheUnicodeFontChoice(textElement, fallbackFamily);
+                    return fallbackFamily;
+                }
+            }
+
+            CacheUnicodeFontChoice(textElement, selectedFamily);
+            return selectedFamily;
+        }
+
+        private void CacheUnicodeFontChoice(string textElement, FontFamily family)
+        {
+            if (_unicodeFontChoiceCache.Count >= 512)
+                _unicodeFontChoiceCache.Clear();
+            _unicodeFontChoiceCache[textElement] = family;
+        }
+
+        private bool FontSupportsTextElement(Graphics graphics, Font font, string textElement)
+        {
+            bool foundVisibleCodePoint = false;
+            for (int index = 0; index < textElement.Length;)
+            {
+                int codePoint = GetCodePoint(textElement, index, out int codePointLength);
+                if (codePoint != 0x200D && !IsVariationSelector(codePoint))
+                {
+                    foundVisibleCodePoint = true;
+                    if (GetFontGlyphIndex(graphics, font, codePoint) == 0)
+                        return false;
+                }
+                index += codePointLength;
+            }
+
+            return foundVisibleCodePoint;
+        }
+
+        private int GetFontGlyphIndex(Graphics graphics, Font font, int codePoint)
+        {
+            byte[] cmap = GetFontCmap(graphics, font);
+            if (cmap == null)
+                return 0;
+
+            return GetGlyphIndexFromCmap(cmap, codePoint);
+        }
+
+        private byte[] GetFontCmap(Graphics graphics, Font font)
+        {
+            string cacheKey = font.Name + "|" + (int)font.Style;
+            if (_unicodeFontCmapCache.TryGetValue(cacheKey, out byte[] cachedCmap))
+                return cachedCmap;
+
+            IntPtr fontHandle = IntPtr.Zero;
+            IntPtr deviceContext = IntPtr.Zero;
+            IntPtr previousObject = IntPtr.Zero;
+            byte[] cmap = null;
+            try
+            {
+                fontHandle = font.ToHfont();
+                deviceContext = graphics.GetHdc();
+                previousObject = SelectObject(deviceContext, fontHandle);
+                if (previousObject != IntPtr.Zero && previousObject != new IntPtr(-1))
+                {
+                    uint cmapTag = 0x70616D63; // GetFontData uses the little-endian FOURCC for 'cmap'.
+                    uint dataSize = GetFontData(deviceContext, cmapTag, 0, null, 0);
+                    if (dataSize != uint.MaxValue && dataSize >= 4 && dataSize <= int.MaxValue)
+                    {
+                        cmap = new byte[(int)dataSize];
+                        uint bytesRead = GetFontData(deviceContext, cmapTag, 0, cmap, dataSize);
+                        if (bytesRead != dataSize)
+                            cmap = null;
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is ExternalException || ex is ArgumentException || ex is InvalidOperationException)
+            {
+                cmap = null;
+            }
+            finally
+            {
+                if (deviceContext != IntPtr.Zero)
+                {
+                    if (previousObject != IntPtr.Zero && previousObject != new IntPtr(-1))
+                        SelectObject(deviceContext, previousObject);
+                    graphics.ReleaseHdc(deviceContext);
+                }
+                if (fontHandle != IntPtr.Zero)
+                    DeleteObject(fontHandle);
+            }
+
+            _unicodeFontCmapCache[cacheKey] = cmap;
+            return cmap;
+        }
+
+        private static int GetGlyphIndexFromCmap(byte[] cmap, int codePoint)
+        {
+            if (cmap == null || cmap.Length < 4)
+                return 0;
+
+            int tableCount = ReadUInt16(cmap, 2);
+            int format12Offset = -1;
+            int format4Offset = -1;
+            for (int index = 0; index < tableCount; index++)
+            {
+                int recordOffset = 4 + index * 8;
+                if (recordOffset + 8 > cmap.Length)
+                    break;
+
+                int platformId = ReadUInt16(cmap, recordOffset);
+                int encodingId = ReadUInt16(cmap, recordOffset + 2);
+                uint subtableOffset = ReadUInt32(cmap, recordOffset + 4);
+                if (subtableOffset > int.MaxValue || subtableOffset + 2 > cmap.Length)
+                    continue;
+
+                int offset = (int)subtableOffset;
+                int format = ReadUInt16(cmap, offset);
+                if (format == 12 && (platformId == 0 || (platformId == 3 && encodingId == 10)))
+                    format12Offset = offset;
+                else if (format == 4 && (platformId == 0 || (platformId == 3 && encodingId == 1)))
+                    format4Offset = offset;
+            }
+
+            int glyphIndex = GetFormat12GlyphIndex(cmap, format12Offset, codePoint);
+            if (glyphIndex != 0)
+                return glyphIndex;
+            return GetFormat4GlyphIndex(cmap, format4Offset, codePoint);
+        }
+
+        private static int GetFormat12GlyphIndex(byte[] cmap, int offset, int codePoint)
+        {
+            if (offset < 0 || offset + 16 > cmap.Length)
+                return 0;
+
+            uint groupCount = ReadUInt32(cmap, offset + 12);
+            for (uint index = 0; index < groupCount; index++)
+            {
+                long groupOffsetLong = (long)offset + 16L + (long)index * 12L;
+                if (groupOffsetLong + 12 > cmap.Length)
+                    return 0;
+
+                int groupOffset = (int)groupOffsetLong;
+                uint startCode = ReadUInt32(cmap, groupOffset);
+                uint endCode = ReadUInt32(cmap, groupOffset + 4);
+                uint startGlyph = ReadUInt32(cmap, groupOffset + 8);
+                if ((uint)codePoint >= startCode && (uint)codePoint <= endCode)
+                    return (int)(startGlyph + (uint)codePoint - startCode);
+            }
+
+            return 0;
+        }
+
+        private static int GetFormat4GlyphIndex(byte[] cmap, int offset, int codePoint)
+        {
+            if (offset < 0 || codePoint > 0xFFFF || offset + 16 > cmap.Length)
+                return 0;
+
+            int segmentCount = ReadUInt16(cmap, offset + 6) / 2;
+            int endCodesOffset = offset + 14;
+            int startCodesOffset = endCodesOffset + segmentCount * 2 + 2;
+            int deltasOffset = startCodesOffset + segmentCount * 2;
+            int rangeOffsetsOffset = deltasOffset + segmentCount * 2;
+            if (segmentCount <= 0 || rangeOffsetsOffset + segmentCount * 2 > cmap.Length)
+                return 0;
+
+            for (int index = 0; index < segmentCount; index++)
+            {
+                int endCode = ReadUInt16(cmap, endCodesOffset + index * 2);
+                int startCode = ReadUInt16(cmap, startCodesOffset + index * 2);
+                if (codePoint < startCode || codePoint > endCode)
+                    continue;
+
+                int delta = unchecked((short)ReadUInt16(cmap, deltasOffset + index * 2));
+                int rangeOffsetAddress = rangeOffsetsOffset + index * 2;
+                int rangeOffset = ReadUInt16(cmap, rangeOffsetAddress);
+                if (rangeOffset == 0)
+                    return (codePoint + delta) & 0xFFFF;
+
+                int glyphAddress = rangeOffsetAddress + rangeOffset + (codePoint - startCode) * 2;
+                if (glyphAddress + 2 > cmap.Length)
+                    return 0;
+
+                int glyphIndex = ReadUInt16(cmap, glyphAddress);
+                return glyphIndex == 0 ? 0 : (glyphIndex + delta) & 0xFFFF;
+            }
+
+            return 0;
+        }
+
+        private static int ReadUInt16(byte[] data, int offset)
+        {
+            return (data[offset] << 8) | data[offset + 1];
+        }
+
+        private static uint ReadUInt32(byte[] data, int offset)
+        {
+            return ((uint)data[offset] << 24) |
+                   ((uint)data[offset + 1] << 16) |
+                   ((uint)data[offset + 2] << 8) |
+                   data[offset + 3];
+        }
+
+        private FontFamily GetUnicodeFallbackFamily(string familyName)
+        {
+            if (_unicodeFallbackFamilies.TryGetValue(familyName, out FontFamily cachedFamily))
+                return cachedFamily;
+
+            FontFamily family = null;
+            try
+            {
+                family = new FontFamily(familyName);
+            }
+            catch (ArgumentException)
+            {
+                // The fallback family is not installed on this Windows version.
+            }
+
+            _unicodeFallbackFamilies[familyName] = family;
+            return family;
+        }
+
+        private Font GetFontForFamily(FontFamily family)
+        {
+            if (SameFontFamily(family, _displayFont.FontFamily))
+                return _displayFont;
+
+            if (_unicodeFallbackFonts.TryGetValue(family.Name, out Font cachedFont))
+                return cachedFont;
+
+            FontStyle style = _displayFont.Style;
+            if (!family.IsStyleAvailable(style))
+                style = FontStyle.Regular;
+
+            var font = new Font(family, _displayFont.Size, style, _displayFont.Unit);
+            _unicodeFallbackFonts[family.Name] = font;
+            return font;
+        }
+
+        private void DisposeUnicodeFallbackFonts()
+        {
+            foreach (Font font in _unicodeFallbackFonts.Values)
+                font.Dispose();
+            _unicodeFallbackFonts.Clear();
+        }
+
+        private static float GetFontBaseline(FontFamily family, FontStyle style, float emSize)
+        {
+            int emHeight = family.GetEmHeight(style);
+            return emHeight <= 0 ? emSize * 0.8f : emSize * family.GetCellAscent(style) / emHeight;
+        }
+
+        private static bool SameFontFamily(FontFamily left, FontFamily right)
+        {
+            return string.Equals(left?.Name, right?.Name, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsAscii(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+                return true;
+
+            for (int index = 0; index < text.Length; index++)
+            {
+                if (text[index] > 0x7F)
+                    return false;
+            }
+
+            return true;
+        }
+
+        private static List<string> GetUnicodeTextElements(string text)
+        {
+            var elements = new List<string>();
+            if (string.IsNullOrEmpty(text))
+                return elements;
+
+            var currentElement = new StringBuilder();
+            bool previousWasJoiner = false;
+            int regionalIndicatorCount = 0;
+            for (int index = 0; index < text.Length;)
+            {
+                int codePoint = GetCodePoint(text, index, out int codePointLength);
+                UnicodeCategory category = CharUnicodeInfo.GetUnicodeCategory(text, index);
+                bool combining = category == UnicodeCategory.NonSpacingMark ||
+                    category == UnicodeCategory.SpacingCombiningMark ||
+                    category == UnicodeCategory.EnclosingMark;
+                bool regionalIndicator = codePoint >= 0x1F1E6 && codePoint <= 0x1F1FF;
+                bool attach = currentElement.Length == 0 || combining || IsVariationSelector(codePoint) ||
+                    (codePoint >= 0x1F3FB && codePoint <= 0x1F3FF) || codePoint == 0x200D ||
+                    previousWasJoiner || (regionalIndicator && regionalIndicatorCount == 1);
+
+                if (!attach)
+                {
+                    elements.Add(currentElement.ToString());
+                    currentElement.Clear();
+                    regionalIndicatorCount = 0;
+                }
+
+                currentElement.Append(text, index, codePointLength);
+                previousWasJoiner = codePoint == 0x200D;
+                if (regionalIndicator)
+                    regionalIndicatorCount++;
+                else if (!combining && !IsVariationSelector(codePoint) && codePoint != 0x200D)
+                    regionalIndicatorCount = 0;
+                index += codePointLength;
+            }
+
+            if (currentElement.Length > 0)
+                elements.Add(currentElement.ToString());
+            return elements;
+        }
+
+        private static int GetCodePoint(string text, int index, out int length)
+        {
+            char first = text[index];
+            if (char.IsHighSurrogate(first) && index + 1 < text.Length && char.IsLowSurrogate(text[index + 1]))
+            {
+                length = 2;
+                return char.ConvertToUtf32(first, text[index + 1]);
+            }
+
+            length = 1;
+            return first;
+        }
+
+        private static bool IsVariationSelector(int codePoint)
+        {
+            return (codePoint >= 0xFE00 && codePoint <= 0xFE0F) ||
+                   (codePoint >= 0xE0100 && codePoint <= 0xE01EF);
         }
 
         private float GetStrokeWidth()
@@ -714,7 +1323,26 @@ namespace TrayTemps
             {
                 int alpha = (int)Math.Round(255d * backgroundOpacity / 100d);
                 using (var backgroundBrush = new SolidBrush(Color.FromArgb(alpha, _backgroundColor)))
-                    graphics.FillRectangle(backgroundBrush, 0, 0, bitmap.Width, bitmap.Height);
+                {
+                    EnsureBackgroundPath(bitmap.Size);
+                    if (_backgroundPath == null)
+                    {
+                        graphics.FillRectangle(backgroundBrush, 0, 0, bitmap.Width, bitmap.Height);
+                    }
+                    else
+                    {
+                        SmoothingMode previousSmoothingMode = graphics.SmoothingMode;
+                        graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                        try
+                        {
+                            graphics.FillPath(backgroundBrush, _backgroundPath);
+                        }
+                        finally
+                        {
+                            graphics.SmoothingMode = previousSmoothingMode;
+                        }
+                    }
+                }
             }
 
             DrawOverlay(graphics);
@@ -791,6 +1419,30 @@ namespace TrayTemps
             _presentationDpi = DeviceDpi;
         }
 
+        private void EnsureBackgroundPath(Size size)
+        {
+            int requestedRadius = ScaleLogical(ValueHelper.ClampInt(_configuration.BackgroundCornerRoundness, 0, 50));
+            int radius = Math.Min(requestedRadius, Math.Min(size.Width, size.Height) / 2);
+            if (_backgroundPathSize == size && _backgroundPathRadius == radius)
+                return;
+
+            _backgroundPath?.Dispose();
+            _backgroundPath = null;
+            _backgroundPathSize = size;
+            _backgroundPathRadius = radius;
+            if (radius <= 0)
+                return;
+
+            int diameter = radius * 2;
+            var path = new GraphicsPath();
+            path.AddArc(0, 0, diameter, diameter, 180, 90);
+            path.AddArc(size.Width - diameter, 0, diameter, diameter, 270, 90);
+            path.AddArc(size.Width - diameter, size.Height - diameter, diameter, diameter, 0, 90);
+            path.AddArc(0, size.Height - diameter, diameter, diameter, 90, 90);
+            path.CloseFigure();
+            _backgroundPath = path;
+        }
+
         private void EnsureTopMost()
         {
             if (IsDisposed || !IsHandleCreated)
@@ -811,6 +1463,7 @@ namespace TrayTemps
             Rectangle area = _workingArea.Width > 0 && _workingArea.Height > 0
                 ? _workingArea
                 : Screen.PrimaryScreen.WorkingArea;
+            int externalSpacing = ScaleLogical(ValueHelper.ClampInt(_configuration.ExternalSpacing, 0, 100));
             int left = area.Left;
             int top = area.Top;
 
@@ -824,7 +1477,10 @@ namespace TrayTemps
                 case OsdPosition.TopRight:
                 case OsdPosition.CenterRight:
                 case OsdPosition.BottomRight:
-                    left = area.Right - Width;
+                    left = area.Right - Width - externalSpacing;
+                    break;
+                default:
+                    left = area.Left + externalSpacing;
                     break;
             }
 
@@ -838,7 +1494,10 @@ namespace TrayTemps
                 case OsdPosition.BottomLeft:
                 case OsdPosition.BottomCenter:
                 case OsdPosition.BottomRight:
-                    top = area.Bottom - Height;
+                    top = area.Bottom - Height - externalSpacing;
+                    break;
+                default:
+                    top = area.Top + externalSpacing;
                     break;
             }
 
@@ -867,21 +1526,47 @@ namespace TrayTemps
             return (int)Math.Round(value * DeviceDpi / 96f);
         }
 
+        private struct UnicodeTextRun
+        {
+            internal UnicodeTextRun(
+                string text,
+                FontFamily family,
+                Font font,
+                float advance,
+                float baselineOffset)
+            {
+                Text = text;
+                Family = family;
+                Font = font;
+                Advance = advance;
+                BaselineOffset = baselineOffset;
+            }
+
+            internal string Text { get; }
+            internal FontFamily Family { get; }
+            internal Font Font { get; }
+            internal float Advance { get; }
+            internal float BaselineOffset { get; }
+        }
+
         private struct MetricLayout
         {
             internal MetricLayout(
                 Rectangle labelBounds,
                 Rectangle primaryValueBounds,
-                Rectangle trailingValueBounds)
+                Rectangle trailingValueBounds,
+                Rectangle secondTrailingValueBounds)
             {
                 LabelBounds = labelBounds;
                 PrimaryValueBounds = primaryValueBounds;
                 TrailingValueBounds = trailingValueBounds;
+                SecondTrailingValueBounds = secondTrailingValueBounds;
             }
 
             internal Rectangle LabelBounds { get; }
             internal Rectangle PrimaryValueBounds { get; }
             internal Rectangle TrailingValueBounds { get; }
+            internal Rectangle SecondTrailingValueBounds { get; }
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -959,6 +1644,14 @@ namespace TrayTemps
 
         [DllImport("gdi32.dll", SetLastError = true)]
         private static extern IntPtr SelectObject(IntPtr deviceContext, IntPtr graphicsObject);
+
+        [DllImport("gdi32.dll", ExactSpelling = true, SetLastError = true)]
+        private static extern uint GetFontData(
+            IntPtr deviceContext,
+            uint table,
+            uint offset,
+            [Out] byte[] data,
+            uint dataSize);
 
         [DllImport("gdi32.dll", SetLastError = true)]
         private static extern bool DeleteObject(IntPtr graphicsObject);

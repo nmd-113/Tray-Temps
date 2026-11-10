@@ -15,7 +15,7 @@ It also includes an optional customizable **on-screen display (OSD)** for hardwa
 * Selectable CPU/GPU devices and temperature sensors
 * Current, minimum, and maximum CPU/GPU temperatures
 * Compact CPU/GPU load indicators with dynamic usage colors
-* Customizable OSD with dedicated Metrics, Appearance, and Layout pages
+* Customizable OSD with dedicated Metrics, Appearance, and Layout pages, metric grouping, and Unicode custom labels
 * RAM and VRAM usage
 * Built-in FPS counter using Windows ETW
 * Independently configurable FPS display refresh interval
@@ -81,7 +81,7 @@ The optional OSD can display:
 * VRAM usage
 * FPS
 
-The OSD supports custom labels, fonts, colors, opacity, screen position, configurable columns and display order, row/column and label/value spacing, and a global visibility hotkey. CPU/GPU temperature and usage values can optionally be combined into compact entries.
+The OSD supports custom labels, fonts, colors, opacity, screen position, configurable columns and display order, row/column and label/value spacing, external screen-edge spacing, background corner roundness, and a global visibility hotkey. Choose to show metrics separately, combine CPU/GPU temperatures with load, or include used memory in those groups. Custom labels accept pasted Unicode symbols and include a categorized icon picker; symbol appearance can vary with the selected font.
 
 The overlay is click-through and does not take focus from other applications.
 

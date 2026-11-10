@@ -30,6 +30,13 @@ namespace TrayTemps
         Custom = 2
     }
 
+    public enum OsdMetricGroupingMode
+    {
+        Disabled,
+        LoadAndTemps,
+        LoadTempsAndUsedMemory
+    }
+
     internal enum OsdItemKind
     {
         CpuTemperature,
@@ -69,6 +76,7 @@ namespace TrayTemps
         public int FpsFontColor { get; set; } = Color.WhiteSmoke.ToArgb();
         public int? BackgroundColor { get; set; } = Color.FromArgb(24, 24, 24).ToArgb();
         public int BackgroundOpacityPercent { get; set; } = 100;
+        public int BackgroundCornerRoundness { get; set; }
         // Kept for compatibility with settings written before background opacity was adjustable.
         public bool TransparentBackground { get; set; }
         public int OpacityPercent { get; set; } = 90;
@@ -81,6 +89,7 @@ namespace TrayTemps
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public decimal? FpsRefreshIntervalSeconds { get; set; }
         public bool CombineTemperatureAndUsage { get; set; }
+        public OsdMetricGroupingMode? MetricGroupingMode { get; set; }
         public OsdLabelMode LabelMode { get; set; } = OsdLabelMode.Short;
         public string CustomCpuLabel { get; set; } = "CPU Temp";
         public string CustomGpuLabel { get; set; } = "GPU Temp";
@@ -122,6 +131,7 @@ namespace TrayTemps
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? FpsSpacing { get; set; }
         public int ScreenMargin { get; set; } = 10;
+        public int ExternalSpacing { get; set; }
         public int Columns { get; set; } = 1;
         public string ItemOrder { get; set; } =
             "CpuTemperature,GpuTemperature,CpuUsage,GpuUsage,RamUsage,VramUsage,Fps,CurrentTime";
@@ -270,6 +280,11 @@ namespace TrayTemps
         internal string Label { get; }
         internal string Value { get; }
         internal string TrailingValue { get; }
+        internal string SecondTrailingValue { get; set; }
+        internal string TrailingValueWidthTemplate { get; set; }
+        internal string SecondTrailingValueWidthTemplate { get; set; }
+        internal Color? TrailingValueColor { get; set; }
+        internal Color? SecondTrailingValueColor { get; set; }
         internal string ValueWidthTemplate { get; set; }
         internal string AlternateValueWidthTemplate { get; set; }
         internal int? LabelValueSpacingOverride { get; set; }
