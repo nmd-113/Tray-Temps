@@ -80,6 +80,7 @@ The optional OSD can display:
 * RAM usage
 * VRAM usage
 * FPS
+* Current time
 
 The OSD supports custom labels, fonts, colors, opacity, screen position, configurable columns and display order, row/column and label/value spacing, external screen-edge spacing, background corner roundness, and a global visibility hotkey. Choose to show metrics separately, combine CPU/GPU temperatures with load, or include used memory in those groups. Custom labels accept pasted Unicode symbols and include a categorized icon picker; symbol appearance can vary with the selected font.
 
