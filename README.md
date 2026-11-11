@@ -149,6 +149,8 @@ dotnet build Tray-Temps.sln -p:Configuration=Release -p:Platform=x64
 
 [![TrayTemps | AlternativeTo](https://alternativeto.net/static/badges/badge-compact-color.svg)](https://alternativeto.net/software/traytemps/about/?utm_source=badge&utm_medium=referral)
 
+[![Download Tray-Temps](https://a.fsdn.com/con/app/sf-download-button)](https://sourceforge.net/projects/tray-temps/files/latest/download)
+
 ---
 
 ## License
