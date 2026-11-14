@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32"><Configuration>Debug</Configuration><Platform>Win32</Platform></ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64"><Configuration>Debug</Configuration><Platform>x64</Platform></ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32"><Configuration>Release</Configuration><Platform>Win32</Platform></ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64"><Configuration>Release</Configuration><Platform>x64</Platform></ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals"><ProjectGuid>{D9B70D61-4417-43EE-BB8F-A40266EFAE1C}</ProjectGuid><Keyword>Win32Proj</Keyword><RootNamespace>FpsLimiterNative</RootNamespace><WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion></PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration"><ConfigurationType>DynamicLibrary</ConfigurationType><UseDebugLibraries>true</UseDebugLibraries><PlatformToolset>v143</PlatformToolset><CharacterSet>Unicode</CharacterSet></PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Release'" Label="Configuration"><ConfigurationType>DynamicLibrary</ConfigurationType><UseDebugLibraries>false</UseDebugLibraries><PlatformToolset>v143</PlatformToolset><WholeProgramOptimization>true</WholeProgramOptimization><CharacterSet>Unicode</CharacterSet></PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup>
+    <VulkanSdkRoot Condition="'$(VulkanSdkRoot)' == ''">$(ProjectDir)..\..\ThirdParty\Vulkan-Headers</VulkanSdkRoot>
+    <PayloadArchitecture Condition="'$(Platform)' == 'Win32'">x86</PayloadArchitecture>
+    <PayloadArchitecture Condition="'$(Platform)' != 'Win32'">x64</PayloadArchitecture>
+    <OutDir>$(ProjectDir)..\out\$(Configuration)\$(PayloadArchitecture)\</OutDir>
+    <IntDir>$(ProjectDir)..\obj\$(Configuration)\$(Platform)\</IntDir>
+    <TargetName>FpsLimiter.Native</TargetName>
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ImportGroup Label="ExtensionSettings" /><ImportGroup Label="Shared" />
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'"><Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" /></ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"><Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" /></ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'"><Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" /></ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'"><Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" /></ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <ItemDefinitionGroup>
+    <ClCompile><WarningLevel>Level4</WarningLevel><SDLCheck>true</SDLCheck><DebugInformationFormat Condition="'$(Configuration)' == 'Release'">None</DebugInformationFormat><PreprocessorDefinitions>WIN32_LEAN_AND_MEAN;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions><ConformanceMode>true</ConformanceMode><LanguageStandard>stdcpp17</LanguageStandard><RuntimeLibrary>MultiThreaded</RuntimeLibrary><AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)..\..\ThirdParty\MinHook\include;$(VulkanSdkRoot)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories></ClCompile>
+    <Link><SubSystem>Windows</SubSystem><GenerateDebugInformation Condition="'$(Configuration)' != 'Release'">true</GenerateDebugInformation><GenerateDebugInformation Condition="'$(Configuration)' == 'Release'">false</GenerateDebugInformation><AdditionalOptions>/Brepro %(AdditionalOptions)</AdditionalOptions><ModuleDefinitionFile>vulkan_layer.def</ModuleDefinitionFile><AdditionalDependencies>d3d11.lib;d3d9.lib;dxgi.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies></Link>
+  </ItemDefinitionGroup>
+  <ItemGroup><ClCompile Include="limiter.cpp"/><ClCompile Include="dxgi_adapter.cpp"/><ClCompile Include="d3d9_adapter.cpp"/><ClCompile Include="opengl_adapter.cpp"/><ClCompile Include="vulkan_layer.cpp"/></ItemGroup>
+  <ItemGroup>
+    <!-- Intentional constructs in pinned, unmodified vendor C code. Keep W4 for our adapters. -->
+    <ClCompile Include="..\..\ThirdParty\MinHook\src\buffer.c"><DisableSpecificWarnings>4201;4100;%(DisableSpecificWarnings)</DisableSpecificWarnings></ClCompile>
+    <ClCompile Include="..\..\ThirdParty\MinHook\src\hook.c"><DisableSpecificWarnings>4244;4310;%(DisableSpecificWarnings)</DisableSpecificWarnings></ClCompile>
+    <ClCompile Include="..\..\ThirdParty\MinHook\src\trampoline.c"><DisableSpecificWarnings>4244;%(DisableSpecificWarnings)</DisableSpecificWarnings></ClCompile>
+    <ClCompile Include="..\..\ThirdParty\MinHook\src\hde\hde32.c"><ExcludedFromBuild Condition="'$(Platform)' == 'x64'">true</ExcludedFromBuild></ClCompile>
+    <ClCompile Include="..\..\ThirdParty\MinHook\src\hde\hde64.c"><ExcludedFromBuild Condition="'$(Platform)' == 'Win32'">true</ExcludedFromBuild></ClCompile>
+  </ItemGroup>
+  <ItemGroup><ClInclude Include="include\TrayFpsProtocol.h"/><ClInclude Include="..\..\ThirdParty\MinHook\include\MinHook.h"/></ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Target Name="BuildBothArchitecturesAndStage" AfterTargets="Build" Condition="'$(Platform)' == 'x64' And '$(StageFpsLimiterPayloads)' != 'false' And '$(DesignTimeBuild)' != 'true'">
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="Build" Properties="Configuration=$(Configuration);Platform=Win32;StageFpsLimiterPayloads=false" />
+    <Exec Command="&quot;$(SystemRoot)\System32\WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -ExecutionPolicy Bypass -File &quot;$(ProjectDir)..\StageFpsLimiter.ps1&quot; -NativeRoot &quot;$(ProjectDir)..\out\$(Configuration)&quot;" />
+  </Target>
+  <Target Name="CleanOtherArchitecture" AfterTargets="Clean" Condition="'$(Platform)' == 'x64' And '$(StageFpsLimiterPayloads)' != 'false'">
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="Clean" Properties="Configuration=$(Configuration);Platform=Win32;StageFpsLimiterPayloads=false" />
+  </Target>
+</Project>

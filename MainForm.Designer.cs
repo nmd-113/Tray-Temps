@@ -128,6 +128,9 @@ namespace TrayTemps
             this.generalSettingsPanel = new System.Windows.Forms.TableLayoutPanel();
             this.minimizeOnStart = new System.Windows.Forms.CheckBox();
             this.clearSettings = new System.Windows.Forms.Button();
+            this.fpsLimiterPanel = new System.Windows.Forms.TableLayoutPanel();
+            this.fpsLimiterEnable = new System.Windows.Forms.CheckBox();
+            this.fpsLimiterSettings = new System.Windows.Forms.Button();
             this.osdPanel = new System.Windows.Forms.TableLayoutPanel();
             this.osdEnable = new System.Windows.Forms.CheckBox();
             this.refreshPanel = new System.Windows.Forms.TableLayoutPanel();
@@ -211,6 +214,7 @@ namespace TrayTemps
             this.tableLayoutPanel1.SuspendLayout();
             this.generalSettingsPanel.SuspendLayout();
             this.osdPanel.SuspendLayout();
+            this.fpsLimiterPanel.SuspendLayout();
             this.refreshPanel.SuspendLayout();
             this.traySettingsPanel.SuspendLayout();
             this.colortempsPanel.SuspendLayout();
@@ -1665,6 +1669,7 @@ namespace TrayTemps
             this.generalSettingsPanel.Controls.Add(this.minimizeOnStart, 1, 0);
             this.generalSettingsPanel.Controls.Add(this.clearSettings, 1, 2);
             this.generalSettingsPanel.Controls.Add(this.osdPanel, 0, 3);
+            this.generalSettingsPanel.Controls.Add(this.fpsLimiterPanel, 1, 3);
             this.generalSettingsPanel.Controls.Add(this.refreshPanel, 1, 1);
             this.generalSettingsPanel.Controls.Add(this.autostartInstall, 0, 0);
             this.generalSettingsPanel.Controls.Add(this.tempsFahrenheit, 0, 1);
@@ -1715,6 +1720,57 @@ namespace TrayTemps
             this.clearSettings.UseVisualStyleBackColor = false;
             this.clearSettings.Click += new System.EventHandler(this.ClearSettings_Click);
             // 
+            // fpsLimiterPanel
+            //
+            this.fpsLimiterPanel.ColumnCount = 2;
+            this.fpsLimiterPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 75F));
+            this.fpsLimiterPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 25F));
+            this.fpsLimiterPanel.Controls.Add(this.fpsLimiterEnable, 0, 0);
+            this.fpsLimiterPanel.Controls.Add(this.fpsLimiterSettings, 1, 0);
+            this.fpsLimiterPanel.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.fpsLimiterPanel.Location = new System.Drawing.Point(318, 133);
+            this.fpsLimiterPanel.Margin = new System.Windows.Forms.Padding(1);
+            this.fpsLimiterPanel.Name = "fpsLimiterPanel";
+            this.fpsLimiterPanel.RowCount = 1;
+            this.fpsLimiterPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.fpsLimiterPanel.Size = new System.Drawing.Size(300, 41);
+            this.fpsLimiterPanel.TabIndex = 27;
+            //
+            // fpsLimiterEnable
+            //
+            this.fpsLimiterEnable.AutoSize = true;
+            this.fpsLimiterEnable.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.fpsLimiterEnable.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.fpsLimiterEnable.ForeColor = System.Drawing.Color.LightGray;
+            this.fpsLimiterEnable.Location = new System.Drawing.Point(1, 1);
+            this.fpsLimiterEnable.Margin = new System.Windows.Forms.Padding(1);
+            this.fpsLimiterEnable.Name = "fpsLimiterEnable";
+            this.fpsLimiterEnable.Padding = new System.Windows.Forms.Padding(5, 0, 0, 0);
+            this.fpsLimiterEnable.Size = new System.Drawing.Size(232, 39);
+            this.fpsLimiterEnable.TabIndex = 0;
+            this.fpsLimiterEnable.Text = "FPS limiter:";
+            this.fpsLimiterEnable.UseVisualStyleBackColor = true;
+            this.fpsLimiterEnable.CheckedChanged += new System.EventHandler(this.FpsLimiterEnable_CheckedChanged);
+            //
+            // fpsLimiterSettings
+            //
+            this.fpsLimiterSettings.BackColor = System.Drawing.Color.SeaGreen;
+            this.fpsLimiterSettings.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.fpsLimiterSettings.Enabled = false;
+            this.fpsLimiterSettings.FlatAppearance.BorderColor = System.Drawing.Color.DarkGray;
+            this.fpsLimiterSettings.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.fpsLimiterSettings.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.fpsLimiterSettings.ForeColor = System.Drawing.Color.White;
+            this.fpsLimiterSettings.Location = new System.Drawing.Point(240, 6);
+            this.fpsLimiterSettings.Margin = new System.Windows.Forms.Padding(6);
+            this.fpsLimiterSettings.Name = "fpsLimiterSettings";
+            this.fpsLimiterSettings.Size = new System.Drawing.Size(66, 29);
+            this.fpsLimiterSettings.TabIndex = 1;
+            this.fpsLimiterSettings.Text = "⚙";
+            this.mainToolTip.SetToolTip(this.fpsLimiterSettings, "Configure FPS caps, executable profiles, exclusions, and the limiter shortcut.");
+            this.fpsLimiterSettings.UseVisualStyleBackColor = false;
+            this.fpsLimiterSettings.Click += new System.EventHandler(this.FpsLimiterSettings_Click);
+            //
             // osdPanel
             // 
             this.osdPanel.ColumnCount = 2;
@@ -2585,6 +2641,8 @@ namespace TrayTemps
             this.tableLayoutPanel1.ResumeLayout(false);
             this.generalSettingsPanel.ResumeLayout(false);
             this.generalSettingsPanel.PerformLayout();
+            this.fpsLimiterPanel.ResumeLayout(false);
+            this.fpsLimiterPanel.PerformLayout();
             this.osdPanel.ResumeLayout(false);
             this.osdPanel.PerformLayout();
             this.refreshPanel.ResumeLayout(false);
@@ -2752,6 +2810,9 @@ namespace TrayTemps
         private System.Windows.Forms.CheckBox minimizeOnStart;
         private System.Windows.Forms.Button checkUpdates;
         private System.Windows.Forms.Label indexLabel;
+        private System.Windows.Forms.TableLayoutPanel fpsLimiterPanel;
+        private System.Windows.Forms.CheckBox fpsLimiterEnable;
+        private System.Windows.Forms.Button fpsLimiterSettings;
         private System.Windows.Forms.TableLayoutPanel osdPanel;
         private System.Windows.Forms.CheckBox osdEnable;
         private System.Windows.Forms.Button osdSettings;

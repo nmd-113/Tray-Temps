@@ -1,36 +1,48 @@
 # TrayTemps
 
-TrayTemps is a lightweight Windows hardware monitoring utility that shows **CPU and GPU temperatures directly in the system tray** and provides compact temperature and load cards in its main window.
-
-It also includes an optional customizable **on-screen display (OSD)** for hardware statistics and FPS.
-
----
+TrayTemps is a lightweight Windows utility for monitoring **CPU and GPU temperatures in the system tray**. Its main window shows temperatures, system load and hardware details, with an optional on-screen display (OSD), FPS counter and game FPS limiter.
 
 ## Features
 
-* CPU and GPU temperatures in the system tray
-* Separate or combined tray icons
-* Custom tray colors and temperature-based colors
-* CPU/GPU temperature alerts
-* Selectable CPU/GPU devices and temperature sensors
-* Current, minimum, and maximum CPU/GPU temperatures
-* Compact CPU/GPU load indicators with dynamic usage colors
-* Customizable OSD with dedicated Metrics, Appearance, and Layout pages, metric grouping, and Unicode custom labels
-* RAM and VRAM usage
-* Built-in FPS counter using Windows ETW
-* Independently configurable FPS display refresh interval
-* Global OSD hotkey
-* Detailed CPU, GPU, RAM, motherboard, BIOS, and storage information
-* SMART and storage health information when supported
-* Windows/WMI hardware fallbacks
-* Optional PawnIO support for additional low-level sensors
-* Resizable, DPI-aware interface with light and dark themes
-* Start minimized to tray
-* Optional Windows startup
-* Built-in GitHub update checking
-* Single portable executable
+- Separate or combined tray icons, custom colors, temperature-based colors and temperature alerts.
+- Current, minimum and maximum temperatures; CPU/GPU load; RAM and VRAM usage.
+- Customizable, click-through OSD with labels, metric groups, fonts, colors, layout and a global hotkey.
+- Built-in FPS counter using Windows ETW, with its own display refresh interval.
+- Optional FPS limiter with a default cap, per-executable profiles, process exclusions and a toggle hotkey.
+- Detailed CPU, GPU, memory, motherboard, BIOS and storage information, including SMART data when available.
+- Light/dark themes, a resizable DPI-aware window, start minimized to tray, optional Windows startup and update checking.
+- A single portable executable.
 
----
+## Requirements
+
+- Windows 10 or newer, **x64**.
+- .NET Framework 4.8.
+
+## Get started
+
+1. Download `TrayTemps.exe` from the [Releases page](https://github.com/nmd-113/Tray-Temps/releases) and run it. No installation is required.
+2. Open **Settings** to choose sensors, tray icons, colors and the update interval.
+3. Enable **OSD** and open its gear button to choose the metrics and appearance.
+4. Enable **FPS limiter** if you want a game cap, then open its gear button to configure it. The limiter is off by default.
+
+The OSD can show CPU/GPU temperatures and load, RAM/VRAM usage, FPS and the current time. It is click-through and does not take focus from other applications. Its FPS counter works independently of the limiter and needs no external FPS overlay.
+
+## FPS limiter
+
+The limiter detects eligible foreground games and applies the default FPS cap or the profile for that executable. You can add executable profiles, exclude process names, and enable the optional **Ctrl+Shift+F12** toggle. Supported caps range from **10 to 1000 FPS**.
+
+- Targets supported **64-bit Direct3D 9/11/12, OpenGL and Vulkan** applications; compatibility varies by game and driver.
+- For Vulkan, enable the limiter **before launching the game** and run the game without administrator rights. TrayTemps itself may run elevated.
+- 32-bit attachment and elevated Vulkan targets are unsupported. Protected/anti-cheat games have not been verified.
+- Close standalone TrayFPS before enabling the limiter in TrayTemps.
+
+## Hardware access
+
+TrayTemps uses [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor), Windows/WMI fallbacks, and optional [PawnIO](https://github.com/namazso/PawnIO) support. Administrator rights can provide more complete sensor access. Available readings depend on the hardware, driver and permissions.
+
+The official PawnIO installer is embedded and runs only after user confirmation. If PawnIO is unavailable or installation is declined, monitoring continues with the sensors and Windows/WMI information that remain accessible.
+
+Low-level hardware tools can trigger antivirus heuristics. TrayTemps does not disable antivirus protection, add exclusions, bypass UAC or silently install drivers. Download it from the official release page.
 
 ## Screenshots
 
@@ -50,113 +62,28 @@ It also includes an optional customizable **on-screen display (OSD)** for hardwa
 
 ![TrayTemps hardware information](https://www.naetech.ro/wp-content/uploads/2024/traytemps/traytemps-hw-dialog.png?v=2.3.0.4)
 
----
+## Build from source
 
-## Requirements
+Use Visual Studio 2022 with the **.NET desktop development** and **Desktop development with C++** tools, the .NET Framework 4.8 Developer Pack and a Windows 10/11 SDK. Open `Tray-Temps.sln`, select **Release / x64**, and press **Build Solution** or **Rebuild Solution**.
 
-* Windows 10 or newer
-* x64 Windows
-* .NET Framework 4.8
+The solution builds the native limiter for x64 and x86, stages and verifies its payloads, builds the managed controller, application and test projects, and automatically creates the release ZIP and checksums. The Vulkan headers are bundled, so a separate Vulkan SDK is not required.
 
----
+The final portable executable is **`bin\x64\Release\TrayTemps.exe`**. Release builds also update `dist/TrayTemps.exe`, the versioned ZIP and `SHA256SUMS.txt`. Debug builds produce the complete application under `bin\x64\Debug` without overwriting the release package.
 
-## Installation
+Commit and sync through Visual Studio as usual. All project sources, bundled headers, native payloads and notices belong in Git; generated `bin`, `obj` and `dist` outputs remain ignored.
 
-1. Download the latest `TrayTemps.exe` from the [Releases page](https://github.com/nmd-113/Tray-Temps/releases).
-2. Run the application.
+For command-line builds, `build-dist.ps1` invokes the same solution build. See the [native build guide](Native/README.md) and [test instructions](Tests/README.md) for development details.
 
-No installation is required.
+Built with C#/WinForms, .NET Framework 4.8, LibreHardwareMonitor, PawnIO, WMI and ETW.
 
----
+Development: [test instructions](Tests/README.md), [changelog](CHANGELOG.md), [integration review](Native/INTEGRATION_REVIEW.md), [handover history](Native/HANDOVER_REVIEW.md).
 
-## On-Screen Display
-
-The optional OSD can display:
-
-* CPU temperature
-* GPU temperature
-* CPU load
-* GPU load
-* RAM usage
-* VRAM usage
-* FPS
-* Current time
-
-The OSD supports custom labels, fonts, colors, opacity, screen position, configurable columns and display order, row/column and label/value spacing, external screen-edge spacing, background corner roundness, and a global visibility hotkey. Choose to show metrics separately, combine CPU/GPU temperatures with load, or include used memory in those groups. Custom labels accept pasted Unicode symbols and include a categorized icon picker; symbol appearance can vary with the selected font.
-
-The overlay is click-through and does not take focus from other applications.
-
----
-
-## FPS Counter
-
-TrayTemps includes a lightweight built-in FPS counter using native Windows **Event Tracing for Windows (ETW)**.
-
-No RTSS, MSI Afterburner, AMD overlay, NVIDIA overlay, or external FPS application is required.
-
-The FPS display refresh interval can be configured independently without increasing CPU/GPU, memory, storage, or temperature sensor polling.
-
-FPS availability may vary depending on the game, rendering method, and anti-cheat software.
-
----
-
-## Hardware Sensor Access
-
-TrayTemps uses [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) for sensor monitoring and supports [PawnIO](https://github.com/namazso/PawnIO) for additional low-level hardware access.
-
-The official PawnIO installer is embedded inside TrayTemps and is only executed after user confirmation.
-
-If PawnIO is unavailable or installation is declined, TrayTemps continues using the sensors and Windows/WMI information that remain accessible.
-
-TrayTemps can also optionally run with administrator rights for fuller hardware access.
-
----
-
-## Antivirus Notice
-
-Low-level hardware monitoring tools can occasionally trigger heuristic antivirus detections.
-
-TrayTemps does **not** disable antivirus protection, add exclusions, bypass UAC, or silently install drivers.
-
-Always download TrayTemps from the official GitHub release page.
-
----
-
-## Build From Source
-
-### Requirements
-
-* Visual Studio 2022
-* .NET Framework 4.8 Developer Pack
-* Windows 10 or newer
-
-```powershell
-dotnet build Tray-Temps.sln -p:Configuration=Release -p:Platform=x64
-```
-
----
-
-## Built With
-
-* C# / WinForms
-* .NET Framework 4.8
-* LibreHardwareMonitor
-* PawnIO
-* Windows Management Instrumentation (WMI)
-* Event Tracing for Windows (ETW)
-
----
+## Links and license
 
 [![TrayTemps | AlternativeTo](https://alternativeto.net/static/badges/badge-compact-color.svg)](https://alternativeto.net/software/traytemps/about/?utm_source=badge&utm_medium=referral)
 
 [![Download Tray-Temps](https://a.fsdn.com/con/app/sf-download-button)](https://sourceforge.net/projects/tray-temps/files/latest/download)
 
----
+TrayTemps is available under the MIT license; see [LICENSE.txt](LICENSE.txt). Bundled components retain their own licenses, including the [FPS limiter notices](Resources/FpsLimiter/NOTICE.txt) and [JetBrains Mono font license](Resources/OFL-JetBrainsMono.txt).
 
-## License
-
-See [LICENSE.txt](LICENSE.txt).
-
----
-
-Created by **NaeTech**
+Created by **NaeTech**.

@@ -218,6 +218,15 @@ namespace TrayTemps
         private static extern uint GetDpiForSystem();
 
         [DllImport("user32.dll")]
+        private static extern uint GetDpiForWindow(IntPtr window);
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr MonitorFromPoint(NativePoint point, uint flags);
+
+        [DllImport("shcore.dll")]
+        private static extern int GetDpiForMonitor(IntPtr monitor, int dpiType, out uint dpiX, out uint dpiY);
+
+        [DllImport("user32.dll")]
         private static extern int GetSystemMetricsForDpi(int nIndex, uint dpi);
 
         [DllImport("user32.dll", SetLastError = true)]
@@ -243,15 +252,30 @@ namespace TrayTemps
             }
         }
 
+        [StructLayout(LayoutKind.Sequential)]
+        private struct NativePoint
+        {
+            public NativePoint(int x, int y)
+            {
+                X = x;
+                Y = y;
+            }
+
+            public int X;
+            public int Y;
+        }
+
         private struct DpiRestartRequest
         {
-            public DpiRestartRequest(int newDpi, Rectangle? normalBounds, Rectangle? suggestedBounds)
+            public DpiRestartRequest(int oldDpi, int newDpi, Rectangle? normalBounds, Rectangle? suggestedBounds)
             {
+                OldDpi = oldDpi;
                 NewDpi = newDpi;
                 NormalBounds = normalBounds;
                 SuggestedBounds = suggestedBounds;
             }
 
+            public int OldDpi;
             public int NewDpi;
             public Rectangle? NormalBounds;
             public Rectangle? SuggestedBounds;
@@ -280,23 +304,51 @@ namespace TrayTemps
             WindowCornerHelper.ApplyRoundedCorners(Handle);
 
             if (_settingsLoaded && !_isShutdownInitiated)
+            {
                 ApplyOsdHotkeyRegistration(showError: false);
+                ApplyFpsLimiterHotkey();
+            }
         }
 
         protected override void OnHandleDestroyed(EventArgs e)
         {
             if (!EmbeddedFonts.IsDesignTime(this))
+            {
                 UnregisterOsdHotkey();
+                UnregisterFpsLimiterHotkey();
+            }
             base.OnHandleDestroyed(e);
         }
 
         private void RefreshCurrentDpiScale()
         {
+            if (IsHandleCreated)
+            {
+                uint windowDpi = GetDpiForWindow(Handle);
+                if (windowDpi > 0)
+                {
+                    _dpiScale = windowDpi / 96f;
+                    return;
+                }
+            }
+
             using (Graphics graphics = Graphics.FromHwnd(Handle))
             {
                 if (graphics.DpiX > 0)
                     _dpiScale = graphics.DpiX / 96f;
             }
+        }
+
+        private void RefreshCurrentDpiScale(Point location)
+        {
+            IntPtr monitor = MonitorFromPoint(new NativePoint(location.X, location.Y), 2);
+            if (monitor != IntPtr.Zero && GetDpiForMonitor(monitor, 0, out uint dpiX, out uint dpiY) == 0 && dpiX > 0)
+            {
+                _dpiScale = dpiX / 96f;
+                return;
+            }
+
+            RefreshCurrentDpiScale();
         }
 
         #endregion
@@ -392,6 +444,8 @@ namespace TrayTemps
                 if (!PromptForElevationAtStartupIfNeeded())
                     return;
 
+                InitializeFpsLimiterRuntime();
+
                 bool startHidden = ShouldStartHidden;
 
                 if (!startHidden)
@@ -440,6 +494,9 @@ namespace TrayTemps
             if (EmbeddedFonts.IsDesignTime(this))
                 return;
 
+            if (DeferFpsLimiterClose(e))
+                return;
+
             if (_settingsLoaded)
                 SaveSettings();
             ExecuteShutdownSequence();
@@ -483,7 +540,7 @@ namespace TrayTemps
 
             _dpiRestartPending = true;
 
-            BeginInvoke((MethodInvoker)delegate
+            BeginInvoke((MethodInvoker)async delegate
             {
                 if (IsDisposed || _isShutdownInitiated || _resourcesDisposed)
                     return;
@@ -493,21 +550,35 @@ namespace TrayTemps
                 if (!startHidden && request.SuggestedBounds.HasValue &&
                     request.SuggestedBounds.Value.Width > 0 && request.SuggestedBounds.Value.Height > 0)
                 {
-                    _lastNormalWindowBounds = request.SuggestedBounds.Value;
+                    Rectangle destinationBounds = request.SuggestedBounds.Value;
+                    Rectangle sourceBounds = request.NormalBounds ?? destinationBounds;
+                    Rectangle scaledBounds = request.NormalBounds.HasValue
+                        ? ScaleWindowBounds(sourceBounds, request.OldDpi, request.NewDpi)
+                        : destinationBounds;
+                    _lastNormalWindowBounds = new Rectangle(destinationBounds.Location, scaledBounds.Size);
                 }
                 else if (request.NormalBounds.HasValue)
                 {
-                    float scaleFactor = request.NewDpi / (_dpiScale * 96f);
-                    _lastNormalWindowBounds = ScaleWindowBounds(request.NormalBounds.Value, scaleFactor);
+                    _lastNormalWindowBounds = ScaleWindowBounds(
+                        request.NormalBounds.Value,
+                        request.OldDpi,
+                        request.NewDpi);
                 }
 
                 int selectedPageIndex = mainTabControl != null
                     ? mainTabControl.SelectedIndex
                     : 0;
 
+                if (!await PrepareFpsLimiterForRestartAsync())
+                {
+                    _dpiRestartPending = false;
+                    return;
+                }
+
                 if (!Program.RequestDpiRestart(startHidden, _deferPawnIoPrompt, selectedPageIndex))
                 {
                     _dpiRestartPending = false;
+                    ResumeFpsLimiterAfterCancelledRestart();
                     _dpiScale = request.NewDpi / 96f;
 
                     if (_explicitShowPending)
@@ -529,8 +600,11 @@ namespace TrayTemps
             });
         }
 
-        private static Rectangle ScaleWindowBounds(Rectangle bounds, float scaleFactor)
+        private static Rectangle ScaleWindowBounds(Rectangle bounds, int oldDpi, int newDpi)
         {
+            double scaleFactor = oldDpi > 0 && newDpi > 0
+                ? newDpi / (double)oldDpi
+                : 1d;
             return new Rectangle(
                 bounds.Location,
                 new Size(
@@ -549,6 +623,12 @@ namespace TrayTemps
             if (EmbeddedFonts.IsDesignTime(this))
             {
                 base.WndProc(ref m);
+                return;
+            }
+
+            if (m.Msg == WM_HOTKEY && m.WParam.ToInt32() == FpsLimiterHotkeyId)
+            {
+                ToggleFpsLimiterFromHotkey();
                 return;
             }
 
@@ -586,8 +666,9 @@ namespace TrayTemps
             Rectangle? suggestedBounds = dpiActuallyChanged && !restartHidden && m.LParam != IntPtr.Zero
                 ? Marshal.PtrToStructure<NativeRect>(m.LParam).ToRectangle()
                 : (Rectangle?)null;
+            int oldDpi = Math.Max(1, (int)Math.Round(_dpiScale * 96f));
             DpiRestartRequest? dpiRestart = dpiActuallyChanged
-                ? new DpiRestartRequest(newDpi, normalBounds, suggestedBounds)
+                ? new DpiRestartRequest(oldDpi, newDpi, normalBounds, suggestedBounds)
                 : (DpiRestartRequest?)null;
 
             base.WndProc(ref m);
@@ -595,7 +676,21 @@ namespace TrayTemps
             if (m.Msg == WM_DPICHANGED)
             {
                 if (_windowMoveResizeActive)
-                    _deferredDpiRestart = dpiRestart;
+                {
+                    if (newDpi == oldDpi)
+                    {
+                        _deferredDpiRestart = null;
+                    }
+                    else if (dpiRestart.HasValue)
+                    {
+                        DpiRestartRequest source = _deferredDpiRestart ?? dpiRestart.Value;
+                        _deferredDpiRestart = new DpiRestartRequest(
+                            source.OldDpi,
+                            newDpi,
+                            source.NormalBounds,
+                            suggestedBounds);
+                    }
+                }
                 else if (dpiRestart.HasValue)
                     QueueDpiRestart(dpiRestart.Value);
             }
@@ -611,6 +706,7 @@ namespace TrayTemps
                     if (Visible && WindowState == FormWindowState.Normal)
                     {
                         request = new DpiRestartRequest(
+                            request.OldDpi,
                             request.NewDpi,
                             request.NormalBounds,
                             Bounds);
@@ -2411,6 +2507,8 @@ namespace TrayTemps
             osdEnable.Checked = false;
             osdSettings.Enabled = false;
             _osdConfiguration = new OsdConfiguration();
+            _fpsLimiterConfiguration = new FpsLimiterConfiguration();
+            SyncFpsLimiterControls();
 
             _desiredEnableCpuTray = false;
             _desiredEnableGpuTray = false;
@@ -2490,6 +2588,7 @@ namespace TrayTemps
                     StartMinimizedToTray = minimizeOnStart.Checked,
                     StartMinimizedWithAdminRights = _startMinimizedWithAdminRights,
                     Osd = CaptureOsdConfiguration(),
+                    FpsLimiter = _fpsLimiterConfiguration.Clone(),
                     ScaleFactor = _windowBoundsScaleFactorOverride ?? _dpiScale
                 };
 
@@ -2579,7 +2678,9 @@ namespace TrayTemps
                 if (restoreSavedLocation)
                 {
                     Location = new Point(settings.WindowX, settings.WindowY);
-                    RefreshCurrentDpiScale();
+                    RefreshCurrentDpiScale(new Point(
+                        settings.WindowX + Math.Max(1, settings.WindowWidth / 2),
+                        settings.WindowY + Math.Max(1, settings.WindowHeight / 2)));
                 }
 
                 double boundsScale = 1d;
@@ -2647,6 +2748,8 @@ namespace TrayTemps
             colortempsEnable.Checked = settings.TempBasedIconColor;
             TemperatureAlertsEnabled = settings.TemperatureAlertsEnabled;
             ShowTemperatureColorCorners = settings.ShowTemperatureColorCorners;
+            _fpsLimiterConfiguration = FpsLimiterConfiguration.Normalize(settings.FpsLimiter);
+            SyncFpsLimiterControls();
             _osdConfiguration = NormalizeOsdConfiguration(settings.Osd);
             osdEnable.Checked = _osdConfiguration.Enabled;
             osdSettings.Enabled = osdEnable.Checked;
@@ -2844,7 +2947,7 @@ namespace TrayTemps
                 gpuColorPanel,
                 iconsizePanel,
                 colortempsPanel);
-            ApplyBackColor(theme.SurfaceBack, osdPanel);
+            ApplyBackColor(theme.SurfaceBack, osdPanel, fpsLimiterPanel);
             ApplyBackColor(subtleSeparator, cpuLoadSeparator, gpuLoadSeparator);
             ApplyBackColor(loadTrackColor, cpuLoadTrack, gpuLoadTrack);
             ApplyBackColor(theme.NavBack, mainMenu, AppDataPnl);
@@ -2941,6 +3044,7 @@ namespace TrayTemps
             ApplyWindowButtonTheme(theme, exitBtn);
             ApplyAccentButtonTheme(theme, colortempsConfig);
             ApplyAccentButtonTheme(theme, osdSettings);
+            ApplyAccentButtonTheme(theme, fpsLimiterSettings);
             ApplyColorButtonTheme(theme, cpuColorValue, gpuColorValue);
         }
 
@@ -3487,7 +3591,7 @@ namespace TrayTemps
 
         #region [ Theme / UI State ]
 
-        private void ClearSettings_Click(object sender, EventArgs e)
+        private async void ClearSettings_Click(object sender, EventArgs e)
         {
             DialogResult result = MessageBox.Show(
                 "Reset in-app settings to their default values?",
@@ -3496,6 +3600,9 @@ namespace TrayTemps
                 MessageBoxIcon.Warning);
 
             if (result != DialogResult.Yes)
+                return;
+
+            if (!await PrepareFpsLimiterForRestartAsync())
                 return;
 
             try
@@ -3520,6 +3627,10 @@ namespace TrayTemps
             catch (Exception ex)
             {
                 MessageBox.Show($"Error resetting settings: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                ResumeFpsLimiterAfterCancelledRestart();
             }
         }
 
@@ -4599,6 +4710,9 @@ namespace TrayTemps
                 _registeredOsdHotkeyKey == key)
                 return true;
 
+            if (_fpsLimiterHotkeyRegistered && IsFpsLimiterShortcut(modifiers, key))
+                return true; // OSD takes priority only when its edited configuration is saved.
+
             bool registered = RegisterHotKey(
                 Handle,
                 OsdHotkeyTestId,
@@ -4623,6 +4737,7 @@ namespace TrayTemps
             if (!OsdHotkeyHelper.IsValid(modifiers, key))
                 return false;
 
+            GiveOsdHotkeyPriority(modifiers, key);
             _osdHotkeyRegistered = RegisterHotKey(
                 Handle,
                 OsdHotkeyId,
@@ -5188,12 +5303,8 @@ namespace TrayTemps
 
             if (pawnIoAction == PawnIoStartupAction.RestartApplication)
             {
-                if (TryRestartElevated())
-                {
-                    ExecuteShutdownSequence();
-                    Close();
+                if (RestartElevatedAndClose(preserveStartupVisibility: false))
                     return false;
-                }
 
                 MessageBox.Show(
                     this,
@@ -5880,9 +5991,16 @@ namespace TrayTemps
                 preserveStartupVisibility && _forceVisibleOnStartup);
         }
 
-        private bool RestartElevatedAndClose()
+        private bool RestartElevatedAndClose(bool preserveStartupVisibility = true)
         {
-            if (!TryRestartElevated(preserveStartupVisibility: true))
+            if (_fpsLimiterService != null)
+            {
+                if (!_fpsLimiterRestartPending)
+                    _ = RestartElevatedWithFpsLimiterAsync(preserveStartupVisibility);
+                return true;
+            }
+
+            if (!TryRestartElevated(preserveStartupVisibility))
                 return false;
 
             ExecuteShutdownSequence();
@@ -5927,6 +6045,7 @@ namespace TrayTemps
 
             _isShutdownInitiated = true;
             _resourcesDisposed = true;
+            ShutdownFpsLimiter();
             _osdPreviewConfiguration = null;
             _backgroundExpansionReady.TrySetResult(false);
 
@@ -6225,19 +6344,26 @@ namespace TrayTemps
             }
         }
 
-        private Task HandleAutostartDisableYes()
+        private async Task HandleAutostartDisableYes()
         {
             if (!IsRunningAsAdministrator())
             {
                 HandleAutostartAdminRequired(
                     "Full uninstall needs administrator rights.\n\nTrayTemps will restart elevated; then disable Autostart again.",
                     true);
-                return Task.CompletedTask;
+                return;
             }
 
             SaveSettings();
-            UninstallAndExit();
-            return Task.CompletedTask;
+            if (!await PrepareFpsLimiterForRestartAsync())
+                return;
+
+            try { UninstallAndExit(); }
+            finally
+            {
+                if (!_isShutdownInitiated && !_fpsLimiterClosePending && !IsDisposed)
+                    ResumeFpsLimiterAfterCancelledRestart();
+            }
         }
 
         private async Task HandleAutostartDisableNo()
@@ -6292,11 +6418,7 @@ namespace TrayTemps
 
             RevertCheckbox(autostartInstall, revertValue);
 
-            if (TryRestartElevated())
-            {
-                ExecuteShutdownSequence();
-                Close();
-            }
+            RestartElevatedAndClose(preserveStartupVisibility: false);
         }
 
         private void RevertCheckbox(CheckBox chk, bool state)
@@ -6456,6 +6578,9 @@ namespace TrayTemps
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
 
+            if (!await PrepareFpsLimiterForRestartAsync())
+                return false;
+
             if (RestartFromInstalledPath(destExe, out string restartError))
             {
                 ExecuteShutdownSequence();
@@ -6463,6 +6588,7 @@ namespace TrayTemps
             }
             else
             {
+                ResumeFpsLimiterAfterCancelledRestart();
                 MessageBox.Show(
                     this,
                     "TrayTemps was installed, but the installed copy could not be started.\n\n" + restartError,
@@ -6530,6 +6656,23 @@ namespace TrayTemps
                 Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
                 $"{AppName}.lnk");
             string settingsFolder = Path.GetDirectoryName(SettingsFilePath);
+
+            // The limiter is stopped before uninstall reaches this method. Remove
+            // all engine versions in both uninstall paths, without touching other app data.
+            try
+            {
+                FpsLimiterPayloads.DeleteCache(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData));
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    this,
+                    "The FPS limiter cache could not be removed. Close games using the limiter and retry uninstall.\n\n" + ex.Message,
+                    "Uninstall Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                return;
+            }
 
             if (!TryRemoveStartupTask(out string taskError))
             {

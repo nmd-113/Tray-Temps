@@ -4,12 +4,15 @@
         {
             "label": "build TrayTemps",
             "type": "process",
-            "command": "dotnet",
+            "command": "powershell.exe",
             "args": [
-                "build",
-                "Tray-Temps.sln",
-                "-p:Configuration=Debug",
-                "-p:Platform=x64"
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                "${workspaceFolder}\\build-dist.ps1",
+                "-Configuration",
+                "Debug"
             ],
             "group": {
                 "kind": "build",

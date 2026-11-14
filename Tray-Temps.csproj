@@ -13,6 +13,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
+    <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
     <IsWebBootstrapper>false</IsWebBootstrapper>
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
@@ -316,6 +317,58 @@
     </ItemGroup>
     <Delete Files="@(ReferenceCopyLocalPaths->'$(OutDir)%(Filename).xml')" />
     <Delete Files="@(_EmbeddedManagedOutput)" />
+  </Target>
+  <ItemGroup>
+    <ProjectReference Include="FpsLimiter.Core\FpsLimiter.Core.csproj">
+      <Project>{25AEEA50-CB6D-4937-BE55-2105746A43B0}</Project>
+      <Name>FpsLimiter.Core</Name>
+      <SetPlatform>Platform=AnyCPU</SetPlatform>
+    </ProjectReference>
+    <ProjectReference Include="Native\FpsLimiter.Native\FpsLimiter.Native.vcxproj">
+      <Project>{D9B70D61-4417-43EE-BB8F-A40266EFAE1C}</Project>
+      <Name>FpsLimiter.Native</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <SetConfiguration>Configuration=Release</SetConfiguration>
+      <SetPlatform>Platform=x64</SetPlatform>
+    </ProjectReference>
+    <Compile Include="MainForm.FpsLimiter.cs">
+      <DependentUpon>MainForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Helpers\Performance\FpsLimiterConfiguration.cs" />
+    <Compile Include="Helpers\Performance\FpsLimiterPayloads.cs" />
+    <Compile Include="Helpers\Performance\FpsLimiterService.cs" />
+    <Compile Include="Dialogs\FpsLimiterSettingsDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Dialogs\FpsLimiterSettingsDialog.Designer.cs">
+      <DependentUpon>FpsLimiterSettingsDialog.cs</DependentUpon>
+    </Compile>
+    <EmbeddedResource Include="Dialogs\FpsLimiterSettingsDialog.resx">
+      <DependentUpon>FpsLimiterSettingsDialog.cs</DependentUpon>
+    </EmbeddedResource>
+    <Compile Include="Dialogs\FpsLimiterNoticesDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Dialogs\FpsLimiterNoticesDialog.Designer.cs">
+      <DependentUpon>FpsLimiterNoticesDialog.cs</DependentUpon>
+    </Compile>
+    <EmbeddedResource Include="Resources\FpsLimiter\x64\FpsLimiter.Native.dll">
+      <LogicalName>TrayFPS.Payload.x64.dll</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\FpsLimiter\x86\FpsLimiter.Native.dll">
+      <LogicalName>TrayFPS.Payload.x86.dll</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\FpsLimiter\NOTICE.txt">
+      <LogicalName>TrayTemps.FpsLimiter.Notice</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+  <Target Name="ValidateFpsLimiterPayloads" BeforeTargets="PrepareResources" DependsOnTargets="ResolveProjectReferences" Condition="'$(DesignTimeBuild)' != 'true'">
+    <!-- Also cover IDE up-to-date skips and missing secondary-architecture outputs. -->
+    <MSBuild Projects="$(MSBuildProjectDirectory)\Native\FpsLimiter.Native\FpsLimiter.Native.vcxproj" Targets="Build" Properties="Configuration=Release;Platform=x64;StageFpsLimiterPayloads=true" />
+    <Exec Command="&quot;$(SystemRoot)\System32\WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\Native\StageFpsLimiter.ps1&quot; -ValidateOnly" />
+  </Target>
+  <Target Name="PackageRelease" AfterTargets="Build" DependsOnTargets="RemoveEmbeddedManagedReferencesFromOutput" Condition="'$(Configuration)' == 'Release' And '$(DesignTimeBuild)' != 'true'">
+    <Exec Command="&quot;$(SystemRoot)\System32\WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\build-dist.ps1&quot; -PackageOnly -BuiltExecutable &quot;$(TargetPath)&quot;" />
   </Target>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

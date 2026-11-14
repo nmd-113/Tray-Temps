@@ -1,0 +1,4 @@
+EXPORTS
+    vkGetInstanceProcAddr=TrayFpsGetInstanceProcAddr
+    vkGetDeviceProcAddr=TrayFpsGetDeviceProcAddr
+    vkNegotiateLoaderLayerInterfaceVersion=TrayFpsNegotiate
