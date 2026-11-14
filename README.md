@@ -34,7 +34,6 @@ The limiter detects eligible foreground games and applies the default FPS cap or
 - Targets supported **64-bit Direct3D 9/11/12, OpenGL and Vulkan** applications; compatibility varies by game and driver.
 - For Vulkan, enable the limiter **before launching the game** and run the game without administrator rights. TrayTemps itself may run elevated.
 - 32-bit attachment and elevated Vulkan targets are unsupported. Protected/anti-cheat games have not been verified.
-- Close standalone TrayFPS before enabling the limiter in TrayTemps.
 
 ## Hardware access
 
