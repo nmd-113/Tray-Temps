@@ -106,6 +106,38 @@ namespace TrayTemps
         private bool _running;
         private bool _disposed;
         private int _stopCleanupDeferred;
+        private FrameTimeHistory _frameTimes;
+
+        private sealed class FrameTimeHistory
+        {
+            internal readonly FrameTimeWindow Primary, Fallback;
+            private int _displayedSource;
+            internal FrameTimeHistory(long frequency)
+            {
+                Primary = new FrameTimeWindow(frequency); Fallback = new FrameTimeWindow(frequency);
+            }
+            internal void Reset(int generation) { Primary.Reset(generation); Fallback.Reset(generation); }
+            internal int? GetValue(int source, long now, int generation)
+            {
+                if (source != _displayedSource)
+                {
+                    if (_displayedSource != 0)
+                    {
+                        if (source == 1) Primary.Reset(generation);
+                        else if (source == 2) Fallback.Reset(generation);
+                        else Reset(generation);
+                    }
+                    _displayedSource = source;
+                }
+                return source == 1 ? Primary.GetValue(now, generation) : source == 2 ? Fallback.GetValue(now, generation) : null;
+            }
+        }
+
+        internal void SetOnePercentLowEnabled(bool enabled)
+        {
+            if (enabled == (Volatile.Read(ref _frameTimes) != null)) return;
+            Volatile.Write(ref _frameTimes, enabled ? new FrameTimeHistory(_qpcFrequency) : null);
+        }
 
         internal ForegroundFpsMonitor()
         {
@@ -260,6 +292,7 @@ namespace TrayTemps
             if (Interlocked.Exchange(ref _targetProcessId, processId) != processId)
             {
                 Interlocked.Increment(ref _targetGeneration);
+                Volatile.Read(ref _frameTimes)?.Reset(Volatile.Read(ref _targetGeneration));
                 Volatile.Write(ref _latestFps, -1);
                 Volatile.Write(ref _lastPresentTimestamp, 0L);
                 Volatile.Write(ref _fallbackLatestFps, -1);
@@ -269,27 +302,36 @@ namespace TrayTemps
 
         internal int? GetLatestFps()
         {
+            GetLatestValues(out int? fps, out _);
+            return fps;
+        }
+
+        internal void GetLatestValues(out int? fps, out int? onePercentLow)
+        {
+            fps = null; onePercentLow = null;
             if (!_running)
-                return null;
+                return;
 
             long lastPresent = Volatile.Read(ref _lastPresentTimestamp);
             QueryPerformanceCounter(out long now);
             int value = Volatile.Read(ref _latestFps);
+            int source = 0;
             if (lastPresent > 0 && now >= lastPresent &&
                 now - lastPresent <= _staleValueTicks && value >= 0)
             {
-                return value;
+                fps = value; source = 1;
             }
-
-            long fallbackLastPresent = Volatile.Read(ref _fallbackLastPresentTimestamp);
-            int fallbackValue = Volatile.Read(ref _fallbackLatestFps);
-            if (fallbackLastPresent > 0 && now >= fallbackLastPresent &&
-                now - fallbackLastPresent <= _staleValueTicks && fallbackValue >= 0)
+            else
             {
-                return fallbackValue;
+                long fallbackLastPresent = Volatile.Read(ref _fallbackLastPresentTimestamp);
+                int fallbackValue = Volatile.Read(ref _fallbackLatestFps);
+                if (fallbackLastPresent > 0 && now >= fallbackLastPresent &&
+                    now - fallbackLastPresent <= _staleValueTicks && fallbackValue >= 0)
+                {
+                    fps = fallbackValue; source = 2;
+                }
             }
-
-            return null;
+            onePercentLow = Volatile.Read(ref _frameTimes)?.GetValue(source, now, Volatile.Read(ref _targetGeneration));
         }
 
         internal void FlushIfNeeded(int intervalMilliseconds)
@@ -325,6 +367,7 @@ namespace TrayTemps
 
         internal void Stop()
         {
+            Volatile.Write(ref _frameTimes, null);
             if (Volatile.Read(ref _stopCleanupDeferred) != 0)
                 return;
 
@@ -605,6 +648,7 @@ namespace TrayTemps
             if (timestamp <= lastPresentTimestamp)
                 return;
 
+            Volatile.Read(ref _frameTimes)?.Primary.Add(timestamp, generation);
             Volatile.Write(ref _lastPresentTimestamp, timestamp);
             if (_windowStartTimestamp <= 0)
             {
@@ -1089,6 +1133,7 @@ namespace TrayTemps
 
         private void SelectFallbackSource(FallbackCandidate candidate)
         {
+            Volatile.Read(ref _frameTimes)?.Fallback.Reset(_fallbackObservedGeneration, candidate.LastTimestamp);
             _selectedFallbackEventId = candidate.EventId;
             _selectedFallbackModel = candidate.Model;
             _selectedFallbackThreadId = candidate.ThreadId;
@@ -1103,6 +1148,7 @@ namespace TrayTemps
 
         private void SampleFallbackTimestamp(long timestamp)
         {
+            Volatile.Read(ref _frameTimes)?.Fallback.Add(timestamp, _fallbackObservedGeneration);
             Volatile.Write(ref _fallbackLastPresentTimestamp, timestamp);
             if (_fallbackWindowStartTimestamp <= 0)
             {
@@ -1145,6 +1191,7 @@ namespace TrayTemps
 
         private void ResetFallbackState(int generation)
         {
+            Volatile.Read(ref _frameTimes)?.Fallback.Reset(generation);
             _fallbackObservedGeneration = generation;
             _fallbackLastObservedTimestamp = 0;
             _selectedFallbackEventId = 0;
@@ -1241,6 +1288,7 @@ namespace TrayTemps
             int threadId,
             long timestamp)
         {
+            Volatile.Read(ref _frameTimes)?.Primary.Reset(_observedGeneration, timestamp);
             _selectedPresentProvider = provider;
             _selectedSwapChain = swapChain;
             _selectedPresentThreadId = threadId;

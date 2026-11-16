@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.5.0.0
+
+- Added OSD presets: three built-in layouts and custom JSON presets. Classic stack is the default; OSD stays off by default.
+- Added an optional 1% Low metric, independent of the FPS limiter.
+- Expanded OSD customization with editable labels, metric groups, individual fonts and colors, and a custom group separator.
+- Added a customizable FPS limiter toggle shortcut (default Ctrl+Shift+F11).
+- Improved OSD alignment, spacing controls, settings responsiveness and UI consistency.
+- Fixed preset import, preview and validation issues, and improved limiter reliability.
+- Made installation cleanup and settings saves safer, preserving unrelated files and custom presets.
+- Fixed hidden-metric group order and unnecessary RAM polling with OSD off.
+- Improved automatic FPS limiter detection for custom-folder games, with detection work kept in the background.
+
 ## 2.4.0.0
 
 ### Added

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -12,6 +12,8 @@ namespace TrayTemps
         private FpsLimiterService _fpsLimiterService;
         private FpsLimiterSettingsDialog _fpsLimiterDialog;
         private bool _fpsLimiterRuntimeReady, _fpsLimiterUiSync, _fpsLimiterHotkeyRegistered;
+        private OsdHotkeyModifiers _registeredFpsLimiterHotkeyModifiers;
+        private Keys _registeredFpsLimiterHotkeyKey;
         private bool _fpsLimiterClosePending, _fpsLimiterCloseReady, _fpsLimiterRestartPending;
         private Exception _fpsLimiterReportedError;
 
@@ -19,6 +21,8 @@ namespace TrayTemps
         {
             if (_fpsLimiterRuntimeReady || _isShutdownInitiated || EmbeddedFonts.IsDesignTime(this)) return;
             _fpsLimiterRuntimeReady = true;
+            try { FpsLimiterService.CleanupStaleVulkanRegistrations(); }
+            catch (Exception error) { Debug.WriteLine("Stale FPS limiter layer cleanup: " + error); }
             ApplyFpsLimiterHotkey();
             SyncFpsLimiterControls();
             if (_fpsLimiterConfiguration.Enabled) await SetFpsLimiterEnabledAsync(true);
@@ -70,7 +74,7 @@ namespace TrayTemps
             _fpsLimiterUiSync = true;
             fpsLimiterEnable.Checked = _fpsLimiterConfiguration.Enabled;
             fpsLimiterEnable.Enabled = !busy;
-            fpsLimiterSettings.Enabled = _fpsLimiterConfiguration.Enabled && !busy;
+            fpsLimiterSettings.Enabled = !busy && _fpsLimiterConfiguration.Enabled;
             _fpsLimiterUiSync = false;
             mainToolTip.SetToolTip(fpsLimiterEnable, _fpsLimiterService?.StatusText ?? "Automatically limits eligible foreground games when enabled.");
         }
@@ -95,15 +99,21 @@ namespace TrayTemps
             }
         }
 
-        private static bool IsFpsLimiterShortcut(OsdHotkeyModifiers modifiers, Keys key) =>
-            modifiers == (OsdHotkeyModifiers.Control | OsdHotkeyModifiers.Shift) && (key & Keys.KeyCode) == Keys.F12;
+        private bool IsFpsLimiterShortcut(OsdHotkeyModifiers modifiers, Keys key) =>
+            modifiers == (OsdHotkeyModifiers)_fpsLimiterConfiguration.ToggleHotkeyModifiers &&
+            (key & Keys.KeyCode) == ((Keys)_fpsLimiterConfiguration.ToggleHotkeyKey & Keys.KeyCode);
 
-        internal bool CanRegisterFpsLimiterHotkey()
+        internal bool CanRegisterFpsLimiterHotkey() => CanRegisterFpsLimiterHotkey(
+            (OsdHotkeyModifiers)_fpsLimiterConfiguration.ToggleHotkeyModifiers, (Keys)_fpsLimiterConfiguration.ToggleHotkeyKey);
+
+        internal bool CanRegisterFpsLimiterHotkey(OsdHotkeyModifiers modifiers, Keys key)
         {
-            if (_osdConfiguration.HotkeyEnabled && IsFpsLimiterShortcut((OsdHotkeyModifiers)_osdConfiguration.HotkeyModifiers, (Keys)_osdConfiguration.HotkeyKey)) return false;
-            if (_fpsLimiterHotkeyRegistered) return true;
-            if (!IsHandleCreated || IsDisposed) return false;
-            bool registered = RegisterHotKey(Handle, FpsLimiterHotkeyTestId, (uint)(OsdHotkeyModifiers.Control | OsdHotkeyModifiers.Shift) | ModNoRepeat, (uint)Keys.F12);
+            key &= Keys.KeyCode;
+            if (!FpsLimiterConfiguration.IsValidHotkey(modifiers, key) || !IsHandleCreated || IsDisposed) return false;
+            if (_osdConfiguration.HotkeyEnabled && modifiers == (OsdHotkeyModifiers)_osdConfiguration.HotkeyModifiers &&
+                key == ((Keys)_osdConfiguration.HotkeyKey & Keys.KeyCode)) return false;
+            if (_fpsLimiterHotkeyRegistered && _registeredFpsLimiterHotkeyModifiers == modifiers && _registeredFpsLimiterHotkeyKey == key) return true;
+            bool registered = RegisterHotKey(Handle, FpsLimiterHotkeyTestId, (uint)modifiers | ModNoRepeat, (uint)key);
             if (registered) UnregisterHotKey(Handle, FpsLimiterHotkeyTestId);
             return registered;
         }
@@ -112,9 +122,17 @@ namespace TrayTemps
         {
             if (!_fpsLimiterRuntimeReady || _isShutdownInitiated || !IsHandleCreated) return;
             if (!_fpsLimiterConfiguration.ToggleHotkeyEnabled) { UnregisterFpsLimiterHotkey(); return; }
-            if (_fpsLimiterHotkeyRegistered) return;
-            _fpsLimiterHotkeyRegistered = CanRegisterFpsLimiterHotkey() && RegisterHotKey(Handle, FpsLimiterHotkeyId,
-                (uint)(OsdHotkeyModifiers.Control | OsdHotkeyModifiers.Shift) | ModNoRepeat, (uint)Keys.F12);
+            var modifiers = (OsdHotkeyModifiers)_fpsLimiterConfiguration.ToggleHotkeyModifiers;
+            Keys key = (Keys)_fpsLimiterConfiguration.ToggleHotkeyKey & Keys.KeyCode;
+            if (_fpsLimiterHotkeyRegistered && _registeredFpsLimiterHotkeyModifiers == modifiers && _registeredFpsLimiterHotkeyKey == key) return;
+            UnregisterFpsLimiterHotkey();
+            _fpsLimiterHotkeyRegistered = CanRegisterFpsLimiterHotkey(modifiers, key) && RegisterHotKey(Handle, FpsLimiterHotkeyId,
+                (uint)modifiers | ModNoRepeat, (uint)key);
+            if (_fpsLimiterHotkeyRegistered)
+            {
+                _registeredFpsLimiterHotkeyModifiers = modifiers;
+                _registeredFpsLimiterHotkeyKey = key;
+            }
             if (!_fpsLimiterHotkeyRegistered)
             {
                 _fpsLimiterConfiguration.ToggleHotkeyEnabled = false;
@@ -126,6 +144,8 @@ namespace TrayTemps
         {
             if (_fpsLimiterHotkeyRegistered && IsHandleCreated) UnregisterHotKey(Handle, FpsLimiterHotkeyId);
             _fpsLimiterHotkeyRegistered = false;
+            _registeredFpsLimiterHotkeyModifiers = OsdHotkeyModifiers.None;
+            _registeredFpsLimiterHotkeyKey = Keys.None;
         }
 
         private void GiveOsdHotkeyPriority(OsdHotkeyModifiers modifiers, Keys key)
@@ -138,12 +158,15 @@ namespace TrayTemps
 
         private void ToggleFpsLimiterFromHotkey()
         {
-            if (_osdSettingsDialog != null && !_osdSettingsDialog.IsDisposed &&
-                _osdSettingsDialog.CaptureRegisteredHotkey(OsdHotkeyModifiers.Control | OsdHotkeyModifiers.Shift, Keys.F12))
-                return;
+            if (!_fpsLimiterHotkeyRegistered) return;
+            if (CaptureHotkeyInSettings(_registeredFpsLimiterHotkeyModifiers, _registeredFpsLimiterHotkeyKey)) return;
             if (!_isShutdownInitiated && _fpsLimiterRuntimeReady && fpsLimiterEnable.Enabled)
                 fpsLimiterEnable.Checked = !fpsLimiterEnable.Checked;
         }
+
+        private bool CaptureHotkeyInSettings(OsdHotkeyModifiers modifiers, Keys key) =>
+            (_fpsLimiterDialog != null && !_fpsLimiterDialog.IsDisposed && _fpsLimiterDialog.CaptureRegisteredHotkey(modifiers, key)) ||
+            (_osdSettingsDialog != null && !_osdSettingsDialog.IsDisposed && _osdSettingsDialog.CaptureRegisteredHotkey(modifiers, key));
 
         private bool DeferFpsLimiterClose(FormClosingEventArgs e)
         {

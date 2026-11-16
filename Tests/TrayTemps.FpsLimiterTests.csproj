@@ -24,6 +24,10 @@
     <ProjectReference Include="..\FpsLimiter.Core\FpsLimiter.Core.csproj"><Project>{25AEEA50-CB6D-4937-BE55-2105746A43B0}</Project><Name>FpsLimiter.Core</Name><SetPlatform>Platform=AnyCPU</SetPlatform><Private>false</Private></ProjectReference>
     <Compile Include="IntegrationTests.cs"/>
     <Compile Include="AuditFixTests.cs"/>
+    <Compile Include="ReleaseSafetyTests.cs"/>
+    <Compile Include="GameDetectionTests.cs"/>
+    <Compile Include="FrameTimeTests.cs"/>
+    <Compile Include="OsdMetricListTests.cs"/>
     <Compile Include="ReviewTests.cs"/>
     <Compile Include="HandoverTests.cs"/>
   </ItemGroup>

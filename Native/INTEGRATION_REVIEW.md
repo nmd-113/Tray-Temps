@@ -3,7 +3,7 @@
 The optional limiter is integrated into the existing settings, theme, tray and window lifecycle. It defaults to off and remains independent of the ETW-based OSD FPS counter.
 
 - The host service serializes discovery, attachment, configuration and shutdown.
-- Executable profiles, exclusions and the optional Ctrl+Shift+F12 shortcut use the normal settings file.
+- Executable profiles, exclusions and the customizable toggle shortcut (default Ctrl+Shift+F11) use the normal settings file.
 - OSD shortcut conflicts take priority when saved.
 - Native engine ownership prevents simultaneous standalone TrayFPS and TrayTemps control.
 - Pending attachments are cleaned up before shutdown, restart or uninstall.

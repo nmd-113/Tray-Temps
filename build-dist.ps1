@@ -32,7 +32,9 @@ an FPS counter and an optional game FPS limiter.
 Requirements: Windows 10 or newer (x64), .NET Framework 4.8.
 Extract this archive and run TrayTemps.exe. No installation is required.
 Open Settings to select sensors, tray icons, OSD metrics and the FPS limiter.
-The limiter is off by default; its gear button configures caps and profiles.
+OSD and the limiter are off by default; enable either to open its settings.
+OSD Settings includes built-in layouts and custom JSON presets.
+For an unrecognized game, add its executable in FPS limiter settings.
 
 The limiter targets supported x64 Direct3D 9/11/12, OpenGL and Vulkan apps.
 Enable it before launching Vulkan games; run those games without admin rights.

@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.MemoryMappedFiles;
@@ -19,9 +20,13 @@ namespace FpsLimiter.Core
         private MemoryMappedFile map, globalMap; private MemoryMappedViewAccessor view, globalView;
         private readonly object configGate = new object(); private Timer heartbeatTimer;
         private int activeProcessId;
-        private DateTime vulkanLayerPreparedAtUtc = DateTime.MinValue;
         private bool vulkanLayerPrepared;
+        private string registeredManifest64, registeredManifest32, registeredNativeRoot;
         private const uint ProtocolVersion = 1;
+        private static readonly HashSet<Timer> pendingLoads = new HashSet<Timer>();
+        private readonly Action<Process, string, uint> inject;
+        public LimiterController() : this(Inject) { }
+        internal LimiterController(Action<Process, string, uint> inject) { this.inject = inject ?? throw new ArgumentNullException(nameof(inject)); }
         public LimiterStatus Status { get; private set; } = LimiterStatus.Disabled;
         public event EventHandler StatusChanged;
         private void SetStatus(LimiterStatus s) { Status = s; var cb = StatusChanged; if (cb != null) cb(this, EventArgs.Empty); }
@@ -41,7 +46,6 @@ namespace FpsLimiter.Core
                 SetStatus(GetTargetStatus(processId, enabled));
                 return;
             }
-            if (view != null) ClearTarget();
             using (var process = Process.GetProcessById(processId))
             {
                 bool x64 = Is64Bit(process.Handle);
@@ -50,11 +54,33 @@ namespace FpsLimiter.Core
                 string name = "Local\\TrayFPS.Config." + processId;
                 var security = new MemoryMappedFileSecurity();
                 security.AddAccessRule(new AccessRule<MemoryMappedFileRights>(WindowsIdentity.GetCurrent().User, MemoryMappedFileRights.ReadWrite, AccessControlType.Allow));
-                map = MemoryMappedFile.CreateOrOpen(name, 32, MemoryMappedFileAccess.ReadWrite, MemoryMappedFileOptions.None, security, HandleInheritability.None);
-                view = map.CreateViewAccessor(0, 32, MemoryMappedFileAccess.ReadWrite);
-                try { if (enabled) StartGlobalVulkan(fps, nativeDll); WriteConfig(processId, fps, enabled); Inject(process, dll); }
-                catch { Stop(); throw; }
-                activeProcessId = processId;
+                MemoryMappedFile candidateMap = null;
+                MemoryMappedViewAccessor candidateView = null;
+                try
+                {
+                    candidateMap = MemoryMappedFile.CreateOrOpen(name, 32, MemoryMappedFileAccess.ReadWrite, MemoryMappedFileOptions.None, security, HandleInheritability.None);
+                    candidateView = candidateMap.CreateViewAccessor(0, 32, MemoryMappedFileAccess.ReadWrite);
+                    // Bootstrap with pacing disabled. The old target and its heartbeat
+                    // remain intact until the candidate has initialized successfully.
+                    WriteView(candidateView, processId, fps, false);
+                    uint required = GetRequiredAdapters(processId);
+                    if (required != 8) inject(process, dll, required);
+                    if (process.HasExited) throw new InvalidOperationException("The candidate exited during attachment.");
+                    if (enabled && !vulkanLayerPrepared) StartGlobalVulkan(fps, nativeDll);
+                    lock (configGate)
+                    {
+                        ClearTarget();
+                        map = candidateMap; view = candidateView;
+                        candidateMap = null; candidateView = null;
+                        activeProcessId = processId;
+                        WriteConfig(processId, fps, enabled);
+                    }
+                }
+                finally
+                {
+                    if (candidateView != null) { WriteView(candidateView, 0, 60, false); candidateView.Dispose(); }
+                    candidateMap?.Dispose();
+                }
                 SetStatus(GetTargetStatus(processId, enabled));
             }
         }
@@ -85,19 +111,26 @@ namespace FpsLimiter.Core
                 EnsureHeartbeat();
             }
             string manifestRoot = Path.GetDirectoryName(nativeRoot);
-            RegisterLayer(nativeRoot, Path.Combine(manifestRoot, "TrayFPS-Vulkan-x64.json"), RegistryView.Registry64, "x64");
-            if (Environment.Is64BitOperatingSystem) RegisterLayer(nativeRoot, Path.Combine(manifestRoot, "TrayFPS-Vulkan-x86.json"), RegistryView.Registry32, "x86");
-            if (!vulkanLayerPrepared) { vulkanLayerPreparedAtUtc = DateTime.UtcNow; vulkanLayerPrepared = true; }
+            registeredNativeRoot = Path.GetFullPath(nativeRoot);
+            registeredManifest64 = Path.GetFullPath(Path.Combine(manifestRoot, "TrayFPS-Vulkan-x64.json"));
+            RegisterLayer(nativeRoot, registeredManifest64, RegistryView.Registry64, "x64");
+            if (Environment.Is64BitOperatingSystem)
+            {
+                registeredManifest32 = Path.GetFullPath(Path.Combine(manifestRoot, "TrayFPS-Vulkan-x86.json"));
+                RegisterLayer(nativeRoot, registeredManifest32, RegistryView.Registry32, "x86");
+            }
+            vulkanLayerPrepared = true;
         }
         private void WriteGlobalConfig(int targetPid, int fps, bool enabled) { WriteView(globalView, targetPid, fps, enabled); }
         private LimiterStatus GetTargetStatus(int processId, bool enabled)
         {
             if (!enabled) return LimiterStatus.Disabled;
             if (FindRemoteModule(processId, "vulkan-1.dll") == IntPtr.Zero) return LimiterStatus.Attached;
-            try { using (var process = Process.GetProcessById(processId)) return process.StartTime.ToUniversalTime() < vulkanLayerPreparedAtUtc ? LimiterStatus.RestartRequired : LimiterStatus.Attached; }
-            catch (ArgumentException) { return LimiterStatus.RestartRequired; }
-            catch (InvalidOperationException) { return LimiterStatus.RestartRequired; }
-            catch (Win32Exception) { return LimiterStatus.RestartRequired; }
+            // Existing games keep a loaded layer across OFF/ON and owner handover.
+            // Inspect the exact payload instead of inferring layer presence from age.
+            return registeredNativeRoot != null && FindRemoteModule(processId,
+                Path.Combine(registeredNativeRoot, "x64", "FpsLimiter.Native.dll")) != IntPtr.Zero
+                ? LimiterStatus.Attached : LimiterStatus.RestartRequired;
         }
         public void DetachTarget()
         {
@@ -106,17 +139,7 @@ namespace FpsLimiter.Core
         }
         public void Pause()
         {
-            if (heartbeatTimer != null) { heartbeatTimer.Dispose(); heartbeatTimer = null; }
-            ClearTarget();
-            lock (configGate)
-            {
-                if (globalView != null)
-                {
-                    double fps = globalView.ReadDouble(24);
-                    WriteGlobalConfig(0, fps >= 10.0 && fps <= 1000.0 ? (int)fps : 60, false);
-                }
-            }
-            SetStatus(LimiterStatus.Disabled);
+            Stop();
         }
         private void ClearTarget()
         {
@@ -143,7 +166,7 @@ namespace FpsLimiter.Core
         {
             using (var root = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, view)) using (var key = root.OpenSubKey("SOFTWARE\\Khronos\\Vulkan\\ImplicitLayers", true)) if (key != null) key.DeleteValue(manifest, false);
         }
-        private static void CleanupOwnLayerRegistrations()
+        public static void CleanupOwnLayerRegistrations()
         {
             foreach (var view in Environment.Is64BitOperatingSystem ? new[] { RegistryView.Registry64, RegistryView.Registry32 } : new[] { RegistryView.Registry64 })
             using (var root = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, view))
@@ -152,21 +175,45 @@ namespace FpsLimiter.Core
                 if (key == null) continue;
                 foreach (string value in key.GetValueNames())
                 {
-                    if (!Path.GetFileName(value).StartsWith("TrayFPS-Vulkan-", StringComparison.OrdinalIgnoreCase)) continue;
-                    try { if (File.ReadAllText(value).IndexOf("\"name\":\"VK_LAYER_TRAYFPS_limiter\"", StringComparison.Ordinal) >= 0) key.DeleteValue(value, false); }
-                    catch (IOException) { }
-                    catch (UnauthorizedAccessException) { }
+                    if (IsOwnLayerManifest(value)) key.DeleteValue(value, false);
                 }
             }
+        }
+        private static bool IsOwnLayerManifest(string manifest)
+        {
+            // Only exact filenames in our own versioned cache (or the legacy
+            // standalone cache) qualify, including manifests lost after a crash.
+            try
+            {
+                if (!Path.IsPathRooted(manifest)) return false;
+                string full = Path.GetFullPath(manifest);
+                string file = Path.GetFileName(full);
+                if (!file.Equals("TrayFPS-Vulkan-x64.json", StringComparison.OrdinalIgnoreCase) &&
+                    !file.Equals("TrayFPS-Vulkan-x86.json", StringComparison.OrdinalIgnoreCase)) return false;
+                string local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                string parent = Path.GetDirectoryName(Path.GetDirectoryName(full));
+                return string.Equals(parent, Path.Combine(local, "TrayTemps", "FpsLimiter"), StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(parent, Path.Combine(local, "TrayFPS"), StringComparison.OrdinalIgnoreCase);
+            }
+            catch (ArgumentException) { return false; }
+            catch (NotSupportedException) { return false; }
+            catch (PathTooLongException) { return false; }
+        }
+        private static uint GetRequiredAdapters(int pid)
+        {
+            if (FindRemoteModule(pid, "vulkan-1.dll") != IntPtr.Zero) return 8;
+            if (FindRemoteModule(pid, "d3d9.dll") != IntPtr.Zero) return 2;
+            if (FindRemoteModule(pid, "opengl32.dll") != IntPtr.Zero) return 4;
+            return 1; // DXGI (D3D10/11/12); unknown renderers must not succeed via GDI alone.
         }
         private static bool Is64Bit(IntPtr process)
         {
             bool wow; if (Environment.Is64BitOperatingSystem && IsWow64Process(process, out wow)) return !wow;
             return Environment.Is64BitProcess;
         }
-        private static void Inject(Process process, string dll)
+        private static void Inject(Process process, string dll, uint required)
         {
-            IntPtr h = OpenProcess(0x043A, false, process.Id); if (h == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error());
+            IntPtr h = OpenProcess(0x10043A, false, process.Id); if (h == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error());
             try
             {
                 IntPtr localModule = LoadLibraryW(dll); if (localModule == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error());
@@ -174,34 +221,55 @@ namespace FpsLimiter.Core
                 {
                     IntPtr init = GetProcAddress(localModule, "TrayFpsInitialize");
                     if (init == IntPtr.Zero) throw new Win32Exception("The native module does not export TrayFpsInitialize.");
-                    byte[] bytes = System.Text.Encoding.Unicode.GetBytes(dll + "\0"); IntPtr remote = VirtualAllocEx(h, IntPtr.Zero, (UIntPtr)bytes.Length, 0x3000, 0x04);
-                    if (remote == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error());
-                    bool remoteThreadMayReadPath = false;
-                    try
+                    IntPtr remoteModule = FindRemoteModule(process.Id, Path.GetFullPath(dll));
+                    bool reused = remoteModule != IntPtr.Zero;
+                    if (remoteModule == IntPtr.Zero)
                     {
-                        UIntPtr written;
-                        if (!WriteProcessMemory(h, remote, bytes, (UIntPtr)bytes.Length, out written) || written.ToUInt64() != (ulong)bytes.Length) throw new Win32Exception(Marshal.GetLastWin32Error());
-                        IntPtr load = GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryW");
-                        IntPtr thread = CreateRemoteThread(h, IntPtr.Zero, 0, load, remote, 0, IntPtr.Zero);
-                        if (thread == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error());
-                        remoteThreadMayReadPath = true;
+                        if (FindRemoteModule(process.Id, Path.GetFileName(dll)) != IntPtr.Zero)
+                            throw new InvalidOperationException("A different limiter payload is already loaded. Restart this game before attaching the new engine.");
+                        byte[] bytes = System.Text.Encoding.Unicode.GetBytes(dll + "\0");
+                        IntPtr remote = VirtualAllocEx(h, IntPtr.Zero, (UIntPtr)bytes.Length, 0x3000, 0x04);
+                        if (remote == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error());
+                        bool remoteThreadMayReadPath = false;
                         try
                         {
-                            if (WaitForSingleObject(thread, 10000) != 0) throw new TimeoutException("Timed out loading the limiter into the game.");
-                            remoteThreadMayReadPath = false;
-                            uint module;
-                            if (!GetExitCodeThread(thread, out module) || module == 0) throw new Win32Exception("The game rejected module loading.");
+                            UIntPtr written;
+                            if (!WriteProcessMemory(h, remote, bytes, (UIntPtr)bytes.Length, out written) || written.ToUInt64() != (ulong)bytes.Length) throw new Win32Exception(Marshal.GetLastWin32Error());
+                            IntPtr load = GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryW");
+                            IntPtr thread = CreateRemoteThread(h, IntPtr.Zero, 0, load, remote, 0, IntPtr.Zero);
+                            if (thread == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error());
+                            remoteThreadMayReadPath = true;
+                            try
+                            {
+                                if (WaitForSingleObject(thread, 10000) != 0)
+                                {
+                                    TrackPendingLoad(h, thread, remote);
+                                    thread = IntPtr.Zero;
+                                    throw new TimeoutException("Timed out loading the limiter into the game.");
+                                }
+                                remoteThreadMayReadPath = false;
+                                uint module;
+                                if (!GetExitCodeThread(thread, out module)) throw new Win32Exception("Could not query the module loader thread.");
+                            }
+                            finally { if (thread != IntPtr.Zero) CloseHandle(thread); }
                         }
-                        finally { CloseHandle(thread); }
-                        IntPtr remoteModule = FindRemoteModule(process.Id, Path.GetFileName(dll));
-                        if (remoteModule == IntPtr.Zero) throw new Win32Exception("Loaded module could not be found in the target process.");
-                        long offset = init.ToInt64() - localModule.ToInt64(); IntPtr remoteInit = new IntPtr(remoteModule.ToInt64() + offset);
-                        thread = CreateRemoteThread(h, IntPtr.Zero, 0, remoteInit, IntPtr.Zero, 0, IntPtr.Zero);
-                        if (thread == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error());
-                        try { uint result; if (WaitForSingleObject(thread, 10000) != 0) throw new TimeoutException("Timed out installing DXGI hooks."); if (!GetExitCodeThread(thread, out result) || result == 0) throw new Win32Exception("Native hook initialization failed."); }
-                        finally { CloseHandle(thread); }
+                        finally { if (!remoteThreadMayReadPath) VirtualFreeEx(h, remote, UIntPtr.Zero, 0x8000); }
+                        // A thread's 32-bit exit code cannot represent an x64 HMODULE.
+                        remoteModule = FindRemoteModule(process.Id, Path.GetFullPath(dll));
                     }
-                    finally { if (!remoteThreadMayReadPath) VirtualFreeEx(h, remote, UIntPtr.Zero, 0x8000); }
+                    if (remoteModule == IntPtr.Zero) throw new Win32Exception("The exact limiter payload could not be found in the target process.");
+                    long offset = init.ToInt64() - localModule.ToInt64(); IntPtr remoteInit = new IntPtr(remoteModule.ToInt64() + offset);
+                    // Bootstrap dependencies pollute later module-based API detection.
+                    // A reused engine remembers which adapters it initialized.
+                    IntPtr initThread = CreateRemoteThread(h, IntPtr.Zero, 0, remoteInit, reused ? IntPtr.Zero : (IntPtr)required, 0, IntPtr.Zero);
+                    if (initThread == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error());
+                    try
+                    {
+                        if (WaitForSingleObject(initThread, 10000) != 0) throw new TimeoutException("Timed out installing presentation hooks.");
+                        if (!GetExitCodeThread(initThread, out uint result) || result == 0 || (!reused && (result & required) != required))
+                            throw new Win32Exception("Native hook initialization failed for the target graphics API.");
+                    }
+                    finally { CloseHandle(initThread); }
                 }
                 finally { FreeLibrary(localModule); }
             }
@@ -209,9 +277,48 @@ namespace FpsLimiter.Core
         }
         private static IntPtr FindRemoteModule(int pid, string moduleName)
         {
-            IntPtr snap = CreateToolhelp32Snapshot(0x18, (uint)pid); if (snap == new IntPtr(-1)) return IntPtr.Zero;
-            try { var entry = new ModuleEntry { Size = (uint)Marshal.SizeOf(typeof(ModuleEntry)) }; if (Module32First(snap, ref entry)) do { if (string.Equals(entry.Module, moduleName, StringComparison.OrdinalIgnoreCase)) return entry.Base; } while (Module32Next(snap, ref entry)); return IntPtr.Zero; }
+            bool fullPath = Path.IsPathRooted(moduleName);
+            IntPtr snap;
+            int attempts = 0;
+            do { snap = CreateToolhelp32Snapshot(0x18, (uint)pid); }
+            while (snap == new IntPtr(-1) && Marshal.GetLastWin32Error() == 24 && ++attempts < 3);
+            if (snap == new IntPtr(-1))
+            {
+                if (fullPath) throw new Win32Exception(Marshal.GetLastWin32Error());
+                return IntPtr.Zero;
+            }
+            try
+            {
+                var entry = new ModuleEntry { Size = (uint)Marshal.SizeOf(typeof(ModuleEntry)) };
+                if (Module32First(snap, ref entry))
+                    do { if (string.Equals(fullPath ? entry.Path : entry.Module, moduleName, StringComparison.OrdinalIgnoreCase)) return entry.Base; }
+                    while (Module32Next(snap, ref entry));
+                int error = Marshal.GetLastWin32Error();
+                if (fullPath && error != 18) throw new Win32Exception(error);
+                return IntPtr.Zero;
+            }
             finally { CloseHandle(snap); }
+        }
+        private static void TrackPendingLoad(IntPtr process, IntPtr thread, IntPtr path)
+        {
+            IntPtr current = GetCurrentProcess();
+            if (!DuplicateHandle(current, process, current, out IntPtr retainedProcess, 0, false, 2))
+                throw new Win32Exception(Marshal.GetLastWin32Error());
+            // The thread owns the path until it exits. Keep both handles alive and
+            // reconcile asynchronously, even after the controller is stopped.
+            Timer cleanup = null;
+            int completed = 0;
+            cleanup = new Timer(_ =>
+            {
+                if (WaitForSingleObject(thread, 0) != 0 && WaitForSingleObject(retainedProcess, 0) != 0) return;
+                if (Interlocked.Exchange(ref completed, 1) != 0) return;
+                cleanup.Change(Timeout.Infinite, Timeout.Infinite);
+                if (WaitForSingleObject(retainedProcess, 0) != 0) VirtualFreeEx(retainedProcess, path, UIntPtr.Zero, 0x8000);
+                CloseHandle(thread); CloseHandle(retainedProcess); cleanup.Dispose();
+                lock (pendingLoads) pendingLoads.Remove(cleanup);
+            }, null, Timeout.Infinite, Timeout.Infinite);
+            lock (pendingLoads) pendingLoads.Add(cleanup);
+            cleanup.Change(1000, 1000);
         }
         public void Stop() {
             if (heartbeatTimer != null) { heartbeatTimer.Dispose(); heartbeatTimer = null; }
@@ -220,16 +327,17 @@ namespace FpsLimiter.Core
                 if (globalView != null) { WriteView(globalView, 0, 60, false); globalView.Dispose(); globalView = null; }
                 if (globalMap != null) { globalMap.Dispose(); globalMap = null; }
             }
-            string app = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TrayFPS", "1.0.0");
-            string x64 = Path.Combine(app, "TrayFPS-Vulkan-x64.json"), x86 = Path.Combine(app, "TrayFPS-Vulkan-x86.json");
-            UnregisterLayer(x64, RegistryView.Registry64); if (Environment.Is64BitOperatingSystem) UnregisterLayer(x86, RegistryView.Registry32);
-            CleanupOwnLayerRegistrations();
-            vulkanLayerPrepared = false; vulkanLayerPreparedAtUtc = DateTime.MinValue;
+            if (registeredManifest64 != null) UnregisterLayer(registeredManifest64, RegistryView.Registry64);
+            if (registeredManifest32 != null) UnregisterLayer(registeredManifest32, RegistryView.Registry32);
+            registeredManifest64 = registeredManifest32 = registeredNativeRoot = null;
+            vulkanLayerPrepared = false;
             SetStatus(LimiterStatus.Disabled);
         }
         public void Dispose() { Stop(); }
 
         [DllImport("kernel32.dll", SetLastError=true)] static extern IntPtr OpenProcess(uint access, bool inherit, int pid);
+        [DllImport("kernel32.dll")] static extern IntPtr GetCurrentProcess();
+        [DllImport("kernel32.dll", SetLastError=true)] static extern bool DuplicateHandle(IntPtr sourceProcess, IntPtr source, IntPtr targetProcess, out IntPtr target, uint access, bool inherit, uint options);
         [DllImport("kernel32.dll", SetLastError=true)] static extern IntPtr VirtualAllocEx(IntPtr p, IntPtr a, UIntPtr n, uint type, uint protect);
         [DllImport("kernel32.dll", SetLastError=true)] static extern bool WriteProcessMemory(IntPtr p, IntPtr a, byte[] b, UIntPtr n, out UIntPtr written);
         [DllImport("kernel32.dll", SetLastError=true)] static extern IntPtr CreateRemoteThread(IntPtr p, IntPtr attr, uint stack, IntPtr start, IntPtr arg, uint flags, IntPtr id);

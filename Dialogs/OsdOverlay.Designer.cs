@@ -8,8 +8,7 @@ namespace TrayTemps
         {
             if (disposing)
             {
-                DisposePresentationSurface();
-                DisposeDisplayFont();
+                DisposeRenderResources();
                 if (components != null)
                     components.Dispose();
             }

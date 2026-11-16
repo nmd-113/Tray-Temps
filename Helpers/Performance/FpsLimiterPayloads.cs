@@ -7,7 +7,7 @@ namespace TrayTemps
 {
     internal static class FpsLimiterPayloads
     {
-        internal const string EngineVersion = "1.0.0-0B84C93A0E2A";
+        internal const string EngineVersion = "1.0.0-6AE216F0574A";
         internal static string ExtractNative()
         {
             string root = Path.Combine(GetCacheDirectory(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)), EngineVersion, "native");

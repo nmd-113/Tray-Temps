@@ -39,7 +39,7 @@
     <ClCompile Include="..\..\ThirdParty\MinHook\src\hde\hde32.c"><ExcludedFromBuild Condition="'$(Platform)' == 'x64'">true</ExcludedFromBuild></ClCompile>
     <ClCompile Include="..\..\ThirdParty\MinHook\src\hde\hde64.c"><ExcludedFromBuild Condition="'$(Platform)' == 'Win32'">true</ExcludedFromBuild></ClCompile>
   </ItemGroup>
-  <ItemGroup><ClInclude Include="include\TrayFpsProtocol.h"/><ClInclude Include="..\..\ThirdParty\MinHook\include\MinHook.h"/></ItemGroup>
+  <ItemGroup><ClInclude Include="include\TrayFpsProtocol.h"/><ClInclude Include="include\HookInstall.h"/><ClInclude Include="..\..\ThirdParty\MinHook\include\MinHook.h"/></ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Target Name="BuildBothArchitecturesAndStage" AfterTargets="Build" Condition="'$(Platform)' == 'x64' And '$(StageFpsLimiterPayloads)' != 'false' And '$(DesignTimeBuild)' != 'true'">
     <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="Build" Properties="Configuration=$(Configuration);Platform=Win32;StageFpsLimiterPayloads=false" />

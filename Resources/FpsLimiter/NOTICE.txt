@@ -1,4 +1,4 @@
-TrayFPS includes MinHook from https://github.com/TsudaKageyu/minhook
+TrayTemps includes MinHook from https://github.com/TsudaKageyu/minhook
 Pinned upstream commit: 8af6b4acae5a9388fd742b56fa79ece89d96f823
 Files: ThirdParty/MinHook (upstream source, unmodified)
 License: BSD 2-Clause; see ThirdParty/MinHook/LICENSE.txt. MinHook is a small

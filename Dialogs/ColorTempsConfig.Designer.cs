@@ -59,14 +59,14 @@ namespace TrayTemps
             this.exitBtn.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.exitBtn.FlatAppearance.MouseOverBackColor = System.Drawing.Color.Red;
             this.exitBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.exitBtn.Font = new System.Drawing.Font("TrayTemps Mono ExtraBold", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.exitBtn.Tag = "TrayTemps.Font.ExtraBold";
+            this.exitBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.exitBtn.ForeColor = System.Drawing.Color.White;
             this.exitBtn.Location = new System.Drawing.Point(244, 1);
             this.exitBtn.Margin = new System.Windows.Forms.Padding(4);
             this.exitBtn.Name = "exitBtn";
             this.exitBtn.Size = new System.Drawing.Size(55, 44);
             this.exitBtn.TabIndex = 3;
+            this.exitBtn.Tag = "TrayTemps.Font.ExtraBold";
             this.exitBtn.Text = "✖";
             this.exitBtn.UseVisualStyleBackColor = true;
             this.exitBtn.Click += new System.EventHandler(this.ExitBtn_Click);
@@ -96,7 +96,7 @@ namespace TrayTemps
             // temperatureAlerts
             // 
             this.temperatureAlerts.AutoSize = true;
-            this.temperatureAlerts.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
+            this.temperatureAlerts.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
             this.temperatureAlerts.ForeColor = System.Drawing.Color.LightGray;
             this.temperatureAlerts.Location = new System.Drawing.Point(22, 158);
             this.temperatureAlerts.Name = "temperatureAlerts";
@@ -110,7 +110,7 @@ namespace TrayTemps
             this.showCornerMarkers.AutoSize = true;
             this.showCornerMarkers.Checked = true;
             this.showCornerMarkers.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.showCornerMarkers.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
+            this.showCornerMarkers.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
             this.showCornerMarkers.ForeColor = System.Drawing.Color.LightGray;
             this.showCornerMarkers.Location = new System.Drawing.Point(22, 132);
             this.showCornerMarkers.Name = "showCornerMarkers";
@@ -122,7 +122,7 @@ namespace TrayTemps
             // lineLabel
             // 
             this.lineLabel.AutoSize = true;
-            this.lineLabel.Font = new System.Drawing.Font("TrayTemps Mono", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lineLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lineLabel.Location = new System.Drawing.Point(106, 101);
             this.lineLabel.Name = "lineLabel";
             this.lineLabel.Size = new System.Drawing.Size(10, 13);
@@ -176,7 +176,7 @@ namespace TrayTemps
             // tempsIntervalLabel
             // 
             this.tempsIntervalLabel.AutoSize = true;
-            this.tempsIntervalLabel.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
+            this.tempsIntervalLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
             this.tempsIntervalLabel.ForeColor = System.Drawing.Color.LightGray;
             this.tempsIntervalLabel.Location = new System.Drawing.Point(22, 72);
             this.tempsIntervalLabel.Name = "tempsIntervalLabel";
@@ -189,13 +189,13 @@ namespace TrayTemps
             this.saveBtn.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(120)))), ((int)(((byte)(212)))));
             this.saveBtn.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
             this.saveBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.saveBtn.Font = new System.Drawing.Font("TrayTemps Mono ExtraBold", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.saveBtn.Tag = "TrayTemps.Font.ExtraBold";
+            this.saveBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.saveBtn.ForeColor = System.Drawing.Color.White;
             this.saveBtn.Location = new System.Drawing.Point(22, 198);
             this.saveBtn.Name = "saveBtn";
             this.saveBtn.Size = new System.Drawing.Size(256, 34);
             this.saveBtn.TabIndex = 4;
+            this.saveBtn.Tag = "TrayTemps.Font.ExtraBold";
             this.saveBtn.Text = "💾 SAVE";
             this.saveBtn.UseVisualStyleBackColor = false;
             this.saveBtn.Click += new System.EventHandler(this.SaveBtn_Click);
@@ -203,7 +203,7 @@ namespace TrayTemps
             // colorsetLabel
             // 
             this.colorsetLabel.AutoSize = true;
-            this.colorsetLabel.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
+            this.colorsetLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
             this.colorsetLabel.ForeColor = System.Drawing.Color.LightGray;
             this.colorsetLabel.Location = new System.Drawing.Point(22, 8);
             this.colorsetLabel.Name = "colorsetLabel";
@@ -216,7 +216,7 @@ namespace TrayTemps
             this.hotTempColor.BackColor = System.Drawing.Color.Red;
             this.hotTempColor.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
             this.hotTempColor.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.hotTempColor.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
+            this.hotTempColor.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
             this.hotTempColor.ForeColor = System.Drawing.Color.DimGray;
             this.hotTempColor.Location = new System.Drawing.Point(204, 34);
             this.hotTempColor.Name = "hotTempColor";
@@ -231,7 +231,7 @@ namespace TrayTemps
             this.warmTempColor.BackColor = System.Drawing.Color.Yellow;
             this.warmTempColor.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
             this.warmTempColor.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.warmTempColor.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
+            this.warmTempColor.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
             this.warmTempColor.ForeColor = System.Drawing.Color.DimGray;
             this.warmTempColor.Location = new System.Drawing.Point(113, 34);
             this.warmTempColor.Name = "warmTempColor";
@@ -246,7 +246,7 @@ namespace TrayTemps
             this.normalTempColor.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(240)))), ((int)(((byte)(240)))), ((int)(((byte)(255)))));
             this.normalTempColor.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
             this.normalTempColor.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.normalTempColor.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
+            this.normalTempColor.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
             this.normalTempColor.ForeColor = System.Drawing.Color.DimGray;
             this.normalTempColor.Location = new System.Drawing.Point(22, 34);
             this.normalTempColor.Name = "normalTempColor";
@@ -259,13 +259,13 @@ namespace TrayTemps
             // formTitle
             // 
             this.formTitle.AutoSize = true;
-            this.formTitle.Font = new System.Drawing.Font("TrayTemps Mono ExtraBold", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.formTitle.Tag = "TrayTemps.Font.ExtraBold";
+            this.formTitle.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.formTitle.ForeColor = System.Drawing.Color.WhiteSmoke;
             this.formTitle.Location = new System.Drawing.Point(22, 15);
             this.formTitle.Name = "formTitle";
             this.formTitle.Size = new System.Drawing.Size(73, 16);
             this.formTitle.TabIndex = 6;
+            this.formTitle.Tag = "TrayTemps.Font.ExtraBold";
             this.formTitle.Text = "Configure";
             // 
             // ColorTempsConfig
@@ -280,7 +280,7 @@ namespace TrayTemps
             this.Controls.Add(this.mainPanel);
             this.Controls.Add(this.exitBtn);
             this.DoubleBuffered = true;
-            this.Font = new System.Drawing.Font("TrayTemps Mono", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.ForeColor = System.Drawing.Color.White;
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));

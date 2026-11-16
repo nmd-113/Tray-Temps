@@ -1,4 +1,4 @@
-namespace TrayTemps
+﻿namespace TrayTemps
 {
     partial class OsdSettingsDialog
     {
@@ -9,6 +9,7 @@ namespace TrayTemps
             if (disposing)
             {
                 UnsubscribeFromThemeChanges();
+                DisposeAppearanceFonts();
                 if (colorDialog != null)
                     colorDialog.Dispose();
                 if (components != null)
@@ -23,6 +24,11 @@ namespace TrayTemps
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle4 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle5 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle3 = new System.Windows.Forms.DataGridViewCellStyle();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(OsdSettingsDialog));
             this.settingsToolTip = new System.Windows.Forms.ToolTip(this.components);
             this.fpsRefreshIntervalValue = new System.Windows.Forms.ComboBox();
@@ -32,14 +38,34 @@ namespace TrayTemps
             this.externalSpacingValue = new System.Windows.Forms.ComboBox();
             this.cornerRoundnessLabel = new System.Windows.Forms.Label();
             this.cornerRoundnessValue = new System.Windows.Forms.ComboBox();
-            this.metricGroupingMode = new System.Windows.Forms.ComboBox();
             this.columnsValue = new System.Windows.Forms.ComboBox();
             this.labelValueSpacing = new System.Windows.Forms.ComboBox();
             this.hotkeyValue = new System.Windows.Forms.TextBox();
             this.spacingHeader = new System.Windows.Forms.Label();
-            this.customLabelsInfoIconLabel = new System.Windows.Forms.Label();
+            this.metricLabelsInfoIcon = new System.Windows.Forms.Label();
+            this.groupCaption = new System.Windows.Forms.TextBox();
             this.customLabelContextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
-            this.metricGroupingModeLabel = new System.Windows.Forms.Label();
+            this.labelUndo = new System.Windows.Forms.ToolStripMenuItem();
+            this.labelEditSeparator = new System.Windows.Forms.ToolStripSeparator();
+            this.labelCut = new System.Windows.Forms.ToolStripMenuItem();
+            this.labelCopy = new System.Windows.Forms.ToolStripMenuItem();
+            this.labelPaste = new System.Windows.Forms.ToolStripMenuItem();
+            this.labelDelete = new System.Windows.Forms.ToolStripMenuItem();
+            this.labelSelectionSeparator = new System.Windows.Forms.ToolStripSeparator();
+            this.labelSelectAll = new System.Windows.Forms.ToolStripMenuItem();
+            this.labelIconSeparator = new System.Windows.Forms.ToolStripSeparator();
+            this.insertIconMenu = new System.Windows.Forms.ToolStripMenuItem();
+            this.labelResetSeparator = new System.Windows.Forms.ToolStripSeparator();
+            this.resetLabelMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.groupSeparator = new System.Windows.Forms.TextBox();
+            this.backgroundColor = new System.Windows.Forms.Button();
+            this.itemOrder = new System.Windows.Forms.TreeView();
+            this.orderUp = new System.Windows.Forms.Button();
+            this.orderDown = new System.Windows.Forms.Button();
+            this.metricContextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.editLabelMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.editGroupMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.resetMetricLabelMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.outerBorder = new System.Windows.Forms.Panel();
             this.resizeGrip = new TrayTemps.WindowResizeGripPanel();
             this.mainPanel = new System.Windows.Forms.Panel();
@@ -49,75 +75,49 @@ namespace TrayTemps
             this.metricsPageLayout = new System.Windows.Forms.TableLayoutPanel();
             this.metricsCard = new System.Windows.Forms.Panel();
             this.displayedHardwareLabel = new System.Windows.Forms.Label();
-            this.metricsCheckboxLayout = new System.Windows.Forms.TableLayoutPanel();
-            this.showCpu = new System.Windows.Forms.CheckBox();
-            this.showCpuUsage = new System.Windows.Forms.CheckBox();
-            this.showGpu = new System.Windows.Forms.CheckBox();
-            this.showGpuUsage = new System.Windows.Forms.CheckBox();
-            this.showRamUsage = new System.Windows.Forms.CheckBox();
-            this.showVramUsage = new System.Windows.Forms.CheckBox();
-            this.showFps = new System.Windows.Forms.CheckBox();
-            this.showCurrentTime = new System.Windows.Forms.CheckBox();
-            this.labelsCard = new System.Windows.Forms.Panel();
-            this.labelsTitle = new System.Windows.Forms.Label();
-            this.customLabelsEnabled = new System.Windows.Forms.CheckBox();
-            this.customLabelsLayout = new System.Windows.Forms.TableLayoutPanel();
-            this.customCpuLabelCaption = new System.Windows.Forms.Label();
-            this.customCpuLabel = new System.Windows.Forms.TextBox();
-            this.customGpuLabelCaption = new System.Windows.Forms.Label();
-            this.customGpuLabel = new System.Windows.Forms.TextBox();
-            this.customCpuUsageLabelCaption = new System.Windows.Forms.Label();
-            this.customCpuUsageLabel = new System.Windows.Forms.TextBox();
-            this.customGpuUsageLabelCaption = new System.Windows.Forms.Label();
-            this.customGpuUsageLabel = new System.Windows.Forms.TextBox();
-            this.customRamLabelCaption = new System.Windows.Forms.Label();
-            this.customRamLabel = new System.Windows.Forms.TextBox();
-            this.customVramLabelCaption = new System.Windows.Forms.Label();
-            this.customVramLabel = new System.Windows.Forms.TextBox();
-            this.customFpsLabelCaption = new System.Windows.Forms.Label();
-            this.customFpsLabel = new System.Windows.Forms.TextBox();
-            this.customTimeLabelCaption = new System.Windows.Forms.Label();
-            this.customTimeLabel = new System.Windows.Forms.TextBox();
+            this.metricsListHeader = new System.Windows.Forms.Panel();
+            this.metricNameHeader = new System.Windows.Forms.Label();
+            this.metricLabelHeader = new System.Windows.Forms.Label();
+            this.metricGroupHeader = new System.Windows.Forms.Label();
+            this.metricsList = new TrayTemps.OsdMetricsListView();
+            this.metricNameColumn = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.metricLabelColumn = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.metricGroupColumn = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.metricLabelEditor = new System.Windows.Forms.TextBox();
+            this.metricRowImages = new System.Windows.Forms.ImageList(this.components);
+            this.metricListHint = new System.Windows.Forms.Label();
             this.hotkeyCard = new System.Windows.Forms.Panel();
             this.hotkeyLabel = new System.Windows.Forms.Label();
             this.hotkeyEnabled = new System.Windows.Forms.CheckBox();
             this.appearancePage = new System.Windows.Forms.TabPage();
             this.appearanceCard = new System.Windows.Forms.Panel();
+            this.appearanceLayout = new System.Windows.Forms.TableLayoutPanel();
+            this.appearanceGrid = new System.Windows.Forms.DataGridView();
+            this.appearanceMetricColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.appearanceFamilyColumn = new System.Windows.Forms.DataGridViewComboBoxColumn();
+            this.appearanceSizeColumn = new System.Windows.Forms.DataGridViewComboBoxColumn();
+            this.appearanceLabelColorColumn = new System.Windows.Forms.DataGridViewButtonColumn();
+            this.appearanceValueColorColumn = new System.Windows.Forms.DataGridViewButtonColumn();
+            this.appearanceFooter = new System.Windows.Forms.TableLayoutPanel();
             this.label1 = new System.Windows.Forms.Label();
-            this.fontColorsLabel = new System.Windows.Forms.Label();
-            this.fontFamilyLabel = new System.Windows.Forms.Label();
-            this.fontFamilyValue = new System.Windows.Forms.ComboBox();
-            this.fontLabel = new System.Windows.Forms.Label();
-            this.fontSizeValue = new System.Windows.Forms.ComboBox();
-            this.opacityLabel = new System.Windows.Forms.Label();
-            this.opacityValue = new System.Windows.Forms.TrackBar();
-            this.opacityValueLabel = new System.Windows.Forms.Label();
-            this.backgroundOpacityValue = new System.Windows.Forms.TrackBar();
             this.backgroundOpacityValueLabel = new System.Windows.Forms.Label();
-            this.fontColorsLayout = new System.Windows.Forms.TableLayoutPanel();
-            this.cpuFontColorLabel = new System.Windows.Forms.Label();
-            this.cpuFontColor = new System.Windows.Forms.Button();
-            this.gpuFontColorLabel = new System.Windows.Forms.Label();
-            this.gpuFontColor = new System.Windows.Forms.Button();
-            this.fpsFontColorLabel = new System.Windows.Forms.Label();
-            this.fpsFontColor = new System.Windows.Forms.Button();
-            this.ramFontColorLabel = new System.Windows.Forms.Label();
-            this.ramFontColor = new System.Windows.Forms.Button();
-            this.vramFontColorLabel = new System.Windows.Forms.Label();
-            this.vramFontColor = new System.Windows.Forms.Button();
+            this.backgroundOpacityValue = new System.Windows.Forms.TrackBar();
+            this.backgroundColorLayout = new System.Windows.Forms.TableLayoutPanel();
             this.backgroundColorLabel = new System.Windows.Forms.Label();
-            this.backgroundColor = new System.Windows.Forms.Button();
+            this.opacityLabel = new System.Windows.Forms.Label();
+            this.opacityValueLabel = new System.Windows.Forms.Label();
+            this.opacityValue = new System.Windows.Forms.TrackBar();
             this.layoutPage = new System.Windows.Forms.TabPage();
             this.layoutPageLayout = new System.Windows.Forms.TableLayoutPanel();
             this.layoutCard = new System.Windows.Forms.Panel();
             this.orderLabel = new System.Windows.Forms.Label();
-            this.positionLabel = new System.Windows.Forms.Label();
-            this.positionValue = new System.Windows.Forms.ComboBox();
-            this.columnsLabel = new System.Windows.Forms.Label();
             this.displayOrderLabel = new System.Windows.Forms.Label();
-            this.itemOrder = new System.Windows.Forms.ListBox();
-            this.orderUp = new System.Windows.Forms.Button();
-            this.orderDown = new System.Windows.Forms.Button();
+            this.groupFieldsLayout = new System.Windows.Forms.TableLayoutPanel();
+            this.positionLabel = new System.Windows.Forms.Label();
+            this.columnsLabel = new System.Windows.Forms.Label();
+            this.positionValue = new System.Windows.Forms.ComboBox();
+            this.groupSeparatorLabel = new System.Windows.Forms.Label();
+            this.groupCaptionLabel = new System.Windows.Forms.Label();
             this.spacingCard = new System.Windows.Forms.Panel();
             this.spacingTitle = new System.Windows.Forms.Label();
             this.spacingLayout = new System.Windows.Forms.TableLayoutPanel();
@@ -133,6 +133,15 @@ namespace TrayTemps
             this.titleBar = new System.Windows.Forms.Panel();
             this.subtitleLabel = new System.Windows.Forms.Label();
             this.exitBtn = new System.Windows.Forms.Button();
+            this.presetsPage = new System.Windows.Forms.TabPage();
+            this.presetsLayout = new System.Windows.Forms.TableLayoutPanel();
+            this.presetsTitle = new System.Windows.Forms.Label();
+            this.presetsHelp = new System.Windows.Forms.Label();
+            this.presetList = new System.Windows.Forms.ComboBox();
+            this.loadEmbeddedPreset = new System.Windows.Forms.Button();
+            this.loadPresetFile = new System.Windows.Forms.Button();
+            this.savePresetFile = new System.Windows.Forms.Button();
+            this.presetsNavButton = new System.Windows.Forms.Button();
             this.navigationPanel = new System.Windows.Forms.Panel();
             this.layoutNavButton = new System.Windows.Forms.Button();
             this.appearanceNavButton = new System.Windows.Forms.Button();
@@ -140,25 +149,32 @@ namespace TrayTemps
             this.navigationTitle = new System.Windows.Forms.Label();
             this.accentLine = new System.Windows.Forms.Panel();
             this.colorDialog = new System.Windows.Forms.ColorDialog();
+            this.customLabelContextMenu.SuspendLayout();
+            this.metricContextMenu.SuspendLayout();
             this.outerBorder.SuspendLayout();
             this.mainPanel.SuspendLayout();
             this.contentPanel.SuspendLayout();
             this.pageTabs.SuspendLayout();
+            this.presetsPage.SuspendLayout();
+            this.presetsLayout.SuspendLayout();
             this.metricsPage.SuspendLayout();
             this.metricsPageLayout.SuspendLayout();
             this.metricsCard.SuspendLayout();
-            this.metricsCheckboxLayout.SuspendLayout();
-            this.labelsCard.SuspendLayout();
-            this.customLabelsLayout.SuspendLayout();
+            this.metricsListHeader.SuspendLayout();
+            this.metricsList.SuspendLayout();
             this.hotkeyCard.SuspendLayout();
             this.appearancePage.SuspendLayout();
             this.appearanceCard.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.opacityValue)).BeginInit();
+            this.appearanceLayout.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.appearanceGrid)).BeginInit();
+            this.appearanceFooter.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.backgroundOpacityValue)).BeginInit();
-            this.fontColorsLayout.SuspendLayout();
+            this.backgroundColorLayout.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.opacityValue)).BeginInit();
             this.layoutPage.SuspendLayout();
             this.layoutPageLayout.SuspendLayout();
             this.layoutCard.SuspendLayout();
+            this.groupFieldsLayout.SuspendLayout();
             this.spacingCard.SuspendLayout();
             this.spacingLayout.SuspendLayout();
             this.bottomBar.SuspendLayout();
@@ -179,7 +195,7 @@ namespace TrayTemps
             this.fpsRefreshIntervalValue.Name = "fpsRefreshIntervalValue";
             this.fpsRefreshIntervalValue.Size = new System.Drawing.Size(169, 21);
             this.fpsRefreshIntervalValue.TabIndex = 4;
-            this.settingsToolTip.SetToolTip(this.fpsRefreshIntervalValue, "Changes only FPS display refresh; hardware sensor polling is unaffected.");
+            this.settingsToolTip.SetToolTip(this.fpsRefreshIntervalValue, "FPS and 1% Low refresh interval in seconds. Hardware polling is separate.");
             this.fpsRefreshIntervalValue.SelectedIndexChanged += new System.EventHandler(this.VisualSettingChanged);
             // 
             // fpsLabelValueSpacingLabel
@@ -192,9 +208,9 @@ namespace TrayTemps
             this.fpsLabelValueSpacingLabel.Name = "fpsLabelValueSpacingLabel";
             this.fpsLabelValueSpacingLabel.Size = new System.Drawing.Size(126, 25);
             this.fpsLabelValueSpacingLabel.TabIndex = 10;
-            this.fpsLabelValueSpacingLabel.Text = "FPS spacing:";
-            this.fpsLabelValueSpacingLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.settingsToolTip.SetToolTip(this.fpsLabelValueSpacingLabel, "Controls spacing between the FPS label and value only.");
+            this.fpsLabelValueSpacingLabel.Text = "FPS/low gap:";
+            this.fpsLabelValueSpacingLabel.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.settingsToolTip.SetToolTip(this.fpsLabelValueSpacingLabel, "Minimum label/value gap for FPS and 1% Low.");
             // 
             // fpsLabelValueSpacing
             // 
@@ -209,7 +225,7 @@ namespace TrayTemps
             this.fpsLabelValueSpacing.Name = "fpsLabelValueSpacing";
             this.fpsLabelValueSpacing.Size = new System.Drawing.Size(169, 21);
             this.fpsLabelValueSpacing.TabIndex = 5;
-            this.settingsToolTip.SetToolTip(this.fpsLabelValueSpacing, "Controls spacing between the FPS label and value only.");
+            this.settingsToolTip.SetToolTip(this.fpsLabelValueSpacing, "Minimum label/value gap for FPS and 1% Low.");
             this.fpsLabelValueSpacing.SelectedIndexChanged += new System.EventHandler(this.VisualSettingChanged);
             // 
             // externalSpacingLabel
@@ -224,7 +240,7 @@ namespace TrayTemps
             this.externalSpacingLabel.TabIndex = 12;
             this.externalSpacingLabel.Text = "External spacing:";
             this.externalSpacingLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.settingsToolTip.SetToolTip(this.externalSpacingLabel, "Offsets the OSD from the selected monitor working-area edges.");
+            this.settingsToolTip.SetToolTip(this.externalSpacingLabel, "Offsets the OSD from the selected monitor edges.");
             // 
             // externalSpacingValue
             // 
@@ -239,8 +255,7 @@ namespace TrayTemps
             this.externalSpacingValue.Name = "externalSpacingValue";
             this.externalSpacingValue.Size = new System.Drawing.Size(169, 21);
             this.externalSpacingValue.TabIndex = 6;
-            this.settingsToolTip.SetToolTip(this.externalSpacingValue, "Controls the distance between the OSD and the selected monitor\'s working-area edg" +
-        "e.");
+            this.settingsToolTip.SetToolTip(this.externalSpacingValue, "Offset from the selected monitor edges.");
             this.externalSpacingValue.SelectedIndexChanged += new System.EventHandler(this.VisualSettingChanged);
             // 
             // cornerRoundnessLabel
@@ -254,8 +269,8 @@ namespace TrayTemps
             this.cornerRoundnessLabel.Size = new System.Drawing.Size(126, 27);
             this.cornerRoundnessLabel.TabIndex = 13;
             this.cornerRoundnessLabel.Text = "Corner roundness:";
-            this.cornerRoundnessLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.settingsToolTip.SetToolTip(this.cornerRoundnessLabel, "Rounds the four corners of the OSD background.");
+            this.cornerRoundnessLabel.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.settingsToolTip.SetToolTip(this.cornerRoundnessLabel, "Rounds the OSD background corners.");
             // 
             // cornerRoundnessValue
             // 
@@ -270,34 +285,22 @@ namespace TrayTemps
             this.cornerRoundnessValue.Name = "cornerRoundnessValue";
             this.cornerRoundnessValue.Size = new System.Drawing.Size(169, 21);
             this.cornerRoundnessValue.TabIndex = 7;
-            this.settingsToolTip.SetToolTip(this.cornerRoundnessValue, "Sets the OSD background corner radius in logical pixels.");
+            this.settingsToolTip.SetToolTip(this.cornerRoundnessValue, "Background corner radius in logical pixels.");
             this.cornerRoundnessValue.SelectedIndexChanged += new System.EventHandler(this.VisualSettingChanged);
-            // 
-            // metricGroupingMode
-            // 
-            this.metricGroupingMode.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.metricGroupingMode.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.metricGroupingMode.FormattingEnabled = true;
-            this.metricGroupingMode.Location = new System.Drawing.Point(148, 76);
-            this.metricGroupingMode.Name = "metricGroupingMode";
-            this.metricGroupingMode.Size = new System.Drawing.Size(169, 21);
-            this.metricGroupingMode.TabIndex = 5;
-            this.settingsToolTip.SetToolTip(this.metricGroupingMode, "Groups enabled CPU/GPU temperature, load and used memory values in the OSD.");
-            this.metricGroupingMode.SelectedIndexChanged += new System.EventHandler(this.HardwareVisibility_CheckedChanged);
             // 
             // columnsValue
             // 
-            this.columnsValue.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.columnsValue.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.columnsValue.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.columnsValue.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
             this.columnsValue.FormattingEnabled = true;
-            this.columnsValue.Location = new System.Drawing.Point(531, 44);
+            this.columnsValue.Location = new System.Drawing.Point(545, 3);
             this.columnsValue.Margin = new System.Windows.Forms.Padding(2);
             this.columnsValue.Name = "columnsValue";
-            this.columnsValue.Size = new System.Drawing.Size(86, 21);
+            this.columnsValue.Size = new System.Drawing.Size(59, 21);
             this.columnsValue.TabIndex = 1;
-            this.settingsToolTip.SetToolTip(this.columnsValue, "Controls how enabled OSD metrics are distributed across columns.");
-            this.columnsValue.SelectedIndexChanged += new System.EventHandler(this.VisualSettingChanged);
+            this.settingsToolTip.SetToolTip(this.columnsValue, "Sets the number of OSD columns.");
+            this.columnsValue.SelectedIndexChanged += new System.EventHandler(this.ColumnsValue_SelectedIndexChanged);
             // 
             // labelValueSpacing
             // 
@@ -312,7 +315,7 @@ namespace TrayTemps
             this.labelValueSpacing.Name = "labelValueSpacing";
             this.labelValueSpacing.Size = new System.Drawing.Size(169, 21);
             this.labelValueSpacing.TabIndex = 1;
-            this.settingsToolTip.SetToolTip(this.labelValueSpacing, "Adjusts the gap between each metric label and its value.");
+            this.settingsToolTip.SetToolTip(this.labelValueSpacing, "Label/value gap, except FPS, 1% Low and Current Time.");
             this.labelValueSpacing.SelectedIndexChanged += new System.EventHandler(this.VisualSettingChanged);
             // 
             // hotkeyValue
@@ -341,39 +344,242 @@ namespace TrayTemps
             this.spacingHeader.Name = "spacingHeader";
             this.spacingHeader.Size = new System.Drawing.Size(126, 25);
             this.spacingHeader.TabIndex = 19;
-            this.spacingHeader.Text = "Label/value spacing:";
-            this.spacingHeader.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.settingsToolTip.SetToolTip(this.spacingHeader, "Controls label/value spacing for all OSD items except FPS.");
+            this.spacingHeader.Text = "Label/value gap:";
+            this.spacingHeader.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.settingsToolTip.SetToolTip(this.spacingHeader, "Label/value gap, except FPS, 1% Low and Current Time.");
             // 
-            // customLabelsInfoIconLabel
+            // metricLabelsInfoIcon
             // 
-            this.customLabelsInfoIconLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.customLabelsInfoIconLabel.BackColor = System.Drawing.Color.Transparent;
-            this.customLabelsInfoIconLabel.Cursor = System.Windows.Forms.Cursors.Help;
-            this.customLabelsInfoIconLabel.Font = new System.Drawing.Font("Segoe UI Symbol", 20.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.customLabelsInfoIconLabel.Location = new System.Drawing.Point(576, 14);
-            this.customLabelsInfoIconLabel.Margin = new System.Windows.Forms.Padding(0);
-            this.customLabelsInfoIconLabel.Name = "customLabelsInfoIconLabel";
-            this.customLabelsInfoIconLabel.Size = new System.Drawing.Size(46, 44);
-            this.customLabelsInfoIconLabel.TabIndex = 9;
-            this.customLabelsInfoIconLabel.Text = "🛈";
-            this.customLabelsInfoIconLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            this.settingsToolTip.SetToolTip(this.customLabelsInfoIconLabel, resources.GetString("customLabelsInfoIconLabel.ToolTip"));
+            this.metricLabelsInfoIcon.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.metricLabelsInfoIcon.BackColor = System.Drawing.Color.Transparent;
+            this.metricLabelsInfoIcon.Cursor = System.Windows.Forms.Cursors.Help;
+            this.metricLabelsInfoIcon.Font = new System.Drawing.Font("Segoe UI Symbol", 18F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.metricLabelsInfoIcon.Location = new System.Drawing.Point(582, 5);
+            this.metricLabelsInfoIcon.Margin = new System.Windows.Forms.Padding(0);
+            this.metricLabelsInfoIcon.Name = "metricLabelsInfoIcon";
+            this.metricLabelsInfoIcon.Size = new System.Drawing.Size(40, 32);
+            this.metricLabelsInfoIcon.TabIndex = 9;
+            this.metricLabelsInfoIcon.Tag = "TrayTemps.Font.System";
+            this.metricLabelsInfoIcon.Text = "ⓘ";
+            this.metricLabelsInfoIcon.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.settingsToolTip.SetToolTip(this.metricLabelsInfoIcon, "Double-click Label or Group to edit; F2 edits Label. Right-click to paste or inse" +
+        "rt icons.");
+            // 
+            // groupCaption
+            // 
+            this.groupCaption.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.groupCaption.ContextMenuStrip = this.customLabelContextMenu;
+            this.groupCaption.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.groupCaption.Location = new System.Drawing.Point(457, 232);
+            this.groupCaption.MaxLength = 40;
+            this.groupCaption.Name = "groupCaption";
+            this.groupCaption.Size = new System.Drawing.Size(160, 19);
+            this.groupCaption.TabIndex = 2;
+            this.settingsToolTip.SetToolTip(this.groupCaption, "Optional caption for the selected group. Empty hides the group label.");
+            this.groupCaption.TextChanged += new System.EventHandler(this.GroupCaption_TextChanged);
             // 
             // customLabelContextMenu
             // 
+            this.customLabelContextMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.labelUndo,
+            this.labelEditSeparator,
+            this.labelCut,
+            this.labelCopy,
+            this.labelPaste,
+            this.labelDelete,
+            this.labelSelectionSeparator,
+            this.labelSelectAll,
+            this.labelIconSeparator,
+            this.insertIconMenu,
+            this.labelResetSeparator,
+            this.resetLabelMenuItem});
             this.customLabelContextMenu.Name = "customLabelContextMenu";
-            this.customLabelContextMenu.Size = new System.Drawing.Size(61, 4);
+            this.customLabelContextMenu.Size = new System.Drawing.Size(131, 204);
+            this.customLabelContextMenu.Closed += new System.Windows.Forms.ToolStripDropDownClosedEventHandler(this.LabelMenu_Closed);
+            this.customLabelContextMenu.Opening += new System.ComponentModel.CancelEventHandler(this.CustomLabelContextMenu_Opening);
             // 
-            // metricGroupingModeLabel
+            // labelUndo
             // 
-            this.metricGroupingModeLabel.AutoSize = true;
-            this.metricGroupingModeLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.metricGroupingModeLabel.Location = new System.Drawing.Point(16, 80);
-            this.metricGroupingModeLabel.Name = "metricGroupingModeLabel";
-            this.metricGroupingModeLabel.Size = new System.Drawing.Size(82, 13);
-            this.metricGroupingModeLabel.TabIndex = 10;
-            this.metricGroupingModeLabel.Text = "Metric grouping:";
+            this.labelUndo.Name = "labelUndo";
+            this.labelUndo.Size = new System.Drawing.Size(130, 22);
+            this.labelUndo.Text = "Undo";
+            this.labelUndo.Click += new System.EventHandler(this.LabelCommand_Click);
+            // 
+            // labelEditSeparator
+            // 
+            this.labelEditSeparator.Name = "labelEditSeparator";
+            this.labelEditSeparator.Size = new System.Drawing.Size(127, 6);
+            // 
+            // labelCut
+            // 
+            this.labelCut.Name = "labelCut";
+            this.labelCut.Size = new System.Drawing.Size(130, 22);
+            this.labelCut.Text = "Cut";
+            this.labelCut.Click += new System.EventHandler(this.LabelCommand_Click);
+            // 
+            // labelCopy
+            // 
+            this.labelCopy.Name = "labelCopy";
+            this.labelCopy.Size = new System.Drawing.Size(130, 22);
+            this.labelCopy.Text = "Copy";
+            this.labelCopy.Click += new System.EventHandler(this.LabelCommand_Click);
+            // 
+            // labelPaste
+            // 
+            this.labelPaste.Name = "labelPaste";
+            this.labelPaste.Size = new System.Drawing.Size(130, 22);
+            this.labelPaste.Text = "Paste";
+            this.labelPaste.Click += new System.EventHandler(this.LabelCommand_Click);
+            // 
+            // labelDelete
+            // 
+            this.labelDelete.Name = "labelDelete";
+            this.labelDelete.Size = new System.Drawing.Size(130, 22);
+            this.labelDelete.Text = "Delete";
+            this.labelDelete.Click += new System.EventHandler(this.LabelCommand_Click);
+            // 
+            // labelSelectionSeparator
+            // 
+            this.labelSelectionSeparator.Name = "labelSelectionSeparator";
+            this.labelSelectionSeparator.Size = new System.Drawing.Size(127, 6);
+            // 
+            // labelSelectAll
+            // 
+            this.labelSelectAll.Name = "labelSelectAll";
+            this.labelSelectAll.Size = new System.Drawing.Size(130, 22);
+            this.labelSelectAll.Text = "Select All";
+            this.labelSelectAll.Click += new System.EventHandler(this.LabelCommand_Click);
+            // 
+            // labelIconSeparator
+            // 
+            this.labelIconSeparator.Name = "labelIconSeparator";
+            this.labelIconSeparator.Size = new System.Drawing.Size(127, 6);
+            // 
+            // insertIconMenu
+            // 
+            this.insertIconMenu.Name = "insertIconMenu";
+            this.insertIconMenu.Size = new System.Drawing.Size(130, 22);
+            this.insertIconMenu.Text = "Insert icon";
+            // 
+            // labelResetSeparator
+            // 
+            this.labelResetSeparator.Name = "labelResetSeparator";
+            this.labelResetSeparator.Size = new System.Drawing.Size(127, 6);
+            // 
+            // resetLabelMenuItem
+            // 
+            this.resetLabelMenuItem.Name = "resetLabelMenuItem";
+            this.resetLabelMenuItem.Size = new System.Drawing.Size(130, 22);
+            this.resetLabelMenuItem.Text = "Reset label";
+            this.resetLabelMenuItem.Click += new System.EventHandler(this.ResetLabelMenu_Click);
+            // 
+            // groupSeparator
+            // 
+            this.groupSeparator.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.groupSeparator.ContextMenuStrip = this.customLabelContextMenu;
+            this.groupSeparator.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.groupSeparator.Location = new System.Drawing.Point(304, 4);
+            this.groupSeparator.MaxLength = 40;
+            this.groupSeparator.Name = "groupSeparator";
+            this.groupSeparator.Size = new System.Drawing.Size(115, 19);
+            this.groupSeparator.TabIndex = 3;
+            this.settingsToolTip.SetToolTip(this.groupSeparator, "Between grouped metrics. Empty: 1 space; FPS + 1% Low: 2 + 1 each side. Right-cli" +
+        "ck for icons.");
+            this.groupSeparator.TextChanged += new System.EventHandler(this.GroupSeparator_TextChanged);
+            // 
+            // backgroundColor
+            // 
+            this.backgroundColor.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(24)))), ((int)(((byte)(24)))), ((int)(((byte)(24)))));
+            this.backgroundColor.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.backgroundColor.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.backgroundColor.Font = new System.Drawing.Font("Segoe UI Emoji", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.backgroundColor.Location = new System.Drawing.Point(130, 2);
+            this.backgroundColor.Margin = new System.Windows.Forms.Padding(2);
+            this.backgroundColor.Name = "backgroundColor";
+            this.backgroundColor.Size = new System.Drawing.Size(48, 35);
+            this.backgroundColor.TabIndex = 7;
+            this.backgroundColor.Tag = "TrayTemps.Font.System";
+            this.backgroundColor.Text = "🎨";
+            this.settingsToolTip.SetToolTip(this.backgroundColor, "Choose the OSD background color.");
+            this.backgroundColor.UseVisualStyleBackColor = false;
+            this.backgroundColor.Click += new System.EventHandler(this.BackgroundColor_Click);
+            // 
+            // itemOrder
+            // 
+            this.itemOrder.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.itemOrder.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.itemOrder.HideSelection = false;
+            this.itemOrder.ItemHeight = 26;
+            this.itemOrder.Location = new System.Drawing.Point(18, 75);
+            this.itemOrder.Margin = new System.Windows.Forms.Padding(2);
+            this.itemOrder.Name = "itemOrder";
+            this.itemOrder.Size = new System.Drawing.Size(429, 178);
+            this.itemOrder.TabIndex = 2;
+            this.settingsToolTip.SetToolTip(this.itemOrder, "Groups start collapsed. Select an item, then use Up/Down to change its order.");
+            this.itemOrder.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.ItemOrder_AfterSelect);
+            // 
+            // orderUp
+            // 
+            this.orderUp.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.orderUp.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.orderUp.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.orderUp.Location = new System.Drawing.Point(457, 78);
+            this.orderUp.Margin = new System.Windows.Forms.Padding(2);
+            this.orderUp.Name = "orderUp";
+            this.orderUp.Size = new System.Drawing.Size(160, 32);
+            this.orderUp.TabIndex = 3;
+            this.orderUp.Text = "Up";
+            this.settingsToolTip.SetToolTip(this.orderUp, "Move the selected item earlier.");
+            this.orderUp.UseVisualStyleBackColor = true;
+            this.orderUp.Click += new System.EventHandler(this.OrderUp_Click);
+            // 
+            // orderDown
+            // 
+            this.orderDown.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.orderDown.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.orderDown.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.orderDown.Location = new System.Drawing.Point(457, 116);
+            this.orderDown.Margin = new System.Windows.Forms.Padding(2);
+            this.orderDown.Name = "orderDown";
+            this.orderDown.Size = new System.Drawing.Size(160, 32);
+            this.orderDown.TabIndex = 4;
+            this.orderDown.Text = "Down";
+            this.settingsToolTip.SetToolTip(this.orderDown, "Move the selected item later.");
+            this.orderDown.UseVisualStyleBackColor = true;
+            this.orderDown.Click += new System.EventHandler(this.OrderDown_Click);
+            // 
+            // metricContextMenu
+            // 
+            this.metricContextMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.editLabelMenuItem,
+            this.editGroupMenuItem,
+            this.resetMetricLabelMenuItem});
+            this.metricContextMenu.Name = "metricContextMenu";
+            this.metricContextMenu.Size = new System.Drawing.Size(131, 70);
+            this.metricContextMenu.Opening += new System.ComponentModel.CancelEventHandler(this.MetricMenu_Opening);
+            // 
+            // editLabelMenuItem
+            // 
+            this.editLabelMenuItem.Name = "editLabelMenuItem";
+            this.editLabelMenuItem.Size = new System.Drawing.Size(130, 22);
+            this.editLabelMenuItem.Text = "Edit label";
+            this.editLabelMenuItem.Click += new System.EventHandler(this.EditLabelMenu_Click);
+            // 
+            // editGroupMenuItem
+            // 
+            this.editGroupMenuItem.Name = "editGroupMenuItem";
+            this.editGroupMenuItem.Size = new System.Drawing.Size(130, 22);
+            this.editGroupMenuItem.Text = "Edit group";
+            this.editGroupMenuItem.Click += new System.EventHandler(this.EditGroupMenu_Click);
+            // 
+            // resetMetricLabelMenuItem
+            // 
+            this.resetMetricLabelMenuItem.Name = "resetMetricLabelMenuItem";
+            this.resetMetricLabelMenuItem.Size = new System.Drawing.Size(130, 22);
+            this.resetMetricLabelMenuItem.Text = "Reset label";
+            this.resetMetricLabelMenuItem.Click += new System.EventHandler(this.ResetLabelMenu_Click);
             // 
             // outerBorder
             // 
@@ -432,6 +638,7 @@ namespace TrayTemps
             this.pageTabs.Controls.Add(this.metricsPage);
             this.pageTabs.Controls.Add(this.appearancePage);
             this.pageTabs.Controls.Add(this.layoutPage);
+            this.pageTabs.Controls.Add(this.presetsPage);
             this.pageTabs.Dock = System.Windows.Forms.DockStyle.Fill;
             this.pageTabs.DrawMode = System.Windows.Forms.TabDrawMode.OwnerDrawFixed;
             this.pageTabs.ItemSize = new System.Drawing.Size(1, 1);
@@ -463,15 +670,13 @@ namespace TrayTemps
             this.metricsPageLayout.ColumnCount = 1;
             this.metricsPageLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.metricsPageLayout.Controls.Add(this.metricsCard, 0, 0);
-            this.metricsPageLayout.Controls.Add(this.labelsCard, 0, 1);
-            this.metricsPageLayout.Controls.Add(this.hotkeyCard, 0, 2);
+            this.metricsPageLayout.Controls.Add(this.hotkeyCard, 0, 1);
             this.metricsPageLayout.Dock = System.Windows.Forms.DockStyle.Fill;
             this.metricsPageLayout.Location = new System.Drawing.Point(0, 0);
             this.metricsPageLayout.Margin = new System.Windows.Forms.Padding(0);
             this.metricsPageLayout.Name = "metricsPageLayout";
-            this.metricsPageLayout.RowCount = 3;
-            this.metricsPageLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 160F));
-            this.metricsPageLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 190F));
+            this.metricsPageLayout.RowCount = 2;
+            this.metricsPageLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.metricsPageLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 90F));
             this.metricsPageLayout.Size = new System.Drawing.Size(638, 453);
             this.metricsPageLayout.TabIndex = 0;
@@ -479,445 +684,156 @@ namespace TrayTemps
             // metricsCard
             // 
             this.metricsCard.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
+            this.metricsCard.Controls.Add(this.metricLabelsInfoIcon);
             this.metricsCard.Controls.Add(this.displayedHardwareLabel);
-            this.metricsCard.Controls.Add(this.metricsCheckboxLayout);
+            this.metricsCard.Controls.Add(this.metricsListHeader);
+            this.metricsCard.Controls.Add(this.metricsList);
+            this.metricsCard.Controls.Add(this.metricListHint);
             this.metricsCard.Dock = System.Windows.Forms.DockStyle.Fill;
             this.metricsCard.Location = new System.Drawing.Point(0, 0);
             this.metricsCard.Margin = new System.Windows.Forms.Padding(0, 0, 0, 8);
             this.metricsCard.Name = "metricsCard";
-            this.metricsCard.Size = new System.Drawing.Size(638, 152);
+            this.metricsCard.Size = new System.Drawing.Size(638, 355);
             this.metricsCard.TabIndex = 0;
             // 
             // displayedHardwareLabel
             // 
             this.displayedHardwareLabel.AutoSize = true;
-            this.displayedHardwareLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.displayedHardwareLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.displayedHardwareLabel.Location = new System.Drawing.Point(16, 14);
             this.displayedHardwareLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.displayedHardwareLabel.Name = "displayedHardwareLabel";
-            this.displayedHardwareLabel.Size = new System.Drawing.Size(107, 15);
+            this.displayedHardwareLabel.Size = new System.Drawing.Size(248, 15);
             this.displayedHardwareLabel.TabIndex = 0;
             this.displayedHardwareLabel.Tag = "TrayTemps.Font.ExtraBold";
-            this.displayedHardwareLabel.Text = "Displayed metrics:";
+            this.displayedHardwareLabel.Text = "Displayed metrics, labels and groups:";
             // 
-            // metricsCheckboxLayout
+            // metricsListHeader
             // 
-            this.metricsCheckboxLayout.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.metricsListHeader.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.metricsCheckboxLayout.BackColor = System.Drawing.Color.Transparent;
-            this.metricsCheckboxLayout.ColumnCount = 3;
-            this.metricsCheckboxLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
-            this.metricsCheckboxLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
-            this.metricsCheckboxLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33334F));
-            this.metricsCheckboxLayout.Controls.Add(this.showCpu, 0, 0);
-            this.metricsCheckboxLayout.Controls.Add(this.showCpuUsage, 1, 0);
-            this.metricsCheckboxLayout.Controls.Add(this.showGpu, 0, 1);
-            this.metricsCheckboxLayout.Controls.Add(this.showGpuUsage, 1, 1);
-            this.metricsCheckboxLayout.Controls.Add(this.showRamUsage, 0, 2);
-            this.metricsCheckboxLayout.Controls.Add(this.showVramUsage, 1, 2);
-            this.metricsCheckboxLayout.Controls.Add(this.showFps, 2, 1);
-            this.metricsCheckboxLayout.Controls.Add(this.showCurrentTime, 2, 0);
-            this.metricsCheckboxLayout.Location = new System.Drawing.Point(16, 36);
-            this.metricsCheckboxLayout.Margin = new System.Windows.Forms.Padding(0);
-            this.metricsCheckboxLayout.Name = "metricsCheckboxLayout";
-            this.metricsCheckboxLayout.RowCount = 3;
-            this.metricsCheckboxLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
-            this.metricsCheckboxLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
-            this.metricsCheckboxLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
-            this.metricsCheckboxLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
-            this.metricsCheckboxLayout.Size = new System.Drawing.Size(606, 111);
-            this.metricsCheckboxLayout.TabIndex = 1;
+            this.metricsListHeader.Controls.Add(this.metricNameHeader);
+            this.metricsListHeader.Controls.Add(this.metricLabelHeader);
+            this.metricsListHeader.Controls.Add(this.metricGroupHeader);
+            this.metricsListHeader.Location = new System.Drawing.Point(16, 38);
+            this.metricsListHeader.Name = "metricsListHeader";
+            this.metricsListHeader.Size = new System.Drawing.Size(606, 30);
+            this.metricsListHeader.TabIndex = 1;
             // 
-            // showCpu
+            // metricNameHeader
             // 
-            this.showCpu.AutoSize = true;
-            this.showCpu.Checked = true;
-            this.showCpu.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.showCpu.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.showCpu.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.showCpu.Location = new System.Drawing.Point(2, 2);
-            this.showCpu.Margin = new System.Windows.Forms.Padding(2);
-            this.showCpu.Name = "showCpu";
-            this.showCpu.Size = new System.Drawing.Size(197, 33);
-            this.showCpu.TabIndex = 0;
-            this.showCpu.Text = "Show CPU temperature";
-            this.showCpu.UseVisualStyleBackColor = true;
-            this.showCpu.CheckedChanged += new System.EventHandler(this.HardwareVisibility_CheckedChanged);
+            this.metricNameHeader.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.metricNameHeader.Location = new System.Drawing.Point(0, 0);
+            this.metricNameHeader.Name = "metricNameHeader";
+            this.metricNameHeader.Padding = new System.Windows.Forms.Padding(6, 0, 0, 0);
+            this.metricNameHeader.Size = new System.Drawing.Size(265, 30);
+            this.metricNameHeader.TabIndex = 0;
+            this.metricNameHeader.Tag = "TrayTemps.Font.ExtraBold";
+            this.metricNameHeader.Text = "Metric";
+            this.metricNameHeader.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
-            // showCpuUsage
+            // metricLabelHeader
             // 
-            this.showCpuUsage.AutoSize = true;
-            this.showCpuUsage.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.showCpuUsage.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.showCpuUsage.Location = new System.Drawing.Point(203, 2);
-            this.showCpuUsage.Margin = new System.Windows.Forms.Padding(2);
-            this.showCpuUsage.Name = "showCpuUsage";
-            this.showCpuUsage.Size = new System.Drawing.Size(197, 33);
-            this.showCpuUsage.TabIndex = 1;
-            this.showCpuUsage.Text = "Show CPU usage";
-            this.showCpuUsage.UseVisualStyleBackColor = true;
-            this.showCpuUsage.CheckedChanged += new System.EventHandler(this.HardwareVisibility_CheckedChanged);
+            this.metricLabelHeader.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.metricLabelHeader.Location = new System.Drawing.Point(265, 0);
+            this.metricLabelHeader.Name = "metricLabelHeader";
+            this.metricLabelHeader.Padding = new System.Windows.Forms.Padding(6, 0, 0, 0);
+            this.metricLabelHeader.Size = new System.Drawing.Size(341, 30);
+            this.metricLabelHeader.TabIndex = 1;
+            this.metricLabelHeader.Tag = "TrayTemps.Font.ExtraBold";
+            this.metricLabelHeader.Text = "Label";
+            this.metricLabelHeader.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
-            // showGpu
+            // metricGroupHeader
             // 
-            this.showGpu.AutoSize = true;
-            this.showGpu.Checked = true;
-            this.showGpu.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.showGpu.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.showGpu.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.showGpu.Location = new System.Drawing.Point(2, 39);
-            this.showGpu.Margin = new System.Windows.Forms.Padding(2);
-            this.showGpu.Name = "showGpu";
-            this.showGpu.Size = new System.Drawing.Size(197, 33);
-            this.showGpu.TabIndex = 2;
-            this.showGpu.Text = "Show GPU temperature";
-            this.showGpu.UseVisualStyleBackColor = true;
-            this.showGpu.CheckedChanged += new System.EventHandler(this.HardwareVisibility_CheckedChanged);
+            this.metricGroupHeader.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F);
+            this.metricGroupHeader.Location = new System.Drawing.Point(0, 0);
+            this.metricGroupHeader.Name = "metricGroupHeader";
+            this.metricGroupHeader.Size = new System.Drawing.Size(180, 30);
+            this.metricGroupHeader.TabIndex = 2;
+            this.metricGroupHeader.Tag = "TrayTemps.Font.ExtraBold";
+            this.metricGroupHeader.Text = "Group";
+            this.metricGroupHeader.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
-            // showGpuUsage
+            // metricsList
             // 
-            this.showGpuUsage.AutoSize = true;
-            this.showGpuUsage.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.showGpuUsage.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.showGpuUsage.Location = new System.Drawing.Point(203, 39);
-            this.showGpuUsage.Margin = new System.Windows.Forms.Padding(2);
-            this.showGpuUsage.Name = "showGpuUsage";
-            this.showGpuUsage.Size = new System.Drawing.Size(197, 33);
-            this.showGpuUsage.TabIndex = 3;
-            this.showGpuUsage.Text = "Show GPU usage";
-            this.showGpuUsage.UseVisualStyleBackColor = true;
-            this.showGpuUsage.CheckedChanged += new System.EventHandler(this.HardwareVisibility_CheckedChanged);
-            // 
-            // showRamUsage
-            // 
-            this.showRamUsage.AutoSize = true;
-            this.showRamUsage.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.showRamUsage.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.showRamUsage.Location = new System.Drawing.Point(2, 76);
-            this.showRamUsage.Margin = new System.Windows.Forms.Padding(2);
-            this.showRamUsage.Name = "showRamUsage";
-            this.showRamUsage.Size = new System.Drawing.Size(197, 33);
-            this.showRamUsage.TabIndex = 4;
-            this.showRamUsage.Text = "Show RAM usage";
-            this.showRamUsage.UseVisualStyleBackColor = true;
-            this.showRamUsage.CheckedChanged += new System.EventHandler(this.HardwareVisibility_CheckedChanged);
-            // 
-            // showVramUsage
-            // 
-            this.showVramUsage.AutoSize = true;
-            this.showVramUsage.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.showVramUsage.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.showVramUsage.Location = new System.Drawing.Point(203, 76);
-            this.showVramUsage.Margin = new System.Windows.Forms.Padding(2);
-            this.showVramUsage.Name = "showVramUsage";
-            this.showVramUsage.Size = new System.Drawing.Size(197, 33);
-            this.showVramUsage.TabIndex = 5;
-            this.showVramUsage.Text = "Show VRAM usage";
-            this.showVramUsage.UseVisualStyleBackColor = true;
-            this.showVramUsage.CheckedChanged += new System.EventHandler(this.HardwareVisibility_CheckedChanged);
-            // 
-            // showFps
-            // 
-            this.showFps.AutoSize = true;
-            this.showFps.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.showFps.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.showFps.Location = new System.Drawing.Point(404, 39);
-            this.showFps.Margin = new System.Windows.Forms.Padding(2);
-            this.showFps.Name = "showFps";
-            this.showFps.Size = new System.Drawing.Size(200, 33);
-            this.showFps.TabIndex = 6;
-            this.showFps.Text = "Show FPS";
-            this.showFps.UseVisualStyleBackColor = true;
-            this.showFps.CheckedChanged += new System.EventHandler(this.HardwareVisibility_CheckedChanged);
-            // 
-            // showCurrentTime
-            // 
-            this.showCurrentTime.AutoSize = true;
-            this.showCurrentTime.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.showCurrentTime.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.showCurrentTime.Location = new System.Drawing.Point(404, 2);
-            this.showCurrentTime.Margin = new System.Windows.Forms.Padding(2);
-            this.showCurrentTime.Name = "showCurrentTime";
-            this.showCurrentTime.Size = new System.Drawing.Size(200, 33);
-            this.showCurrentTime.TabIndex = 8;
-            this.showCurrentTime.Text = "Show current time";
-            this.showCurrentTime.UseVisualStyleBackColor = true;
-            this.showCurrentTime.CheckedChanged += new System.EventHandler(this.HardwareVisibility_CheckedChanged);
-            // 
-            // labelsCard
-            // 
-            this.labelsCard.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
-            this.labelsCard.Controls.Add(this.labelsTitle);
-            this.labelsCard.Controls.Add(this.customLabelsInfoIconLabel);
-            this.labelsCard.Controls.Add(this.customLabelsEnabled);
-            this.labelsCard.Controls.Add(this.customLabelsLayout);
-            this.labelsCard.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.labelsCard.Location = new System.Drawing.Point(0, 160);
-            this.labelsCard.Margin = new System.Windows.Forms.Padding(0, 0, 0, 8);
-            this.labelsCard.Name = "labelsCard";
-            this.labelsCard.Size = new System.Drawing.Size(638, 182);
-            this.labelsCard.TabIndex = 1;
-            // 
-            // labelsTitle
-            // 
-            this.labelsTitle.AutoSize = true;
-            this.labelsTitle.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.labelsTitle.Location = new System.Drawing.Point(16, 14);
-            this.labelsTitle.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
-            this.labelsTitle.Name = "labelsTitle";
-            this.labelsTitle.Size = new System.Drawing.Size(112, 15);
-            this.labelsTitle.TabIndex = 0;
-            this.labelsTitle.Tag = "TrayTemps.Font.ExtraBold";
-            this.labelsTitle.Text = "Labels and names:";
-            // 
-            // customLabelsEnabled
-            // 
-            this.customLabelsEnabled.AutoSize = true;
-            this.customLabelsEnabled.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.customLabelsEnabled.Location = new System.Drawing.Point(18, 41);
-            this.customLabelsEnabled.Margin = new System.Windows.Forms.Padding(2);
-            this.customLabelsEnabled.Name = "customLabelsEnabled";
-            this.customLabelsEnabled.Size = new System.Drawing.Size(91, 17);
-            this.customLabelsEnabled.TabIndex = 0;
-            this.customLabelsEnabled.Text = "Custom labels";
-            this.customLabelsEnabled.UseVisualStyleBackColor = true;
-            this.customLabelsEnabled.CheckedChanged += new System.EventHandler(this.CustomLabelsEnabled_CheckedChanged);
-            // 
-            // customLabelsLayout
-            // 
-            this.customLabelsLayout.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.metricsList.AccessibleName = "Displayed metrics and editable labels";
+            this.metricsList.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.customLabelsLayout.ColumnCount = 4;
-            this.customLabelsLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 15F));
-            this.customLabelsLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 35F));
-            this.customLabelsLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 15F));
-            this.customLabelsLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 35F));
-            this.customLabelsLayout.Controls.Add(this.customCpuLabelCaption, 0, 0);
-            this.customLabelsLayout.Controls.Add(this.customCpuLabel, 1, 0);
-            this.customLabelsLayout.Controls.Add(this.customGpuLabelCaption, 2, 0);
-            this.customLabelsLayout.Controls.Add(this.customGpuLabel, 3, 0);
-            this.customLabelsLayout.Controls.Add(this.customCpuUsageLabelCaption, 0, 1);
-            this.customLabelsLayout.Controls.Add(this.customCpuUsageLabel, 1, 1);
-            this.customLabelsLayout.Controls.Add(this.customGpuUsageLabelCaption, 2, 1);
-            this.customLabelsLayout.Controls.Add(this.customGpuUsageLabel, 3, 1);
-            this.customLabelsLayout.Controls.Add(this.customRamLabelCaption, 0, 2);
-            this.customLabelsLayout.Controls.Add(this.customRamLabel, 1, 2);
-            this.customLabelsLayout.Controls.Add(this.customVramLabelCaption, 2, 2);
-            this.customLabelsLayout.Controls.Add(this.customVramLabel, 3, 2);
-            this.customLabelsLayout.Controls.Add(this.customFpsLabelCaption, 0, 3);
-            this.customLabelsLayout.Controls.Add(this.customFpsLabel, 1, 3);
-            this.customLabelsLayout.Controls.Add(this.customTimeLabelCaption, 2, 3);
-            this.customLabelsLayout.Controls.Add(this.customTimeLabel, 3, 3);
-            this.customLabelsLayout.Location = new System.Drawing.Point(16, 65);
-            this.customLabelsLayout.Margin = new System.Windows.Forms.Padding(2);
-            this.customLabelsLayout.Name = "customLabelsLayout";
-            this.customLabelsLayout.RowCount = 4;
-            this.customLabelsLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 25F));
-            this.customLabelsLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 25F));
-            this.customLabelsLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 25F));
-            this.customLabelsLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 25F));
-            this.customLabelsLayout.Size = new System.Drawing.Size(606, 108);
-            this.customLabelsLayout.TabIndex = 3;
+            this.metricsList.CheckBoxes = true;
+            this.metricsList.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+            this.metricNameColumn,
+            this.metricLabelColumn,
+            this.metricGroupColumn});
+            this.metricsList.ContextMenuStrip = this.metricContextMenu;
+            this.metricsList.Controls.Add(this.metricLabelEditor);
+            this.metricsList.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.metricsList.FullRowSelect = true;
+            this.metricsList.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.None;
+            this.metricsList.HideSelection = false;
+            this.metricsList.Location = new System.Drawing.Point(16, 68);
+            this.metricsList.MultiSelect = false;
+            this.metricsList.Name = "metricsList";
+            this.metricsList.ShowItemToolTips = true;
+            this.metricsList.Size = new System.Drawing.Size(606, 240);
+            this.metricsList.SmallImageList = this.metricRowImages;
+            this.metricsList.TabIndex = 1;
+            this.metricsList.UseCompatibleStateImageBehavior = false;
+            this.metricsList.View = System.Windows.Forms.View.Details;
+            this.metricsList.ViewChanging += new System.EventHandler(this.MetricsList_ViewChanging);
+            this.metricsList.ColumnWidthChanged += new System.Windows.Forms.ColumnWidthChangedEventHandler(this.MetricsList_ColumnWidthChanged);
+            this.metricsList.ItemCheck += new System.Windows.Forms.ItemCheckEventHandler(this.MetricsList_ItemCheck);
+            this.metricsList.SelectedIndexChanged += new System.EventHandler(this.MetricsList_SelectedIndexChanged);
+            this.metricsList.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.MetricsList_MouseDoubleClick);
+            this.metricsList.Resize += new System.EventHandler(this.MetricsList_Resize);
             // 
-            // customCpuLabelCaption
+            // metricNameColumn
             // 
-            this.customCpuLabelCaption.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.customCpuLabelCaption.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.customCpuLabelCaption.Location = new System.Drawing.Point(2, 2);
-            this.customCpuLabelCaption.Margin = new System.Windows.Forms.Padding(2);
-            this.customCpuLabelCaption.Name = "customCpuLabelCaption";
-            this.customCpuLabelCaption.Size = new System.Drawing.Size(86, 23);
-            this.customCpuLabelCaption.TabIndex = 0;
-            this.customCpuLabelCaption.Text = "CPU Temp:";
-            this.customCpuLabelCaption.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.metricNameColumn.Text = "Metric";
+            this.metricNameColumn.Width = 265;
             // 
-            // customCpuLabel
+            // metricLabelColumn
             // 
-            this.customCpuLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.customCpuLabel.ContextMenuStrip = this.customLabelContextMenu;
-            this.customCpuLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.customCpuLabel.Location = new System.Drawing.Point(92, 4);
-            this.customCpuLabel.Margin = new System.Windows.Forms.Padding(2);
-            this.customCpuLabel.MaxLength = 40;
-            this.customCpuLabel.Name = "customCpuLabel";
-            this.customCpuLabel.Size = new System.Drawing.Size(208, 19);
-            this.customCpuLabel.TabIndex = 1;
-            this.customCpuLabel.TextChanged += new System.EventHandler(this.VisualSettingChanged);
+            this.metricLabelColumn.Text = "Label";
+            this.metricLabelColumn.Width = 341;
             // 
-            // customGpuLabelCaption
+            // metricGroupColumn
             // 
-            this.customGpuLabelCaption.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.customGpuLabelCaption.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.customGpuLabelCaption.Location = new System.Drawing.Point(304, 2);
-            this.customGpuLabelCaption.Margin = new System.Windows.Forms.Padding(2);
-            this.customGpuLabelCaption.Name = "customGpuLabelCaption";
-            this.customGpuLabelCaption.Size = new System.Drawing.Size(86, 23);
-            this.customGpuLabelCaption.TabIndex = 3;
-            this.customGpuLabelCaption.Text = "GPU Temp:";
-            this.customGpuLabelCaption.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.metricGroupColumn.Text = "Group";
+            this.metricGroupColumn.Width = 180;
             // 
-            // customGpuLabel
+            // metricLabelEditor
             // 
-            this.customGpuLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.customGpuLabel.ContextMenuStrip = this.customLabelContextMenu;
-            this.customGpuLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.customGpuLabel.Location = new System.Drawing.Point(394, 4);
-            this.customGpuLabel.Margin = new System.Windows.Forms.Padding(2);
-            this.customGpuLabel.MaxLength = 40;
-            this.customGpuLabel.Name = "customGpuLabel";
-            this.customGpuLabel.Size = new System.Drawing.Size(210, 19);
-            this.customGpuLabel.TabIndex = 3;
-            this.customGpuLabel.TextChanged += new System.EventHandler(this.VisualSettingChanged);
+            this.metricLabelEditor.AccessibleName = "Selected metric label";
+            this.metricLabelEditor.ContextMenuStrip = this.customLabelContextMenu;
+            this.metricLabelEditor.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F);
+            this.metricLabelEditor.Location = new System.Drawing.Point(0, 0);
+            this.metricLabelEditor.MaxLength = 40;
+            this.metricLabelEditor.Name = "metricLabelEditor";
+            this.metricLabelEditor.Size = new System.Drawing.Size(100, 21);
+            this.metricLabelEditor.TabIndex = 0;
+            this.metricLabelEditor.Visible = false;
+            this.metricLabelEditor.TextChanged += new System.EventHandler(this.MetricLabelEditor_TextChanged);
+            this.metricLabelEditor.Leave += new System.EventHandler(this.MetricLabelEditor_Leave);
             // 
-            // customCpuUsageLabelCaption
+            // metricRowImages
             // 
-            this.customCpuUsageLabelCaption.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.customCpuUsageLabelCaption.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.customCpuUsageLabelCaption.Location = new System.Drawing.Point(2, 29);
-            this.customCpuUsageLabelCaption.Margin = new System.Windows.Forms.Padding(2);
-            this.customCpuUsageLabelCaption.Name = "customCpuUsageLabelCaption";
-            this.customCpuUsageLabelCaption.Size = new System.Drawing.Size(86, 23);
-            this.customCpuUsageLabelCaption.TabIndex = 6;
-            this.customCpuUsageLabelCaption.Text = "CPU Load:";
-            this.customCpuUsageLabelCaption.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.metricRowImages.ColorDepth = System.Windows.Forms.ColorDepth.Depth8Bit;
+            this.metricRowImages.ImageSize = new System.Drawing.Size(1, 25);
+            this.metricRowImages.TransparentColor = System.Drawing.Color.Transparent;
             // 
-            // customCpuUsageLabel
+            // metricListHint
             // 
-            this.customCpuUsageLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.customCpuUsageLabel.ContextMenuStrip = this.customLabelContextMenu;
-            this.customCpuUsageLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.customCpuUsageLabel.Location = new System.Drawing.Point(92, 31);
-            this.customCpuUsageLabel.Margin = new System.Windows.Forms.Padding(2);
-            this.customCpuUsageLabel.MaxLength = 40;
-            this.customCpuUsageLabel.Name = "customCpuUsageLabel";
-            this.customCpuUsageLabel.Size = new System.Drawing.Size(208, 19);
-            this.customCpuUsageLabel.TabIndex = 5;
-            this.customCpuUsageLabel.TextChanged += new System.EventHandler(this.VisualSettingChanged);
-            // 
-            // customGpuUsageLabelCaption
-            // 
-            this.customGpuUsageLabelCaption.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.customGpuUsageLabelCaption.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.customGpuUsageLabelCaption.Location = new System.Drawing.Point(304, 29);
-            this.customGpuUsageLabelCaption.Margin = new System.Windows.Forms.Padding(2);
-            this.customGpuUsageLabelCaption.Name = "customGpuUsageLabelCaption";
-            this.customGpuUsageLabelCaption.Size = new System.Drawing.Size(86, 23);
-            this.customGpuUsageLabelCaption.TabIndex = 9;
-            this.customGpuUsageLabelCaption.Text = "GPU Load:";
-            this.customGpuUsageLabelCaption.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            // 
-            // customGpuUsageLabel
-            // 
-            this.customGpuUsageLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.customGpuUsageLabel.ContextMenuStrip = this.customLabelContextMenu;
-            this.customGpuUsageLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.customGpuUsageLabel.Location = new System.Drawing.Point(394, 31);
-            this.customGpuUsageLabel.Margin = new System.Windows.Forms.Padding(2);
-            this.customGpuUsageLabel.MaxLength = 40;
-            this.customGpuUsageLabel.Name = "customGpuUsageLabel";
-            this.customGpuUsageLabel.Size = new System.Drawing.Size(210, 19);
-            this.customGpuUsageLabel.TabIndex = 7;
-            this.customGpuUsageLabel.TextChanged += new System.EventHandler(this.VisualSettingChanged);
-            // 
-            // customRamLabelCaption
-            // 
-            this.customRamLabelCaption.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.customRamLabelCaption.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.customRamLabelCaption.Location = new System.Drawing.Point(2, 56);
-            this.customRamLabelCaption.Margin = new System.Windows.Forms.Padding(2);
-            this.customRamLabelCaption.Name = "customRamLabelCaption";
-            this.customRamLabelCaption.Size = new System.Drawing.Size(86, 23);
-            this.customRamLabelCaption.TabIndex = 12;
-            this.customRamLabelCaption.Text = "RAM Use:";
-            this.customRamLabelCaption.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            // 
-            // customRamLabel
-            // 
-            this.customRamLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.customRamLabel.ContextMenuStrip = this.customLabelContextMenu;
-            this.customRamLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.customRamLabel.Location = new System.Drawing.Point(92, 58);
-            this.customRamLabel.Margin = new System.Windows.Forms.Padding(2);
-            this.customRamLabel.MaxLength = 40;
-            this.customRamLabel.Name = "customRamLabel";
-            this.customRamLabel.Size = new System.Drawing.Size(208, 19);
-            this.customRamLabel.TabIndex = 9;
-            this.customRamLabel.TextChanged += new System.EventHandler(this.VisualSettingChanged);
-            // 
-            // customVramLabelCaption
-            // 
-            this.customVramLabelCaption.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.customVramLabelCaption.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.customVramLabelCaption.Location = new System.Drawing.Point(304, 56);
-            this.customVramLabelCaption.Margin = new System.Windows.Forms.Padding(2);
-            this.customVramLabelCaption.Name = "customVramLabelCaption";
-            this.customVramLabelCaption.Size = new System.Drawing.Size(86, 23);
-            this.customVramLabelCaption.TabIndex = 15;
-            this.customVramLabelCaption.Text = "VRAM Use:";
-            this.customVramLabelCaption.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            // 
-            // customVramLabel
-            // 
-            this.customVramLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.customVramLabel.ContextMenuStrip = this.customLabelContextMenu;
-            this.customVramLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.customVramLabel.Location = new System.Drawing.Point(394, 58);
-            this.customVramLabel.Margin = new System.Windows.Forms.Padding(2);
-            this.customVramLabel.MaxLength = 40;
-            this.customVramLabel.Name = "customVramLabel";
-            this.customVramLabel.Size = new System.Drawing.Size(210, 19);
-            this.customVramLabel.TabIndex = 11;
-            this.customVramLabel.TextChanged += new System.EventHandler(this.VisualSettingChanged);
-            // 
-            // customFpsLabelCaption
-            // 
-            this.customFpsLabelCaption.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.customFpsLabelCaption.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.customFpsLabelCaption.Location = new System.Drawing.Point(2, 83);
-            this.customFpsLabelCaption.Margin = new System.Windows.Forms.Padding(2);
-            this.customFpsLabelCaption.Name = "customFpsLabelCaption";
-            this.customFpsLabelCaption.Size = new System.Drawing.Size(86, 23);
-            this.customFpsLabelCaption.TabIndex = 18;
-            this.customFpsLabelCaption.Text = "FPS:";
-            this.customFpsLabelCaption.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            // 
-            // customFpsLabel
-            // 
-            this.customFpsLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.customFpsLabel.ContextMenuStrip = this.customLabelContextMenu;
-            this.customFpsLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.customFpsLabel.Location = new System.Drawing.Point(92, 85);
-            this.customFpsLabel.Margin = new System.Windows.Forms.Padding(2);
-            this.customFpsLabel.MaxLength = 40;
-            this.customFpsLabel.Name = "customFpsLabel";
-            this.customFpsLabel.Size = new System.Drawing.Size(208, 19);
-            this.customFpsLabel.TabIndex = 13;
-            this.customFpsLabel.TextChanged += new System.EventHandler(this.VisualSettingChanged);
-            // 
-            // customTimeLabelCaption
-            // 
-            this.customTimeLabelCaption.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.customTimeLabelCaption.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.customTimeLabelCaption.Location = new System.Drawing.Point(304, 83);
-            this.customTimeLabelCaption.Margin = new System.Windows.Forms.Padding(2);
-            this.customTimeLabelCaption.Name = "customTimeLabelCaption";
-            this.customTimeLabelCaption.Size = new System.Drawing.Size(86, 23);
-            this.customTimeLabelCaption.TabIndex = 14;
-            this.customTimeLabelCaption.Text = "Time:";
-            this.customTimeLabelCaption.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            // 
-            // customTimeLabel
-            // 
-            this.customTimeLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
-            this.customTimeLabel.ContextMenuStrip = this.customLabelContextMenu;
-            this.customTimeLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.customTimeLabel.Location = new System.Drawing.Point(394, 85);
-            this.customTimeLabel.Margin = new System.Windows.Forms.Padding(2);
-            this.customTimeLabel.MaxLength = 40;
-            this.customTimeLabel.Name = "customTimeLabel";
-            this.customTimeLabel.Size = new System.Drawing.Size(210, 19);
-            this.customTimeLabel.TabIndex = 15;
-            this.customTimeLabel.TextChanged += new System.EventHandler(this.VisualSettingChanged);
+            this.metricListHint.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.metricListHint.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.metricListHint.Location = new System.Drawing.Point(16, 314);
+            this.metricListHint.Name = "metricListHint";
+            this.metricListHint.Size = new System.Drawing.Size(606, 32);
+            this.metricListHint.TabIndex = 2;
+            this.metricListHint.Text = "Double-click Label or Group. F2 edits the label; Tab switches cells. Empty group " +
+    "= separate.";
             // 
             // hotkeyCard
             // 
@@ -926,20 +842,20 @@ namespace TrayTemps
             this.hotkeyCard.Controls.Add(this.hotkeyEnabled);
             this.hotkeyCard.Controls.Add(this.hotkeyValue);
             this.hotkeyCard.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.hotkeyCard.Location = new System.Drawing.Point(0, 350);
+            this.hotkeyCard.Location = new System.Drawing.Point(0, 363);
             this.hotkeyCard.Margin = new System.Windows.Forms.Padding(0);
             this.hotkeyCard.Name = "hotkeyCard";
-            this.hotkeyCard.Size = new System.Drawing.Size(638, 103);
+            this.hotkeyCard.Size = new System.Drawing.Size(638, 90);
             this.hotkeyCard.TabIndex = 2;
             // 
             // hotkeyLabel
             // 
             this.hotkeyLabel.AutoSize = true;
-            this.hotkeyLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.hotkeyLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.hotkeyLabel.Location = new System.Drawing.Point(16, 14);
             this.hotkeyLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.hotkeyLabel.Name = "hotkeyLabel";
-            this.hotkeyLabel.Size = new System.Drawing.Size(250, 15);
+            this.hotkeyLabel.Size = new System.Drawing.Size(300, 15);
             this.hotkeyLabel.TabIndex = 0;
             this.hotkeyLabel.Tag = "TrayTemps.Font.ExtraBold";
             this.hotkeyLabel.Text = "Global hotkey (press Ctrl, Shift, or Alt + a key):";
@@ -970,355 +886,274 @@ namespace TrayTemps
             // appearanceCard
             // 
             this.appearanceCard.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
-            this.appearanceCard.Controls.Add(this.label1);
-            this.appearanceCard.Controls.Add(this.fontColorsLabel);
-            this.appearanceCard.Controls.Add(this.fontFamilyLabel);
-            this.appearanceCard.Controls.Add(this.fontFamilyValue);
-            this.appearanceCard.Controls.Add(this.fontLabel);
-            this.appearanceCard.Controls.Add(this.fontSizeValue);
-            this.appearanceCard.Controls.Add(this.opacityLabel);
-            this.appearanceCard.Controls.Add(this.opacityValue);
-            this.appearanceCard.Controls.Add(this.opacityValueLabel);
-            this.appearanceCard.Controls.Add(this.backgroundOpacityValue);
-            this.appearanceCard.Controls.Add(this.backgroundOpacityValueLabel);
-            this.appearanceCard.Controls.Add(this.fontColorsLayout);
-            this.appearanceCard.Dock = System.Windows.Forms.DockStyle.Top;
+            this.appearanceCard.Controls.Add(this.appearanceLayout);
+            this.appearanceCard.Dock = System.Windows.Forms.DockStyle.Fill;
             this.appearanceCard.Location = new System.Drawing.Point(0, 0);
             this.appearanceCard.Margin = new System.Windows.Forms.Padding(0);
             this.appearanceCard.Name = "appearanceCard";
-            this.appearanceCard.Size = new System.Drawing.Size(638, 297);
+            this.appearanceCard.Size = new System.Drawing.Size(638, 453);
             this.appearanceCard.TabIndex = 0;
+            // 
+            // appearanceLayout
+            // 
+            this.appearanceLayout.ColumnCount = 1;
+            this.appearanceLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.appearanceLayout.Controls.Add(this.appearanceGrid, 0, 0);
+            this.appearanceLayout.Controls.Add(this.appearanceFooter, 0, 1);
+            this.appearanceLayout.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.appearanceLayout.Location = new System.Drawing.Point(0, 0);
+            this.appearanceLayout.Name = "appearanceLayout";
+            this.appearanceLayout.Padding = new System.Windows.Forms.Padding(12);
+            this.appearanceLayout.RowCount = 2;
+            this.appearanceLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.appearanceLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 84F));
+            this.appearanceLayout.Size = new System.Drawing.Size(638, 453);
+            this.appearanceLayout.TabIndex = 0;
+            // 
+            // appearanceGrid
+            // 
+            this.appearanceGrid.AllowUserToAddRows = false;
+            this.appearanceGrid.AllowUserToDeleteRows = false;
+            this.appearanceGrid.AllowUserToResizeRows = false;
+            this.appearanceGrid.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+            this.appearanceGrid.BorderStyle = System.Windows.Forms.BorderStyle.None;
+            this.appearanceGrid.CellBorderStyle = System.Windows.Forms.DataGridViewCellBorderStyle.None;
+            this.appearanceGrid.ColumnHeadersBorderStyle = System.Windows.Forms.DataGridViewHeaderBorderStyle.None;
+            dataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle1.BackColor = System.Drawing.SystemColors.Control;
+            dataGridViewCellStyle1.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold);
+            dataGridViewCellStyle1.ForeColor = System.Drawing.SystemColors.WindowText;
+            dataGridViewCellStyle1.Padding = new System.Windows.Forms.Padding(6, 4, 0, 4);
+            dataGridViewCellStyle1.SelectionBackColor = System.Drawing.SystemColors.Highlight;
+            dataGridViewCellStyle1.SelectionForeColor = System.Drawing.SystemColors.HighlightText;
+            dataGridViewCellStyle1.WrapMode = System.Windows.Forms.DataGridViewTriState.True;
+            this.appearanceGrid.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle1;
+            this.appearanceGrid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.appearanceGrid.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
+            this.appearanceMetricColumn,
+            this.appearanceFamilyColumn,
+            this.appearanceSizeColumn,
+            this.appearanceLabelColorColumn,
+            this.appearanceValueColorColumn});
+            dataGridViewCellStyle4.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle4.BackColor = System.Drawing.SystemColors.Window;
+            dataGridViewCellStyle4.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F);
+            dataGridViewCellStyle4.ForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle4.Padding = new System.Windows.Forms.Padding(6, 0, 0, 0);
+            dataGridViewCellStyle4.SelectionBackColor = System.Drawing.SystemColors.Highlight;
+            dataGridViewCellStyle4.SelectionForeColor = System.Drawing.SystemColors.HighlightText;
+            dataGridViewCellStyle4.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
+            this.appearanceGrid.DefaultCellStyle = dataGridViewCellStyle4;
+            this.appearanceGrid.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.appearanceGrid.EditMode = System.Windows.Forms.DataGridViewEditMode.EditOnEnter;
+            this.appearanceGrid.EnableHeadersVisualStyles = false;
+            this.appearanceGrid.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F);
+            this.appearanceGrid.Location = new System.Drawing.Point(15, 15);
+            this.appearanceGrid.MultiSelect = false;
+            this.appearanceGrid.Name = "appearanceGrid";
+            dataGridViewCellStyle5.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle5.BackColor = System.Drawing.SystemColors.Control;
+            dataGridViewCellStyle5.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            dataGridViewCellStyle5.ForeColor = System.Drawing.SystemColors.WindowText;
+            dataGridViewCellStyle5.SelectionBackColor = System.Drawing.SystemColors.Highlight;
+            dataGridViewCellStyle5.SelectionForeColor = System.Drawing.SystemColors.HighlightText;
+            dataGridViewCellStyle5.WrapMode = System.Windows.Forms.DataGridViewTriState.True;
+            this.appearanceGrid.RowHeadersDefaultCellStyle = dataGridViewCellStyle5;
+            this.appearanceGrid.RowHeadersVisible = false;
+            this.appearanceGrid.RowTemplate.Height = 26;
+            this.appearanceGrid.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
+            this.appearanceGrid.Size = new System.Drawing.Size(608, 339);
+            this.appearanceGrid.TabIndex = 0;
+            this.appearanceGrid.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.AppearanceGrid_CellContentClick);
+            this.appearanceGrid.CellPainting += new System.Windows.Forms.DataGridViewCellPaintingEventHandler(this.AppearanceGrid_CellPainting);
+            this.appearanceGrid.CellValueChanged += new System.Windows.Forms.DataGridViewCellEventHandler(this.AppearanceGrid_CellValueChanged);
+            this.appearanceGrid.CurrentCellDirtyStateChanged += new System.EventHandler(this.AppearanceGrid_CurrentCellDirtyStateChanged);
+            this.appearanceGrid.DataError += new System.Windows.Forms.DataGridViewDataErrorEventHandler(this.AppearanceGrid_DataError);
+            this.appearanceGrid.EditingControlShowing += new System.Windows.Forms.DataGridViewEditingControlShowingEventHandler(this.AppearanceGrid_EditingControlShowing);
+            this.appearanceGrid.Paint += new System.Windows.Forms.PaintEventHandler(this.AppearanceGrid_Paint);
+            this.appearanceGrid.Enter += new System.EventHandler(this.AppearanceGrid_FocusChanged);
+            this.appearanceGrid.Leave += new System.EventHandler(this.AppearanceGrid_FocusChanged);
+            // 
+            // appearanceMetricColumn
+            // 
+            this.appearanceMetricColumn.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
+            this.appearanceMetricColumn.HeaderText = "Metric";
+            this.appearanceMetricColumn.MinimumWidth = 140;
+            this.appearanceMetricColumn.Name = "appearanceMetricColumn";
+            this.appearanceMetricColumn.ReadOnly = true;
+            this.appearanceMetricColumn.Width = 140;
+            // 
+            // appearanceFamilyColumn
+            // 
+            this.appearanceFamilyColumn.DisplayStyleForCurrentCellOnly = true;
+            this.appearanceFamilyColumn.DropDownWidth = 260;
+            this.appearanceFamilyColumn.FillWeight = 150F;
+            this.appearanceFamilyColumn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.appearanceFamilyColumn.HeaderText = "Font Family";
+            this.appearanceFamilyColumn.MinimumWidth = 160;
+            this.appearanceFamilyColumn.Name = "appearanceFamilyColumn";
+            // 
+            // appearanceSizeColumn
+            // 
+            this.appearanceSizeColumn.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
+            this.appearanceSizeColumn.DisplayStyleForCurrentCellOnly = true;
+            this.appearanceSizeColumn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.appearanceSizeColumn.HeaderText = "Font Size";
+            this.appearanceSizeColumn.MinimumWidth = 70;
+            this.appearanceSizeColumn.Name = "appearanceSizeColumn";
+            this.appearanceSizeColumn.Width = 70;
+            // 
+            // appearanceLabelColorColumn
+            // 
+            this.appearanceLabelColorColumn.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
+            dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter;
+            dataGridViewCellStyle2.Padding = new System.Windows.Forms.Padding(5, 3, 5, 3);
+            this.appearanceLabelColorColumn.DefaultCellStyle = dataGridViewCellStyle2;
+            this.appearanceLabelColorColumn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.appearanceLabelColorColumn.HeaderText = "Label Color";
+            this.appearanceLabelColorColumn.MinimumWidth = 62;
+            this.appearanceLabelColorColumn.Name = "appearanceLabelColorColumn";
+            this.appearanceLabelColorColumn.Width = 62;
+            // 
+            // appearanceValueColorColumn
+            // 
+            this.appearanceValueColorColumn.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
+            dataGridViewCellStyle3.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter;
+            dataGridViewCellStyle3.Padding = new System.Windows.Forms.Padding(5, 3, 5, 3);
+            this.appearanceValueColorColumn.DefaultCellStyle = dataGridViewCellStyle3;
+            this.appearanceValueColorColumn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.appearanceValueColorColumn.HeaderText = "Value Color";
+            this.appearanceValueColorColumn.MinimumWidth = 62;
+            this.appearanceValueColorColumn.Name = "appearanceValueColorColumn";
+            this.appearanceValueColorColumn.Width = 62;
+            // 
+            // appearanceFooter
+            // 
+            this.appearanceFooter.ColumnCount = 4;
+            this.appearanceFooter.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 170F));
+            this.appearanceFooter.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 48F));
+            this.appearanceFooter.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.appearanceFooter.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 180F));
+            this.appearanceFooter.Controls.Add(this.label1, 0, 0);
+            this.appearanceFooter.Controls.Add(this.backgroundOpacityValueLabel, 1, 0);
+            this.appearanceFooter.Controls.Add(this.backgroundOpacityValue, 2, 0);
+            this.appearanceFooter.Controls.Add(this.backgroundColorLayout, 3, 0);
+            this.appearanceFooter.Controls.Add(this.opacityLabel, 0, 1);
+            this.appearanceFooter.Controls.Add(this.opacityValueLabel, 1, 1);
+            this.appearanceFooter.Controls.Add(this.opacityValue, 2, 1);
+            this.appearanceFooter.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.appearanceFooter.Location = new System.Drawing.Point(15, 360);
+            this.appearanceFooter.Name = "appearanceFooter";
+            this.appearanceFooter.RowCount = 2;
+            this.appearanceFooter.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 50F));
+            this.appearanceFooter.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 50F));
+            this.appearanceFooter.Size = new System.Drawing.Size(608, 78);
+            this.appearanceFooter.TabIndex = 1;
             // 
             // label1
             // 
             this.label1.AutoSize = true;
+            this.label1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.label1.Location = new System.Drawing.Point(16, 238);
+            this.label1.Location = new System.Drawing.Point(2, 0);
             this.label1.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(90, 13);
+            this.label1.Size = new System.Drawing.Size(166, 39);
             this.label1.TabIndex = 13;
-            this.label1.Text = "BG Transparency:";
+            this.label1.Text = "Background transparency:";
+            this.label1.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
-            // fontColorsLabel
+            // backgroundOpacityValueLabel
             // 
-            this.fontColorsLabel.AutoSize = true;
-            this.fontColorsLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.fontColorsLabel.Location = new System.Drawing.Point(16, 14);
-            this.fontColorsLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
-            this.fontColorsLabel.Name = "fontColorsLabel";
-            this.fontColorsLabel.Size = new System.Drawing.Size(76, 15);
-            this.fontColorsLabel.TabIndex = 0;
-            this.fontColorsLabel.Tag = "TrayTemps.Font.ExtraBold";
-            this.fontColorsLabel.Text = "Appearance:";
-            // 
-            // fontFamilyLabel
-            // 
-            this.fontFamilyLabel.AutoSize = true;
-            this.fontFamilyLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.fontFamilyLabel.Location = new System.Drawing.Point(16, 46);
-            this.fontFamilyLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
-            this.fontFamilyLabel.Name = "fontFamilyLabel";
-            this.fontFamilyLabel.Size = new System.Drawing.Size(60, 13);
-            this.fontFamilyLabel.TabIndex = 1;
-            this.fontFamilyLabel.Text = "Font family:";
-            // 
-            // fontFamilyValue
-            // 
-            this.fontFamilyValue.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.fontFamilyValue.DropDownHeight = 200;
-            this.fontFamilyValue.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.fontFamilyValue.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.fontFamilyValue.FormattingEnabled = true;
-            this.fontFamilyValue.IntegralHeight = false;
-            this.fontFamilyValue.Location = new System.Drawing.Point(145, 42);
-            this.fontFamilyValue.Margin = new System.Windows.Forms.Padding(2);
-            this.fontFamilyValue.Name = "fontFamilyValue";
-            this.fontFamilyValue.Size = new System.Drawing.Size(269, 21);
-            this.fontFamilyValue.TabIndex = 0;
-            this.fontFamilyValue.SelectedIndexChanged += new System.EventHandler(this.VisualSettingChanged);
-            // 
-            // fontLabel
-            // 
-            this.fontLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.fontLabel.AutoSize = true;
-            this.fontLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.fontLabel.Location = new System.Drawing.Point(475, 46);
-            this.fontLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
-            this.fontLabel.Name = "fontLabel";
-            this.fontLabel.Size = new System.Drawing.Size(30, 13);
-            this.fontLabel.TabIndex = 2;
-            this.fontLabel.Text = "Size:";
-            // 
-            // fontSizeValue
-            // 
-            this.fontSizeValue.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.fontSizeValue.DropDownHeight = 200;
-            this.fontSizeValue.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.fontSizeValue.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.fontSizeValue.FormattingEnabled = true;
-            this.fontSizeValue.IntegralHeight = false;
-            this.fontSizeValue.Location = new System.Drawing.Point(531, 42);
-            this.fontSizeValue.Margin = new System.Windows.Forms.Padding(2);
-            this.fontSizeValue.Name = "fontSizeValue";
-            this.fontSizeValue.Size = new System.Drawing.Size(86, 21);
-            this.fontSizeValue.TabIndex = 1;
-            this.fontSizeValue.SelectedIndexChanged += new System.EventHandler(this.VisualSettingChanged);
-            // 
-            // opacityLabel
-            // 
-            this.opacityLabel.AutoSize = true;
-            this.opacityLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.opacityLabel.Location = new System.Drawing.Point(16, 92);
-            this.opacityLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
-            this.opacityLabel.Name = "opacityLabel";
-            this.opacityLabel.Size = new System.Drawing.Size(96, 13);
-            this.opacityLabel.TabIndex = 3;
-            this.opacityLabel.Text = "OSD transparency:";
-            // 
-            // opacityValue
-            // 
-            this.opacityValue.AutoSize = false;
-            this.opacityValue.Location = new System.Drawing.Point(194, 83);
-            this.opacityValue.Margin = new System.Windows.Forms.Padding(2);
-            this.opacityValue.Maximum = 100;
-            this.opacityValue.Minimum = 20;
-            this.opacityValue.Name = "opacityValue";
-            this.opacityValue.Size = new System.Drawing.Size(125, 30);
-            this.opacityValue.TabIndex = 2;
-            this.opacityValue.TickFrequency = 10;
-            this.opacityValue.Value = 90;
-            this.opacityValue.ValueChanged += new System.EventHandler(this.OpacityValue_ValueChanged);
-            // 
-            // opacityValueLabel
-            // 
-            this.opacityValueLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.opacityValueLabel.Location = new System.Drawing.Point(147, 87);
-            this.opacityValueLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
-            this.opacityValueLabel.Name = "opacityValueLabel";
-            this.opacityValueLabel.Size = new System.Drawing.Size(46, 22);
-            this.opacityValueLabel.TabIndex = 4;
-            this.opacityValueLabel.Text = "90%";
-            this.opacityValueLabel.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.backgroundOpacityValueLabel.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.backgroundOpacityValueLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.backgroundOpacityValueLabel.Location = new System.Drawing.Point(172, 0);
+            this.backgroundOpacityValueLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
+            this.backgroundOpacityValueLabel.Name = "backgroundOpacityValueLabel";
+            this.backgroundOpacityValueLabel.Size = new System.Drawing.Size(44, 39);
+            this.backgroundOpacityValueLabel.TabIndex = 10;
+            this.backgroundOpacityValueLabel.Text = "0%";
+            this.backgroundOpacityValueLabel.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             // 
             // backgroundOpacityValue
             // 
             this.backgroundOpacityValue.AutoSize = false;
-            this.backgroundOpacityValue.Location = new System.Drawing.Point(194, 229);
+            this.backgroundOpacityValue.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.backgroundOpacityValue.Location = new System.Drawing.Point(220, 2);
             this.backgroundOpacityValue.Margin = new System.Windows.Forms.Padding(2);
             this.backgroundOpacityValue.Maximum = 100;
             this.backgroundOpacityValue.Name = "backgroundOpacityValue";
-            this.backgroundOpacityValue.Size = new System.Drawing.Size(123, 30);
+            this.backgroundOpacityValue.Size = new System.Drawing.Size(206, 35);
             this.backgroundOpacityValue.TabIndex = 8;
             this.backgroundOpacityValue.TickFrequency = 10;
-            this.backgroundOpacityValue.Value = 100;
             this.backgroundOpacityValue.ValueChanged += new System.EventHandler(this.BackgroundOpacityValue_ValueChanged);
             // 
-            // backgroundOpacityValueLabel
+            // backgroundColorLayout
             // 
-            this.backgroundOpacityValueLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.backgroundOpacityValueLabel.Location = new System.Drawing.Point(147, 233);
-            this.backgroundOpacityValueLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
-            this.backgroundOpacityValueLabel.Name = "backgroundOpacityValueLabel";
-            this.backgroundOpacityValueLabel.Size = new System.Drawing.Size(46, 22);
-            this.backgroundOpacityValueLabel.TabIndex = 10;
-            this.backgroundOpacityValueLabel.Text = "100%";
-            this.backgroundOpacityValueLabel.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-            // 
-            // fontColorsLayout
-            // 
-            this.fontColorsLayout.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.fontColorsLayout.ColumnCount = 6;
-            this.fontColorsLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 13.95349F));
-            this.fontColorsLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 19.37984F));
-            this.fontColorsLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 13.95349F));
-            this.fontColorsLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 19.37984F));
-            this.fontColorsLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 13.95349F));
-            this.fontColorsLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 19.37984F));
-            this.fontColorsLayout.Controls.Add(this.cpuFontColorLabel, 0, 0);
-            this.fontColorsLayout.Controls.Add(this.cpuFontColor, 1, 0);
-            this.fontColorsLayout.Controls.Add(this.gpuFontColorLabel, 2, 0);
-            this.fontColorsLayout.Controls.Add(this.gpuFontColor, 3, 0);
-            this.fontColorsLayout.Controls.Add(this.fpsFontColorLabel, 4, 0);
-            this.fontColorsLayout.Controls.Add(this.fpsFontColor, 5, 0);
-            this.fontColorsLayout.Controls.Add(this.ramFontColorLabel, 0, 1);
-            this.fontColorsLayout.Controls.Add(this.ramFontColor, 1, 1);
-            this.fontColorsLayout.Controls.Add(this.vramFontColorLabel, 2, 1);
-            this.fontColorsLayout.Controls.Add(this.vramFontColor, 3, 1);
-            this.fontColorsLayout.Controls.Add(this.backgroundColorLabel, 4, 1);
-            this.fontColorsLayout.Controls.Add(this.backgroundColor, 5, 1);
-            this.fontColorsLayout.Location = new System.Drawing.Point(16, 127);
-            this.fontColorsLayout.Margin = new System.Windows.Forms.Padding(2);
-            this.fontColorsLayout.Name = "fontColorsLayout";
-            this.fontColorsLayout.RowCount = 2;
-            this.fontColorsLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 50F));
-            this.fontColorsLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 50F));
-            this.fontColorsLayout.Size = new System.Drawing.Size(603, 86);
-            this.fontColorsLayout.TabIndex = 11;
-            // 
-            // cpuFontColorLabel
-            // 
-            this.cpuFontColorLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.cpuFontColorLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.cpuFontColorLabel.Location = new System.Drawing.Point(2, 2);
-            this.cpuFontColorLabel.Margin = new System.Windows.Forms.Padding(2);
-            this.cpuFontColorLabel.Name = "cpuFontColorLabel";
-            this.cpuFontColorLabel.Size = new System.Drawing.Size(80, 39);
-            this.cpuFontColorLabel.TabIndex = 5;
-            this.cpuFontColorLabel.Text = "CPU color:";
-            this.cpuFontColorLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            // 
-            // cpuFontColor
-            // 
-            this.cpuFontColor.BackColor = System.Drawing.Color.Aqua;
-            this.cpuFontColor.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.cpuFontColor.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.cpuFontColor.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.cpuFontColor.Location = new System.Drawing.Point(86, 2);
-            this.cpuFontColor.Margin = new System.Windows.Forms.Padding(2);
-            this.cpuFontColor.Name = "cpuFontColor";
-            this.cpuFontColor.Size = new System.Drawing.Size(112, 39);
-            this.cpuFontColor.TabIndex = 3;
-            this.cpuFontColor.Text = "🎨";
-            this.cpuFontColor.UseVisualStyleBackColor = false;
-            this.cpuFontColor.Click += new System.EventHandler(this.FontColor_Click);
-            // 
-            // gpuFontColorLabel
-            // 
-            this.gpuFontColorLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.gpuFontColorLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.gpuFontColorLabel.Location = new System.Drawing.Point(202, 2);
-            this.gpuFontColorLabel.Margin = new System.Windows.Forms.Padding(2);
-            this.gpuFontColorLabel.Name = "gpuFontColorLabel";
-            this.gpuFontColorLabel.Size = new System.Drawing.Size(80, 39);
-            this.gpuFontColorLabel.TabIndex = 6;
-            this.gpuFontColorLabel.Text = "GPU color:";
-            this.gpuFontColorLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            // 
-            // gpuFontColor
-            // 
-            this.gpuFontColor.BackColor = System.Drawing.Color.Gold;
-            this.gpuFontColor.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.gpuFontColor.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.gpuFontColor.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.gpuFontColor.Location = new System.Drawing.Point(286, 2);
-            this.gpuFontColor.Margin = new System.Windows.Forms.Padding(2);
-            this.gpuFontColor.Name = "gpuFontColor";
-            this.gpuFontColor.Size = new System.Drawing.Size(112, 39);
-            this.gpuFontColor.TabIndex = 4;
-            this.gpuFontColor.Text = "🎨";
-            this.gpuFontColor.UseVisualStyleBackColor = false;
-            this.gpuFontColor.Click += new System.EventHandler(this.FontColor_Click);
-            // 
-            // fpsFontColorLabel
-            // 
-            this.fpsFontColorLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.fpsFontColorLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.fpsFontColorLabel.Location = new System.Drawing.Point(402, 2);
-            this.fpsFontColorLabel.Margin = new System.Windows.Forms.Padding(2);
-            this.fpsFontColorLabel.Name = "fpsFontColorLabel";
-            this.fpsFontColorLabel.Size = new System.Drawing.Size(80, 39);
-            this.fpsFontColorLabel.TabIndex = 11;
-            this.fpsFontColorLabel.Text = "FPS color:";
-            this.fpsFontColorLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            // 
-            // fpsFontColor
-            // 
-            this.fpsFontColor.BackColor = System.Drawing.Color.WhiteSmoke;
-            this.fpsFontColor.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.fpsFontColor.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.fpsFontColor.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.fpsFontColor.Location = new System.Drawing.Point(486, 2);
-            this.fpsFontColor.Margin = new System.Windows.Forms.Padding(2);
-            this.fpsFontColor.Name = "fpsFontColor";
-            this.fpsFontColor.Size = new System.Drawing.Size(115, 39);
-            this.fpsFontColor.TabIndex = 12;
-            this.fpsFontColor.Text = "🎨";
-            this.fpsFontColor.UseVisualStyleBackColor = false;
-            this.fpsFontColor.Click += new System.EventHandler(this.FontColor_Click);
-            // 
-            // ramFontColorLabel
-            // 
-            this.ramFontColorLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.ramFontColorLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.ramFontColorLabel.Location = new System.Drawing.Point(2, 45);
-            this.ramFontColorLabel.Margin = new System.Windows.Forms.Padding(2);
-            this.ramFontColorLabel.Name = "ramFontColorLabel";
-            this.ramFontColorLabel.Size = new System.Drawing.Size(80, 39);
-            this.ramFontColorLabel.TabIndex = 7;
-            this.ramFontColorLabel.Text = "RAM color:";
-            this.ramFontColorLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            // 
-            // ramFontColor
-            // 
-            this.ramFontColor.BackColor = System.Drawing.Color.LightGreen;
-            this.ramFontColor.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.ramFontColor.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.ramFontColor.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.ramFontColor.Location = new System.Drawing.Point(86, 45);
-            this.ramFontColor.Margin = new System.Windows.Forms.Padding(2);
-            this.ramFontColor.Name = "ramFontColor";
-            this.ramFontColor.Size = new System.Drawing.Size(112, 39);
-            this.ramFontColor.TabIndex = 5;
-            this.ramFontColor.Text = "🎨";
-            this.ramFontColor.UseVisualStyleBackColor = false;
-            this.ramFontColor.Click += new System.EventHandler(this.FontColor_Click);
-            // 
-            // vramFontColorLabel
-            // 
-            this.vramFontColorLabel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.vramFontColorLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.vramFontColorLabel.Location = new System.Drawing.Point(202, 45);
-            this.vramFontColorLabel.Margin = new System.Windows.Forms.Padding(2);
-            this.vramFontColorLabel.Name = "vramFontColorLabel";
-            this.vramFontColorLabel.Size = new System.Drawing.Size(80, 39);
-            this.vramFontColorLabel.TabIndex = 8;
-            this.vramFontColorLabel.Text = "VRAM color:";
-            this.vramFontColorLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            // 
-            // vramFontColor
-            // 
-            this.vramFontColor.BackColor = System.Drawing.Color.Violet;
-            this.vramFontColor.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.vramFontColor.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.vramFontColor.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.vramFontColor.Location = new System.Drawing.Point(286, 45);
-            this.vramFontColor.Margin = new System.Windows.Forms.Padding(2);
-            this.vramFontColor.Name = "vramFontColor";
-            this.vramFontColor.Size = new System.Drawing.Size(112, 39);
-            this.vramFontColor.TabIndex = 6;
-            this.vramFontColor.Text = "🎨";
-            this.vramFontColor.UseVisualStyleBackColor = false;
-            this.vramFontColor.Click += new System.EventHandler(this.FontColor_Click);
+            this.backgroundColorLayout.ColumnCount = 2;
+            this.backgroundColorLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.backgroundColorLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 52F));
+            this.backgroundColorLayout.Controls.Add(this.backgroundColorLabel, 0, 0);
+            this.backgroundColorLayout.Controls.Add(this.backgroundColor, 1, 0);
+            this.backgroundColorLayout.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.backgroundColorLayout.Location = new System.Drawing.Point(428, 0);
+            this.backgroundColorLayout.Margin = new System.Windows.Forms.Padding(0);
+            this.backgroundColorLayout.Name = "backgroundColorLayout";
+            this.backgroundColorLayout.RowCount = 1;
+            this.backgroundColorLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.backgroundColorLayout.Size = new System.Drawing.Size(180, 39);
+            this.backgroundColorLayout.TabIndex = 9;
             // 
             // backgroundColorLabel
             // 
             this.backgroundColorLabel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.backgroundColorLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.backgroundColorLabel.Location = new System.Drawing.Point(402, 45);
+            this.backgroundColorLabel.Location = new System.Drawing.Point(2, 2);
             this.backgroundColorLabel.Margin = new System.Windows.Forms.Padding(2);
             this.backgroundColorLabel.Name = "backgroundColorLabel";
-            this.backgroundColorLabel.Size = new System.Drawing.Size(80, 39);
+            this.backgroundColorLabel.Size = new System.Drawing.Size(124, 35);
             this.backgroundColorLabel.TabIndex = 9;
-            this.backgroundColorLabel.Text = "BG Color:";
-            this.backgroundColorLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.backgroundColorLabel.Text = "Background color:";
+            this.backgroundColorLabel.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             // 
-            // backgroundColor
+            // opacityLabel
             // 
-            this.backgroundColor.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(24)))), ((int)(((byte)(24)))), ((int)(((byte)(24)))));
-            this.backgroundColor.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.backgroundColor.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.backgroundColor.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.backgroundColor.Location = new System.Drawing.Point(486, 45);
-            this.backgroundColor.Margin = new System.Windows.Forms.Padding(2);
-            this.backgroundColor.Name = "backgroundColor";
-            this.backgroundColor.Size = new System.Drawing.Size(115, 39);
-            this.backgroundColor.TabIndex = 7;
-            this.backgroundColor.Text = "🎨";
-            this.backgroundColor.UseVisualStyleBackColor = false;
-            this.backgroundColor.Click += new System.EventHandler(this.FontColor_Click);
+            this.opacityLabel.AutoSize = true;
+            this.opacityLabel.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.opacityLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.opacityLabel.Location = new System.Drawing.Point(2, 39);
+            this.opacityLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
+            this.opacityLabel.Name = "opacityLabel";
+            this.opacityLabel.Size = new System.Drawing.Size(166, 39);
+            this.opacityLabel.TabIndex = 3;
+            this.opacityLabel.Text = "OSD transparency:";
+            this.opacityLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            // 
+            // opacityValueLabel
+            // 
+            this.opacityValueLabel.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.opacityValueLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.opacityValueLabel.Location = new System.Drawing.Point(172, 39);
+            this.opacityValueLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
+            this.opacityValueLabel.Name = "opacityValueLabel";
+            this.opacityValueLabel.Size = new System.Drawing.Size(44, 39);
+            this.opacityValueLabel.TabIndex = 4;
+            this.opacityValueLabel.Text = "10%";
+            this.opacityValueLabel.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            // 
+            // opacityValue
+            // 
+            this.opacityValue.AutoSize = false;
+            this.opacityValue.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.opacityValue.Location = new System.Drawing.Point(220, 41);
+            this.opacityValue.Margin = new System.Windows.Forms.Padding(2);
+            this.opacityValue.Maximum = 80;
+            this.opacityValue.Name = "opacityValue";
+            this.opacityValue.Size = new System.Drawing.Size(206, 35);
+            this.opacityValue.TabIndex = 2;
+            this.opacityValue.TickFrequency = 10;
+            this.opacityValue.Value = 10;
+            this.opacityValue.ValueChanged += new System.EventHandler(this.OpacityValue_ValueChanged);
             // 
             // layoutPage
             // 
@@ -1352,16 +1187,13 @@ namespace TrayTemps
             // 
             this.layoutCard.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
             this.layoutCard.Controls.Add(this.orderLabel);
-            this.layoutCard.Controls.Add(this.positionLabel);
-            this.layoutCard.Controls.Add(this.positionValue);
-            this.layoutCard.Controls.Add(this.columnsLabel);
-            this.layoutCard.Controls.Add(this.columnsValue);
             this.layoutCard.Controls.Add(this.displayOrderLabel);
             this.layoutCard.Controls.Add(this.itemOrder);
             this.layoutCard.Controls.Add(this.orderUp);
             this.layoutCard.Controls.Add(this.orderDown);
-            this.layoutCard.Controls.Add(this.metricGroupingModeLabel);
-            this.layoutCard.Controls.Add(this.metricGroupingMode);
+            this.layoutCard.Controls.Add(this.groupFieldsLayout);
+            this.layoutCard.Controls.Add(this.groupCaptionLabel);
+            this.layoutCard.Controls.Add(this.groupCaption);
             this.layoutCard.Dock = System.Windows.Forms.DockStyle.Fill;
             this.layoutCard.Location = new System.Drawing.Point(0, 0);
             this.layoutCard.Margin = new System.Windows.Forms.Padding(0, 0, 0, 8);
@@ -1373,101 +1205,123 @@ namespace TrayTemps
             // orderLabel
             // 
             this.orderLabel.AutoSize = true;
-            this.orderLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.orderLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.orderLabel.Location = new System.Drawing.Point(16, 16);
             this.orderLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.orderLabel.Name = "orderLabel";
-            this.orderLabel.Size = new System.Drawing.Size(113, 15);
+            this.orderLabel.Size = new System.Drawing.Size(133, 15);
             this.orderLabel.TabIndex = 0;
             this.orderLabel.Tag = "TrayTemps.Font.ExtraBold";
             this.orderLabel.Text = "Position and layout:";
             // 
+            // displayOrderLabel
+            // 
+            this.displayOrderLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.displayOrderLabel.AutoSize = true;
+            this.displayOrderLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.displayOrderLabel.Location = new System.Drawing.Point(457, 155);
+            this.displayOrderLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
+            this.displayOrderLabel.Name = "displayOrderLabel";
+            this.displayOrderLabel.Size = new System.Drawing.Size(114, 13);
+            this.displayOrderLabel.TabIndex = 3;
+            this.displayOrderLabel.Text = "* Display order / priority";
+            // 
+            // groupFieldsLayout
+            // 
+            this.groupFieldsLayout.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.groupFieldsLayout.ColumnCount = 6;
+            this.groupFieldsLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 15F));
+            this.groupFieldsLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 20F));
+            this.groupFieldsLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 15F));
+            this.groupFieldsLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 20F));
+            this.groupFieldsLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 20F));
+            this.groupFieldsLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 10F));
+            this.groupFieldsLayout.Controls.Add(this.positionLabel, 0, 0);
+            this.groupFieldsLayout.Controls.Add(this.columnsValue, 5, 0);
+            this.groupFieldsLayout.Controls.Add(this.columnsLabel, 4, 0);
+            this.groupFieldsLayout.Controls.Add(this.positionValue, 1, 0);
+            this.groupFieldsLayout.Controls.Add(this.groupSeparatorLabel, 2, 0);
+            this.groupFieldsLayout.Controls.Add(this.groupSeparator, 3, 0);
+            this.groupFieldsLayout.Location = new System.Drawing.Point(16, 40);
+            this.groupFieldsLayout.Name = "groupFieldsLayout";
+            this.groupFieldsLayout.RowCount = 1;
+            this.groupFieldsLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.groupFieldsLayout.Size = new System.Drawing.Size(606, 28);
+            this.groupFieldsLayout.TabIndex = 5;
+            // 
             // positionLabel
             // 
             this.positionLabel.AutoSize = true;
+            this.positionLabel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.positionLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.positionLabel.Location = new System.Drawing.Point(16, 48);
+            this.positionLabel.Location = new System.Drawing.Point(2, 0);
             this.positionLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.positionLabel.Name = "positionLabel";
-            this.positionLabel.Size = new System.Drawing.Size(47, 13);
+            this.positionLabel.Size = new System.Drawing.Size(86, 28);
             this.positionLabel.TabIndex = 1;
             this.positionLabel.Text = "Position:";
-            // 
-            // positionValue
-            // 
-            this.positionValue.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.positionValue.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.positionValue.FormattingEnabled = true;
-            this.positionValue.Location = new System.Drawing.Point(148, 44);
-            this.positionValue.Margin = new System.Windows.Forms.Padding(2);
-            this.positionValue.Name = "positionValue";
-            this.positionValue.Size = new System.Drawing.Size(169, 21);
-            this.positionValue.TabIndex = 0;
-            this.positionValue.SelectedIndexChanged += new System.EventHandler(this.VisualSettingChanged);
+            this.positionLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // columnsLabel
             // 
-            this.columnsLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.columnsLabel.AutoSize = true;
+            this.columnsLabel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.columnsLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.columnsLabel.Location = new System.Drawing.Point(421, 48);
+            this.columnsLabel.Location = new System.Drawing.Point(424, 0);
             this.columnsLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.columnsLabel.Name = "columnsLabel";
-            this.columnsLabel.Size = new System.Drawing.Size(79, 13);
+            this.columnsLabel.Size = new System.Drawing.Size(117, 28);
             this.columnsLabel.TabIndex = 2;
             this.columnsLabel.Text = "No. of columns:";
+            this.columnsLabel.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             // 
-            // displayOrderLabel
+            // positionValue
             // 
-            this.displayOrderLabel.AutoSize = true;
-            this.displayOrderLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.displayOrderLabel.Location = new System.Drawing.Point(16, 109);
-            this.displayOrderLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
-            this.displayOrderLabel.Name = "displayOrderLabel";
-            this.displayOrderLabel.Size = new System.Drawing.Size(110, 13);
-            this.displayOrderLabel.TabIndex = 3;
-            this.displayOrderLabel.Text = "Display order / priority:";
+            this.positionValue.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.positionValue.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.positionValue.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.positionValue.FormattingEnabled = true;
+            this.positionValue.Items.AddRange(new object[] {
+            "Top left",
+            "Top center",
+            "Top right",
+            "Center left",
+            "Center",
+            "Center right",
+            "Bottom left",
+            "Bottom center",
+            "Bottom right"});
+            this.positionValue.Location = new System.Drawing.Point(92, 2);
+            this.positionValue.Margin = new System.Windows.Forms.Padding(2);
+            this.positionValue.Name = "positionValue";
+            this.positionValue.Size = new System.Drawing.Size(117, 21);
+            this.positionValue.TabIndex = 0;
+            this.positionValue.SelectedIndexChanged += new System.EventHandler(this.VisualSettingChanged);
             // 
-            // itemOrder
+            // groupSeparatorLabel
             // 
-            this.itemOrder.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.itemOrder.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.itemOrder.FormattingEnabled = true;
-            this.itemOrder.Location = new System.Drawing.Point(18, 132);
-            this.itemOrder.Margin = new System.Windows.Forms.Padding(2);
-            this.itemOrder.Name = "itemOrder";
-            this.itemOrder.Size = new System.Drawing.Size(502, 121);
-            this.itemOrder.TabIndex = 2;
+            this.groupSeparatorLabel.AutoSize = true;
+            this.groupSeparatorLabel.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.groupSeparatorLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.groupSeparatorLabel.Location = new System.Drawing.Point(214, 0);
+            this.groupSeparatorLabel.Name = "groupSeparatorLabel";
+            this.groupSeparatorLabel.Size = new System.Drawing.Size(84, 28);
+            this.groupSeparatorLabel.TabIndex = 5;
+            this.groupSeparatorLabel.Text = "Separator:";
+            this.groupSeparatorLabel.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             // 
-            // orderUp
+            // groupCaptionLabel
             // 
-            this.orderUp.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.orderUp.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.orderUp.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.orderUp.Location = new System.Drawing.Point(531, 132);
-            this.orderUp.Margin = new System.Windows.Forms.Padding(2);
-            this.orderUp.Name = "orderUp";
-            this.orderUp.Size = new System.Drawing.Size(86, 32);
-            this.orderUp.TabIndex = 3;
-            this.orderUp.Text = "Up";
-            this.orderUp.UseVisualStyleBackColor = true;
-            this.orderUp.Click += new System.EventHandler(this.OrderUp_Click);
-            // 
-            // orderDown
-            // 
-            this.orderDown.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.orderDown.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.orderDown.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.orderDown.Location = new System.Drawing.Point(531, 170);
-            this.orderDown.Margin = new System.Windows.Forms.Padding(2);
-            this.orderDown.Name = "orderDown";
-            this.orderDown.Size = new System.Drawing.Size(86, 32);
-            this.orderDown.TabIndex = 4;
-            this.orderDown.Text = "Down";
-            this.orderDown.UseVisualStyleBackColor = true;
-            this.orderDown.Click += new System.EventHandler(this.OrderDown_Click);
+            this.groupCaptionLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.groupCaptionLabel.AutoSize = true;
+            this.groupCaptionLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.groupCaptionLabel.Location = new System.Drawing.Point(457, 213);
+            this.groupCaptionLabel.Name = "groupCaptionLabel";
+            this.groupCaptionLabel.Size = new System.Drawing.Size(64, 13);
+            this.groupCaptionLabel.TabIndex = 7;
+            this.groupCaptionLabel.Text = "Group label:";
+            this.groupCaptionLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // spacingCard
             // 
@@ -1484,13 +1338,13 @@ namespace TrayTemps
             // spacingTitle
             // 
             this.spacingTitle.AutoSize = true;
-            this.spacingTitle.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.spacingTitle.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.spacingTitle.Location = new System.Drawing.Point(16, 14);
             this.spacingTitle.Name = "spacingTitle";
-            this.spacingTitle.Size = new System.Drawing.Size(205, 15);
+            this.spacingTitle.Size = new System.Drawing.Size(140, 15);
             this.spacingTitle.TabIndex = 0;
             this.spacingTitle.Tag = "TrayTemps.Font.ExtraBold";
-            this.spacingTitle.Text = "Spacing, Padding, Corners, Refresh:";
+            this.spacingTitle.Text = "Spacing and refresh:";
             // 
             // spacingLayout
             // 
@@ -1595,7 +1449,7 @@ namespace TrayTemps
             this.columnsGapHeader.Size = new System.Drawing.Size(126, 25);
             this.columnsGapHeader.TabIndex = 22;
             this.columnsGapHeader.Text = "Column spacing:";
-            this.columnsGapHeader.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.columnsGapHeader.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             // 
             // columnsSpacing
             // 
@@ -1622,7 +1476,7 @@ namespace TrayTemps
             this.fpsRefreshIntervalLabel.Name = "fpsRefreshIntervalLabel";
             this.fpsRefreshIntervalLabel.Size = new System.Drawing.Size(126, 25);
             this.fpsRefreshIntervalLabel.TabIndex = 8;
-            this.fpsRefreshIntervalLabel.Text = "FPS refresh (s):";
+            this.fpsRefreshIntervalLabel.Text = "FPS/low (s):";
             this.fpsRefreshIntervalLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // bottomBar
@@ -1649,7 +1503,7 @@ namespace TrayTemps
             this.saveBtn.Size = new System.Drawing.Size(132, 30);
             this.saveBtn.TabIndex = 2;
             this.saveBtn.Tag = "TrayTemps.Font.ExtraBold";
-            this.saveBtn.Text = "SAVE";
+            this.saveBtn.Text = "Save";
             this.saveBtn.UseVisualStyleBackColor = false;
             this.saveBtn.Click += new System.EventHandler(this.SaveBtn_Click);
             // 
@@ -1707,6 +1561,7 @@ namespace TrayTemps
             // navigationPanel
             // 
             this.navigationPanel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
+            this.navigationPanel.Controls.Add(this.presetsNavButton);
             this.navigationPanel.Controls.Add(this.layoutNavButton);
             this.navigationPanel.Controls.Add(this.appearanceNavButton);
             this.navigationPanel.Controls.Add(this.metricsNavButton);
@@ -1722,13 +1577,31 @@ namespace TrayTemps
             this.navigationPanel.MouseMove += new System.Windows.Forms.MouseEventHandler(this.DragSurface_MouseMove);
             this.navigationPanel.MouseUp += new System.Windows.Forms.MouseEventHandler(this.DragSurface_MouseUp);
             // 
+            // presetsNavButton
+            // 
+            this.presetsNavButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
+            this.presetsNavButton.Dock = System.Windows.Forms.DockStyle.Top;
+            this.presetsNavButton.FlatAppearance.BorderSize = 0;
+            this.presetsNavButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.presetsNavButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.presetsNavButton.Location = new System.Drawing.Point(0, 190);
+            this.presetsNavButton.Name = "presetsNavButton";
+            this.presetsNavButton.Padding = new System.Windows.Forms.Padding(18, 0, 0, 0);
+            this.presetsNavButton.Size = new System.Drawing.Size(130, 45);
+            this.presetsNavButton.TabIndex = 4;
+            this.presetsNavButton.Tag = "TrayTemps.Font.ExtraBold";
+            this.presetsNavButton.Text = "Presets";
+            this.presetsNavButton.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.presetsNavButton.UseVisualStyleBackColor = false;
+            this.presetsNavButton.Click += new System.EventHandler(this.PresetsNavButton_Click);
+            // 
             // layoutNavButton
             // 
             this.layoutNavButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
             this.layoutNavButton.Dock = System.Windows.Forms.DockStyle.Top;
             this.layoutNavButton.FlatAppearance.BorderSize = 0;
             this.layoutNavButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.layoutNavButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.layoutNavButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.layoutNavButton.Location = new System.Drawing.Point(0, 145);
             this.layoutNavButton.Name = "layoutNavButton";
             this.layoutNavButton.Padding = new System.Windows.Forms.Padding(18, 0, 0, 0);
@@ -1746,7 +1619,7 @@ namespace TrayTemps
             this.appearanceNavButton.Dock = System.Windows.Forms.DockStyle.Top;
             this.appearanceNavButton.FlatAppearance.BorderSize = 0;
             this.appearanceNavButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.appearanceNavButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.appearanceNavButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.appearanceNavButton.Location = new System.Drawing.Point(0, 100);
             this.appearanceNavButton.Name = "appearanceNavButton";
             this.appearanceNavButton.Padding = new System.Windows.Forms.Padding(18, 0, 0, 0);
@@ -1764,7 +1637,7 @@ namespace TrayTemps
             this.metricsNavButton.Dock = System.Windows.Forms.DockStyle.Top;
             this.metricsNavButton.FlatAppearance.BorderSize = 0;
             this.metricsNavButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.metricsNavButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.metricsNavButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.metricsNavButton.Location = new System.Drawing.Point(0, 55);
             this.metricsNavButton.Name = "metricsNavButton";
             this.metricsNavButton.Padding = new System.Windows.Forms.Padding(18, 0, 0, 0);
@@ -1779,7 +1652,7 @@ namespace TrayTemps
             // navigationTitle
             // 
             this.navigationTitle.Dock = System.Windows.Forms.DockStyle.Top;
-            this.navigationTitle.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.navigationTitle.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.navigationTitle.ForeColor = System.Drawing.Color.DarkGray;
             this.navigationTitle.Location = new System.Drawing.Point(0, 0);
             this.navigationTitle.Name = "navigationTitle";
@@ -1800,6 +1673,83 @@ namespace TrayTemps
             this.accentLine.Size = new System.Drawing.Size(3, 45);
             this.accentLine.TabIndex = 4;
             // 
+            // presetsPage
+            this.presetsPage.AutoScroll = true;
+            this.presetsPage.Controls.Add(this.presetsLayout);
+            this.presetsPage.Location = new System.Drawing.Point(4, 5);
+            this.presetsPage.Name = "presetsPage";
+            this.presetsPage.Padding = new System.Windows.Forms.Padding(16);
+            this.presetsPage.Size = new System.Drawing.Size(630, 444);
+            this.presetsPage.TabIndex = 3;
+            this.presetsPage.Text = "Presets";
+            // presetsLayout
+            this.presetsLayout.ColumnCount = 2;
+            this.presetsLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 65F));
+            this.presetsLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 35F));
+            this.presetsLayout.RowCount = 5;
+            this.presetsLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 36F));
+            this.presetsLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 76F));
+            this.presetsLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 38F));
+            this.presetsLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 38F));
+            this.presetsLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.presetsLayout.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.presetsLayout.Location = new System.Drawing.Point(16, 16);
+            this.presetsLayout.Name = "presetsLayout";
+            this.presetsLayout.Size = new System.Drawing.Size(598, 412);
+            this.presetsLayout.TabIndex = 0;
+            this.presetsLayout.Controls.Add(this.presetsTitle, 0, 0);
+            this.presetsLayout.SetColumnSpan(this.presetsTitle, 2);
+            this.presetsLayout.Controls.Add(this.presetsHelp, 0, 1);
+            this.presetsLayout.SetColumnSpan(this.presetsHelp, 2);
+            this.presetsLayout.Controls.Add(this.presetList, 0, 2);
+            this.presetsLayout.Controls.Add(this.loadEmbeddedPreset, 1, 2);
+            this.presetsLayout.Controls.Add(this.loadPresetFile, 0, 3);
+            this.presetsLayout.Controls.Add(this.savePresetFile, 1, 3);
+            // presetsTitle
+            this.presetsTitle.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.presetsTitle.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold);
+            this.presetsTitle.Name = "presetsTitle";
+            this.presetsTitle.Tag = "TrayTemps.Font.ExtraBold";
+            this.presetsTitle.Text = "OSD Presets";
+            this.presetsTitle.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            // presetsHelp
+            this.presetsHelp.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.presetsHelp.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F);
+            this.presetsHelp.Name = "presetsHelp";
+            this.presetsHelp.Text = "Load a built-in preset or a saved JSON file. Save current exports your draft as a custom preset. Click Save below to apply changes; close to discard. OSD enable state and shortcut are preserved when loading.";
+            // presetList
+            this.presetList.Anchor = ((System.Windows.Forms.AnchorStyles)(System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right));
+            this.presetList.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.presetList.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F);
+            this.presetList.Name = "presetList";
+            this.presetList.TabIndex = 0;
+            // loadEmbeddedPreset
+            this.loadEmbeddedPreset.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.loadEmbeddedPreset.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.loadEmbeddedPreset.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F);
+            this.loadEmbeddedPreset.Name = "loadEmbeddedPreset";
+            this.loadEmbeddedPreset.Text = "Load selected";
+            this.loadEmbeddedPreset.TabIndex = 1;
+            this.loadEmbeddedPreset.UseVisualStyleBackColor = false;
+            this.loadEmbeddedPreset.Click += new System.EventHandler(this.LoadEmbeddedPreset_Click);
+            // loadPresetFile
+            this.loadPresetFile.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.loadPresetFile.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.loadPresetFile.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F);
+            this.loadPresetFile.Name = "loadPresetFile";
+            this.loadPresetFile.Text = "Load file...";
+            this.loadPresetFile.TabIndex = 2;
+            this.loadPresetFile.UseVisualStyleBackColor = false;
+            this.loadPresetFile.Click += new System.EventHandler(this.LoadPresetFile_Click);
+            // savePresetFile
+            this.savePresetFile.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.savePresetFile.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.savePresetFile.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F);
+            this.savePresetFile.Name = "savePresetFile";
+            this.savePresetFile.Text = "Save current...";
+            this.savePresetFile.TabIndex = 3;
+            this.savePresetFile.UseVisualStyleBackColor = false;
+            this.savePresetFile.Click += new System.EventHandler(this.SavePresetFile_Click);
             // OsdSettingsDialog
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
@@ -1822,32 +1772,38 @@ namespace TrayTemps
             this.MouseDown += new System.Windows.Forms.MouseEventHandler(this.DragSurface_MouseDown);
             this.MouseMove += new System.Windows.Forms.MouseEventHandler(this.DragSurface_MouseMove);
             this.MouseUp += new System.Windows.Forms.MouseEventHandler(this.DragSurface_MouseUp);
+            this.customLabelContextMenu.ResumeLayout(false);
+            this.metricContextMenu.ResumeLayout(false);
             this.outerBorder.ResumeLayout(false);
             this.mainPanel.ResumeLayout(false);
             this.contentPanel.ResumeLayout(false);
             this.pageTabs.ResumeLayout(false);
+            this.presetsPage.ResumeLayout(false);
+            this.presetsLayout.ResumeLayout(false);
             this.metricsPage.ResumeLayout(false);
             this.metricsPageLayout.ResumeLayout(false);
             this.metricsCard.ResumeLayout(false);
             this.metricsCard.PerformLayout();
-            this.metricsCheckboxLayout.ResumeLayout(false);
-            this.metricsCheckboxLayout.PerformLayout();
-            this.labelsCard.ResumeLayout(false);
-            this.labelsCard.PerformLayout();
-            this.customLabelsLayout.ResumeLayout(false);
-            this.customLabelsLayout.PerformLayout();
+            this.metricsListHeader.ResumeLayout(false);
+            this.metricsList.ResumeLayout(false);
+            this.metricsList.PerformLayout();
             this.hotkeyCard.ResumeLayout(false);
             this.hotkeyCard.PerformLayout();
             this.appearancePage.ResumeLayout(false);
             this.appearanceCard.ResumeLayout(false);
-            this.appearanceCard.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.opacityValue)).EndInit();
+            this.appearanceLayout.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.appearanceGrid)).EndInit();
+            this.appearanceFooter.ResumeLayout(false);
+            this.appearanceFooter.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.backgroundOpacityValue)).EndInit();
-            this.fontColorsLayout.ResumeLayout(false);
+            this.backgroundColorLayout.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.opacityValue)).EndInit();
             this.layoutPage.ResumeLayout(false);
             this.layoutPageLayout.ResumeLayout(false);
             this.layoutCard.ResumeLayout(false);
             this.layoutCard.PerformLayout();
+            this.groupFieldsLayout.ResumeLayout(false);
+            this.groupFieldsLayout.PerformLayout();
             this.spacingCard.ResumeLayout(false);
             this.spacingCard.PerformLayout();
             this.spacingLayout.ResumeLayout(false);
@@ -1881,27 +1837,26 @@ namespace TrayTemps
         private System.Windows.Forms.TabPage layoutPage;
         private System.Windows.Forms.TableLayoutPanel layoutPageLayout;
         private System.Windows.Forms.Panel metricsCard;
-        private System.Windows.Forms.TableLayoutPanel metricsCheckboxLayout;
-        private System.Windows.Forms.Panel labelsCard;
+        private OsdMetricsListView metricsList;
+        private System.Windows.Forms.ColumnHeader metricNameColumn;
+        private System.Windows.Forms.ColumnHeader metricLabelColumn;
+        private System.Windows.Forms.Panel metricsListHeader;
+        private System.Windows.Forms.Label metricNameHeader;
+        private System.Windows.Forms.Label metricLabelHeader;
+        private System.Windows.Forms.Label metricListHint;
+        private System.Windows.Forms.TextBox metricLabelEditor;
         private System.Windows.Forms.Panel appearanceCard;
-        private System.Windows.Forms.TableLayoutPanel fontColorsLayout;
         private System.Windows.Forms.Panel layoutCard;
         private System.Windows.Forms.Panel spacingCard;
         private System.Windows.Forms.Label spacingTitle;
         private System.Windows.Forms.TableLayoutPanel spacingLayout;
         private System.Windows.Forms.Panel hotkeyCard;
-        private System.Windows.Forms.Label labelsTitle;
-        private System.Windows.Forms.Label customLabelsInfoIconLabel;
         private System.Windows.Forms.Label displayOrderLabel;
         private System.Windows.Forms.Button saveBtn;
         private System.Windows.Forms.Label positionLabel;
         private System.Windows.Forms.ComboBox positionValue;
-        private System.Windows.Forms.Label fontLabel;
-        private System.Windows.Forms.ComboBox fontSizeValue;
         private System.Windows.Forms.Label screenMarginLabel;
         private System.Windows.Forms.ComboBox screenMarginValue;
-        private System.Windows.Forms.Label fontFamilyLabel;
-        private System.Windows.Forms.ComboBox fontFamilyValue;
         private System.Windows.Forms.Label opacityLabel;
         private System.Windows.Forms.TrackBar opacityValue;
         private System.Windows.Forms.Label opacityValueLabel;
@@ -1909,12 +1864,6 @@ namespace TrayTemps
         private System.Windows.Forms.Button backgroundColor;
         private System.Windows.Forms.TrackBar backgroundOpacityValue;
         private System.Windows.Forms.Label backgroundOpacityValueLabel;
-        private System.Windows.Forms.CheckBox showCpuUsage;
-        private System.Windows.Forms.CheckBox showGpuUsage;
-        private System.Windows.Forms.CheckBox showRamUsage;
-        private System.Windows.Forms.CheckBox showVramUsage;
-        private System.Windows.Forms.CheckBox showFps;
-        private System.Windows.Forms.CheckBox showCurrentTime;
         private System.Windows.Forms.Label fpsRefreshIntervalLabel;
         private System.Windows.Forms.ComboBox fpsRefreshIntervalValue;
         private System.Windows.Forms.Label fpsLabelValueSpacingLabel;
@@ -1923,51 +1872,55 @@ namespace TrayTemps
         private System.Windows.Forms.ComboBox externalSpacingValue;
         private System.Windows.Forms.Label cornerRoundnessLabel;
         private System.Windows.Forms.ComboBox cornerRoundnessValue;
-        private System.Windows.Forms.ComboBox metricGroupingMode;
-        private System.Windows.Forms.Label metricGroupingModeLabel;
-        private System.Windows.Forms.CheckBox customLabelsEnabled;
         private System.Windows.Forms.ComboBox labelValueSpacing;
-        private System.Windows.Forms.TableLayoutPanel customLabelsLayout;
-        private System.Windows.Forms.Label customCpuLabelCaption;
-        private System.Windows.Forms.Label customGpuLabelCaption;
-        private System.Windows.Forms.TextBox customCpuLabel;
-        private System.Windows.Forms.TextBox customGpuLabel;
-        private System.Windows.Forms.Label customCpuUsageLabelCaption;
-        private System.Windows.Forms.Label customGpuUsageLabelCaption;
-        private System.Windows.Forms.TextBox customCpuUsageLabel;
-        private System.Windows.Forms.TextBox customGpuUsageLabel;
-        private System.Windows.Forms.Label customRamLabelCaption;
-        private System.Windows.Forms.Label customVramLabelCaption;
-        private System.Windows.Forms.TextBox customRamLabel;
-        private System.Windows.Forms.TextBox customVramLabel;
-        private System.Windows.Forms.Label customFpsLabelCaption;
-        private System.Windows.Forms.TextBox customFpsLabel;
-        private System.Windows.Forms.Label customTimeLabelCaption;
-        private System.Windows.Forms.TextBox customTimeLabel;
         private System.Windows.Forms.Label columnsLabel;
+        private System.Windows.Forms.TabPage presetsPage;
+        private System.Windows.Forms.TableLayoutPanel presetsLayout;
+        private System.Windows.Forms.Label presetsTitle;
+        private System.Windows.Forms.Label presetsHelp;
+        private System.Windows.Forms.ComboBox presetList;
+        private System.Windows.Forms.Button loadEmbeddedPreset;
+        private System.Windows.Forms.Button loadPresetFile;
+        private System.Windows.Forms.Button savePresetFile;
+        private System.Windows.Forms.Button presetsNavButton;
         private System.Windows.Forms.ComboBox columnsValue;
         private System.Windows.Forms.Label orderLabel;
-        private System.Windows.Forms.ListBox itemOrder;
+        private System.Windows.Forms.TreeView itemOrder;
         private System.Windows.Forms.Button orderUp;
         private System.Windows.Forms.Button orderDown;
         private System.Windows.Forms.Label hotkeyLabel;
         private System.Windows.Forms.CheckBox hotkeyEnabled;
         private System.Windows.Forms.TextBox hotkeyValue;
         private System.Windows.Forms.Label displayedHardwareLabel;
-        private System.Windows.Forms.CheckBox showCpu;
-        private System.Windows.Forms.CheckBox showGpu;
-        private System.Windows.Forms.Label fontColorsLabel;
-        private System.Windows.Forms.Label cpuFontColorLabel;
-        private System.Windows.Forms.Label gpuFontColorLabel;
-        private System.Windows.Forms.Label ramFontColorLabel;
-        private System.Windows.Forms.Label vramFontColorLabel;
-        private System.Windows.Forms.Label fpsFontColorLabel;
-        private System.Windows.Forms.Button cpuFontColor;
-        private System.Windows.Forms.Button gpuFontColor;
-        private System.Windows.Forms.Button ramFontColor;
-        private System.Windows.Forms.Button vramFontColor;
-        private System.Windows.Forms.Button fpsFontColor;
+        private System.Windows.Forms.Label metricLabelsInfoIcon;
         private System.Windows.Forms.ColorDialog colorDialog;
+        private System.Windows.Forms.DataGridView appearanceGrid;
+        private System.Windows.Forms.TableLayoutPanel appearanceLayout;
+        private System.Windows.Forms.TableLayoutPanel appearanceFooter;
+        private System.Windows.Forms.TableLayoutPanel backgroundColorLayout;
+        private System.Windows.Forms.ImageList metricRowImages;
+        private System.Windows.Forms.ColumnHeader metricGroupColumn;
+        private System.Windows.Forms.Label metricGroupHeader;
+        private System.Windows.Forms.TableLayoutPanel groupFieldsLayout;
+        private System.Windows.Forms.Label groupSeparatorLabel;
+        private System.Windows.Forms.Label groupCaptionLabel;
+        private System.Windows.Forms.TextBox groupCaption;
+        private System.Windows.Forms.ContextMenuStrip metricContextMenu;
+        private System.Windows.Forms.ToolStripMenuItem labelUndo;
+        private System.Windows.Forms.ToolStripMenuItem labelCut;
+        private System.Windows.Forms.ToolStripMenuItem labelCopy;
+        private System.Windows.Forms.ToolStripMenuItem labelPaste;
+        private System.Windows.Forms.ToolStripMenuItem labelDelete;
+        private System.Windows.Forms.ToolStripMenuItem labelSelectAll;
+        private System.Windows.Forms.ToolStripMenuItem insertIconMenu;
+        private System.Windows.Forms.ToolStripMenuItem resetLabelMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem editLabelMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem editGroupMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem resetMetricLabelMenuItem;
+        private System.Windows.Forms.ToolStripSeparator labelEditSeparator;
+        private System.Windows.Forms.ToolStripSeparator labelSelectionSeparator;
+        private System.Windows.Forms.ToolStripSeparator labelIconSeparator;
+        private System.Windows.Forms.ToolStripSeparator labelResetSeparator;
         private System.Windows.Forms.ToolTip settingsToolTip;
         private System.Windows.Forms.ContextMenuStrip customLabelContextMenu;
         private System.Windows.Forms.Label label1;
@@ -1977,5 +1930,11 @@ namespace TrayTemps
         private System.Windows.Forms.Label columnsGapHeader;
         private System.Windows.Forms.Label rowsGapHeader;
         private System.Windows.Forms.Label navigationTitle;
+        private System.Windows.Forms.DataGridViewTextBoxColumn appearanceMetricColumn;
+        private System.Windows.Forms.DataGridViewComboBoxColumn appearanceFamilyColumn;
+        private System.Windows.Forms.DataGridViewComboBoxColumn appearanceSizeColumn;
+        private System.Windows.Forms.DataGridViewButtonColumn appearanceLabelColorColumn;
+        private System.Windows.Forms.DataGridViewButtonColumn appearanceValueColorColumn;
+        private System.Windows.Forms.TextBox groupSeparator;
     }
 }

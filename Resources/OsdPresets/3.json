@@ -1,0 +1,132 @@
+{
+    "Enabled":  true,
+    "Position":  0,
+    "ShowCpu":  true,
+    "ShowGpu":  true,
+    "FontFamily":  "JetBrains Mono ExtraBold",
+    "FontSize":  16,
+    "CpuFontColor":  -16711681,
+    "GpuFontColor":  -10496,
+    "RamFontColor":  -7278960,
+    "VramFontColor":  -1146130,
+    "FpsFontColor":  -657931,
+    "BackgroundColor":  -15198184,
+    "BackgroundOpacityPercent":  0,
+    "BackgroundCornerRoundness":  15,
+    "TransparentBackground":  true,
+    "OpacityPercent":  100,
+    "ShowCpuUsage":  true,
+    "ShowGpuUsage":  true,
+    "ShowRamUsage":  true,
+    "ShowVramUsage":  true,
+    "ShowFps":  true,
+    "ShowFpsOnePercentLow":  false,
+    "ShowCurrentTime":  false,
+    "FpsRefreshIntervalSeconds":  0.5,
+    "CombineTemperatureAndUsage":  false,
+    "MetricGroupingMode":  0,
+    "LabelMode":  0,
+    "CustomCpuLabel":  "CPU Temp",
+    "CustomGpuLabel":  "GPU Temp",
+    "CustomCpuUsageLabel":  "CPU Load",
+    "CustomGpuUsageLabel":  "GPU Load",
+    "CustomRamLabel":  "RAM Use",
+    "CustomVramLabel":  "VRAM Use",
+    "CustomFpsLabel":  "FPS",
+    "CustomTimeLabel":  "Time",
+    "LabelOverrides":  {
+                           "CpuTemperature":  "",
+                           "GpuTemperature":  "",
+                           "CpuUsage":  "",
+                           "GpuUsage":  "",
+                           "RamUsage":  "",
+                           "VramUsage":  "",
+                           "Fps":  "FPS:"
+                       },
+    "MetricGroups":  {
+                         "Fps":  "",
+                         "FpsOnePercentLow":  "",
+                         "CpuTemperature":  "CPU",
+                         "CpuUsage":  "CPU",
+                         "RamUsage":  "CPU",
+                         "GpuTemperature":  "GPU",
+                         "GpuUsage":  "GPU",
+                         "VramUsage":  "GPU"
+                     },
+    "GroupLabels":  {
+                        "FPS":  "🎯 FPS:",
+                        "GPU":  "GPU:",
+                        "CPU":  "CPU:"
+                    },
+    "GroupedLabelOverrides":  {
+
+                              },
+    "MetricStyles":  {
+                         "CpuTemperature":  {
+                                                "FontFamily":  "JetBrains Mono ExtraBold",
+                                                "FontSize":  10,
+                                                "LabelColor":  -8323073,
+                                                "ValueColor":  -8323073
+                                            },
+                         "GpuTemperature":  {
+                                                "FontFamily":  "JetBrains Mono ExtraBold",
+                                                "FontSize":  10,
+                                                "LabelColor":  -16711808,
+                                                "ValueColor":  -16711808
+                                            },
+                         "CpuUsage":  {
+                                          "FontFamily":  "JetBrains Mono ExtraBold",
+                                          "FontSize":  10,
+                                          "LabelColor":  -8323073,
+                                          "ValueColor":  -8323073
+                                      },
+                         "GpuUsage":  {
+                                          "FontFamily":  "JetBrains Mono ExtraBold",
+                                          "FontSize":  10,
+                                          "LabelColor":  -16711808,
+                                          "ValueColor":  -16711808
+                                      },
+                         "RamUsage":  {
+                                          "FontFamily":  "JetBrains Mono ExtraBold",
+                                          "FontSize":  10,
+                                          "LabelColor":  -8323073,
+                                          "ValueColor":  -8323073
+                                      },
+                         "VramUsage":  {
+                                           "FontFamily":  "JetBrains Mono ExtraBold",
+                                           "FontSize":  10,
+                                           "LabelColor":  -16711808,
+                                           "ValueColor":  -16711808
+                                       },
+                         "Fps":  {
+                                     "FontFamily":  "JetBrains Mono ExtraBold",
+                                     "FontSize":  12,
+                                     "LabelColor":  -657931,
+                                     "ValueColor":  -128
+                                 },
+                         "FpsOnePercentLow":  {
+                                                  "FontFamily":  "JetBrains Mono ExtraBold",
+                                                  "FontSize":  10,
+                                                  "LabelColor":  -657931,
+                                                  "ValueColor":  -128
+                                              },
+                         "CurrentTime":  {
+                                             "FontFamily":  "JetBrains Mono ExtraBold",
+                                             "FontSize":  10,
+                                             "LabelColor":  -657931,
+                                             "ValueColor":  -1
+                                         }
+                     },
+    "GroupSeparator":  "",
+    "LabelValueSpacing":  5,
+    "FpsLabelValueSpacing":  5,
+    "RowsSpacing":  5,
+    "ColumnsSpacing":  30,
+    "ScreenMargin":  0,
+    "ExternalSpacing":  5,
+    "Columns":  1,
+    "ItemOrder":  "FpsOnePercentLow,CurrentTime,CpuTemperature,CpuUsage,RamUsage,GpuTemperature,GpuUsage,VramUsage,Fps",
+    "HotkeyEnabled":  true,
+    "HotkeyModifiers":  6,
+    "HotkeyKey":  79
+}

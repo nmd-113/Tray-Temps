@@ -1,12 +1,12 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Forms;
 using FpsLimiter.Core;
 
 namespace TrayTemps
@@ -22,19 +22,27 @@ namespace TrayTemps
         private Task _worker = Task.CompletedTask;
         private Task _operation = Task.CompletedTask;
         private Task _shutdown;
+        private Task<DiscoverySnapshot> _inspection = Task.FromResult<DiscoverySnapshot>(null);
+        private bool _discoveryInProgress;
+        private string _lastDetectionReport;
         private bool _stopping;
         private int _attachedPid;
+        private DateTime _attachedStartTime;
         private string _attachedPath = "", _attachedName = "";
+        private readonly Dictionary<int, DateTime> _rejectedCandidates = new Dictionary<int, DateTime>();
         private static readonly string[] DefaultExclusions = { "TrayFPS", "TrayTemps", "Tray-Temps", "explorer", "dwm", "csrss", "services", "svchost", "chrome", "msedge", "firefox", "Discord", "steam", "EpicGamesLauncher", "GameBar", "Widgets" };
         private static readonly char[] Separators = { ',', ';', '\r', '\n' };
         internal bool Enabled { get; private set; }
         internal bool IsBusy { get; private set; }
         internal string StatusText { get; private set; } = "Disabled";
         internal Exception LastError { get; private set; }
+        internal bool IsDiscovering => _discoveryInProgress;
+        internal string LastDetectionReason { get; private set; }
         internal event EventHandler StateChanged;
 
         [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
         [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint pid);
+        [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr hwnd);
         [DllImport("kernel32.dll", SetLastError = true)] private static extern bool IsWow64Process(IntPtr process, out bool wow64);
         [DllImport("advapi32.dll", SetLastError = true)] private static extern bool OpenProcessToken(IntPtr process, uint access, out IntPtr token);
         [DllImport("advapi32.dll", SetLastError = true)] private static extern bool GetTokenInformation(IntPtr token, int informationClass, out int information, int length, out int required);
@@ -45,6 +53,12 @@ namespace TrayTemps
             _configuration = configuration.Clone();
             _nativeDirectory = nativeDirectory ?? FpsLimiterPayloads.ExtractNative;
             _discovery.Tick += Discovery_Tick;
+        }
+
+        internal static void CleanupStaleVulkanRegistrations()
+        {
+            using (var lease = new Mutex(false, "Local\\TrayFPS.Instance", out bool created))
+                if (created) LimiterController.CleanupOwnLayerRegistrations();
         }
 
         internal Task SetEnabledAsync(bool enabled)
@@ -60,6 +74,7 @@ namespace TrayTemps
                         var lease = new Mutex(false, "Local\\TrayFPS.Instance", out bool created);
                         if (!created) { lease.Dispose(); throw new InvalidOperationException("Another TrayFPS limiter instance is running. Close it before enabling the limiter here."); }
                         _ownership = lease;
+                        LimiterController.CleanupOwnLayerRegistrations();
                         _controller = new LimiterController();
                     }
                 }
@@ -68,7 +83,7 @@ namespace TrayTemps
             }
             _discovery.Stop();
             if (_controller == null) { Enabled = false; Changed(); return Task.CompletedTask; }
-            return RunAsync(_controller.Pause, () => { Enabled = false; ClearTarget(); StatusText = "Disabled"; });
+            return RunAsync(ReleaseController, () => { Enabled = false; ClearTarget(); _rejectedCandidates.Clear(); StatusText = "Disabled"; });
         }
 
         private async Task EnableAsync()
@@ -96,10 +111,15 @@ namespace TrayTemps
         }
 
         internal Task AttachTargetAsync(int pid, string name, string path, int cap)
+            => AttachTargetCoreAsync(pid, name, path, cap, null, false);
+
+        private Task AttachTargetCoreAsync(int pid, string name, string path, int cap, DateTime? expectedStart, bool requireForeground)
         {
             if (!Enabled || _stopping || IsBusy || pid <= 0 || pid == Process.GetCurrentProcess().Id || IsExcluded(name)) return Task.CompletedTask;
-            bool exited = false, unsupported = false, elevatedVulkan = false, rejected = false;
+            bool unsupported = false, elevatedVulkan = false, rejected = false;
             Exception rejection = null;
+            string skipped = null;
+            DateTime attachedIdentity = default(DateTime);
             return RunAsync(() =>
             {
                 // Keep the process handle alive through Apply. Windows cannot reuse
@@ -113,6 +133,14 @@ namespace TrayTemps
                     process = Process.GetProcessById(pid);
                     try
                     {
+                        DateTime identity = process.StartTime.ToUniversalTime();
+                        attachedIdentity = identity;
+                        if (expectedStart.HasValue && (identity != expectedStart.Value ||
+                            !string.Equals(GetExecutablePath(process), path, StringComparison.OrdinalIgnoreCase)))
+                        { rejected = true; skipped = "Process identity changed"; return; }
+                        if (requireForeground && !IsForegroundProcess(pid))
+                        { rejected = true; skipped = "Foreground changed before attachment"; return; }
+                        if (_rejectedCandidates.TryGetValue(pid, out DateTime previous) && previous == identity) { rejected = true; return; }
                         if (Environment.Is64BitProcess)
                         {
                             if (!IsWow64Process(process.Handle, out bool wow64)) throw new Win32Exception(Marshal.GetLastWin32Error());
@@ -124,16 +152,18 @@ namespace TrayTemps
                         { elevatedVulkan = true; return; }
                         string native = _nativeDirectory();
                         if (process.HasExited) { rejected = true; return; }
+                        if (requireForeground && !IsForegroundProcess(pid))
+                        { rejected = true; skipped = "Foreground changed before attachment"; return; }
                         // Only Apply can change the session. Preflight failures must
                         // leave the previous target and global registration intact.
                         applying = true;
                         try { _controller.Apply(pid, cap, true, native); }
-                        catch (Exception error) when ((error is ArgumentException || error is InvalidOperationException || error is Win32Exception) && process.HasExited)
+                        catch (Exception error) when (error is ArgumentException || error is InvalidOperationException || error is Win32Exception || error is TimeoutException || error is UnauthorizedAccessException)
                         {
-                            _controller.DetachTarget();
-                            _controller.Start();
-                            _controller.PrepareVulkan(_configuration.FramesPerSecond, _nativeDirectory());
-                            exited = true;
+                            rejected = true;
+                            if (!HasExited(pid)) rejection = error;
+                            if (_rejectedCandidates.Count >= 256) _rejectedCandidates.Remove(_rejectedCandidates.First().Key);
+                            _rejectedCandidates[pid] = identity;
                         }
                     }
                     catch (Win32Exception error) when (!applying && error.NativeErrorCode == 5)
@@ -154,8 +184,10 @@ namespace TrayTemps
                 }
                 if (rejected)
                 {
+                    if (skipped != null) ReportDetection(pid, name, skipped);
                     LastError = rejection;
-                    if (rejection != null) StatusText = "Candidate access denied. TrayTemps and the game must have matching privileges.";
+                    if (rejection != null) StatusText = "Could not attach to " + name + ": " + rejection.Message
+                        + (_attachedPid != 0 ? " The previous target remains active." : " Waiting for another game.");
                     return;
                 }
                 if (unsupported)
@@ -163,11 +195,11 @@ namespace TrayTemps
                     if (_attachedPid == 0) StatusText = "32-bit game attachment is not supported. Waiting for a compatible 64-bit game.";
                     return;
                 }
-                if (exited) { ClearTarget(); StatusText = "Waiting for an eligible foreground game"; return; }
                 _attachedPid = pid; _attachedPath = path; _attachedName = name;
+                _attachedStartTime = attachedIdentity;
                 StatusText = _controller.Status == LimiterStatus.RestartRequired
                     ? "Restart required: relaunch this Vulkan game while the limiter is enabled."
-                    : "Attached to " + name + " - " + cap + " FPS";
+                    : "Attached to " + name + " - " + cap + " FPS requested (presentation hooks ready)";
             });
         }
 
@@ -210,52 +242,140 @@ namespace TrayTemps
             StatusText = error is UnauthorizedAccessException || (error is Win32Exception win32 && win32.NativeErrorCode == 5)
                 ? "Access denied. TrayTemps and the game must have matching privileges." : error.Message;
             // Never clean up another instance: a controller exists only after ownership succeeds.
-            try { _controller?.Stop(); } catch (Exception cleanup) { Debug.WriteLine("FPS limiter cleanup: " + cleanup); }
+            try { ReleaseController(); } catch (Exception cleanup) { Debug.WriteLine("FPS limiter cleanup: " + cleanup); }
             Changed();
         }
 
-        private void ClearTarget() { _attachedPid = 0; _attachedPath = ""; _attachedName = ""; }
+        private void ClearTarget() { _attachedPid = 0; _attachedStartTime = default(DateTime); _attachedPath = ""; _attachedName = ""; }
         private void Changed() { if (!_stopping) StateChanged?.Invoke(this, EventArgs.Empty); }
 
-        private bool IsExcluded(string name)
+        private bool IsExcluded(string name) => IsExcludedByConfiguration(name, _configuration);
+
+        private static bool IsExcludedByConfiguration(string name, FpsLimiterConfiguration configuration)
         {
-            var user = (_configuration.ExcludedProcesses ?? "").Split(Separators, StringSplitOptions.RemoveEmptyEntries)
+            var user = (configuration.ExcludedProcesses ?? "").Split(Separators, StringSplitOptions.RemoveEmptyEntries)
                 .Select(item => item.Trim()).Where(item => item.Length != 0);
             return DefaultExclusions.Concat(user).Any(item => string.Equals(item.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? item.Substring(0, item.Length - 4) : item, name, StringComparison.OrdinalIgnoreCase));
         }
 
         private async void Discovery_Tick(object sender, EventArgs args)
+            => await DiscoverForegroundAsync();
+
+        internal async Task DiscoverForegroundAsync()
         {
-            if (!Enabled || IsBusy || _stopping) return;
+            if (!Enabled || IsBusy || _stopping || _discoveryInProgress) return;
+            _discoveryInProgress = true;
             try
             {
-                if (_attachedPid != 0)
+                GetWindowThreadProcessId(GetForegroundWindow(), out uint foreground);
+                int pid = foreground <= int.MaxValue ? (int)foreground : 0;
+                int previousTarget = _attachedPid;
+                DateTime previousIdentity = _attachedStartTime;
+                // Configuration objects are privately cloned and replaced, never mutated.
+                // Hold this snapshot while the UI remains free to save a newer one.
+                var configuration = _configuration;
+                DateTime? previousRejection = _rejectedCandidates.TryGetValue(pid, out DateTime rejectedStart) ? rejectedStart : (DateTime?)null;
+                _inspection = Task.Run(() => InspectForeground(pid, previousTarget, previousIdentity, configuration, previousRejection));
+                var snapshot = await _inspection;
+                if (_stopping || !Enabled || IsBusy || previousTarget != _attachedPid || previousIdentity != _attachedStartTime) return;
+                if (snapshot.AttachedExited)
                 {
-                    bool exited;
-                    try { using (var process = Process.GetProcessById(_attachedPid)) exited = process.HasExited; }
-                    catch (ArgumentException) { exited = true; }
-                    if (exited)
-                    {
-                        await RunAsync(_controller.DetachTarget, () => { ClearTarget(); StatusText = "Waiting for an eligible foreground game"; });
-                        if (_stopping || !Enabled) return;
-                    }
+                    await RunAsync(_controller.DetachTarget, () => { ClearTarget(); StatusText = "Waiting for an eligible foreground game"; });
+                    if (_stopping || !Enabled) return;
                 }
-                if (GetWindowThreadProcessId(GetForegroundWindow(), out uint pid) == 0 || pid == 0 || pid == (uint)Process.GetCurrentProcess().Id || pid == _attachedPid) return;
-                using (var process = Process.GetProcessById((int)pid))
+                if (!snapshot.HasCandidate || !IsForegroundProcess(snapshot.Pid)) return;
+                // Recheck exclusions/profiles against the latest settings after inspection.
+                if (IsExcluded(snapshot.Name)) { ReportDetection(snapshot.Pid, snapshot.Name, "Excluded"); return; }
+                if (_rejectedCandidates.TryGetValue(snapshot.Pid, out DateTime rejected) && rejected == snapshot.Started)
                 {
-                    string name = process.ProcessName;
-                    if (IsExcluded(name)) return;
-                    string path = GetExecutablePath(process);
-                    var game = _configuration.FindGame(path);
-                    if (game == null && !LooksLikeGame(process, path)) return;
-                    await AttachTargetAsync(process.Id, name, path, game?.FramesPerSecond ?? _configuration.FramesPerSecond);
+                    ReportDetection(snapshot.Pid, snapshot.Name, "Previous attachment rejected; restart game or toggle limiter to retry");
+                    return;
+                }
+                var game = _configuration.FindGame(snapshot.Path);
+                ReportDetection(snapshot.Pid, snapshot.Name, game != null ? "Executable profile" : snapshot.Decision.Reason);
+                if (game == null && !snapshot.Decision.Eligible) return;
+                await AttachTargetCoreAsync(snapshot.Pid, snapshot.Name, snapshot.Path,
+                    game?.FramesPerSecond ?? _configuration.FramesPerSecond, snapshot.Started, true);
+            }
+            catch (Exception error) when (error is ArgumentException || error is InvalidOperationException ||
+                error is Win32Exception || error is NotSupportedException)
+            { Trace.WriteLine("FPS discovery: " + error.Message); }
+            catch (Exception error) { if (!_stopping) Fail(error); }
+            finally { _discoveryInProgress = false; }
+        }
+
+        private sealed class DiscoverySnapshot
+        {
+            internal int Pid;
+            internal string Name = "", Path = "";
+            internal DateTime Started;
+            internal bool AttachedExited, HasCandidate;
+            internal GameDetectionDecision Decision = new GameDetectionDecision(false, "Process information unavailable");
+        }
+
+        private static DiscoverySnapshot InspectForeground(int pid, int attachedPid, DateTime attachedIdentity, FpsLimiterConfiguration configuration, DateTime? rejectedStart)
+        {
+            var result = new DiscoverySnapshot { Pid = pid, AttachedExited = attachedPid != 0 && HasProcessIdentityChanged(attachedPid, attachedIdentity) };
+            if (pid <= 0 || pid == Process.GetCurrentProcess().Id || (pid == attachedPid && !result.AttachedExited)) return result;
+            result.HasCandidate = true;
+            try
+            {
+                using (var process = Process.GetProcessById(pid))
+                {
+                    result.Name = process.ProcessName;
+                    if (IsExcludedByConfiguration(result.Name, configuration))
+                    { result.Decision = new GameDetectionDecision(false, "Excluded"); return result; }
+                    result.Started = process.StartTime.ToUniversalTime();
+                    result.Path = GetExecutablePath(process);
+                    if (rejectedStart == result.Started) return result;
+                    if (configuration.FindGame(result.Path) != null)
+                    {
+                        // The UI rechecks the profile after this worker returns. A removed
+                        // profile must wait for a fresh automatic inspection on the next tick.
+                        result.Decision = new GameDetectionDecision(false, "Profile changed; waiting for automatic inspection");
+                        return result;
+                    }
+                    IntPtr window = process.MainWindowHandle;
+                    bool visible = window != IntPtr.Zero && IsWindowVisible(window) && !string.IsNullOrEmpty(process.MainWindowTitle);
+                    result.Decision = FpsLimiterGameDetection.Evaluate(result.Path, visible, null);
+                    if (!visible || result.Decision.Eligible || result.Path.Length == 0) return result;
+                    result.Decision = FpsLimiterGameDetection.Evaluate(result.Path, visible,
+                        process.Modules.Cast<ProcessModule>().Select(module => module.ModuleName));
                 }
             }
-            catch (ArgumentException) { }
-            catch (InvalidOperationException) { }
-            catch (Win32Exception) { }
-            catch (NotSupportedException) { }
-            catch (Exception error) { if (!_stopping) Fail(error); }
+            catch (Exception error) when (error is ArgumentException || error is InvalidOperationException ||
+                error is Win32Exception || error is NotSupportedException)
+            { result.Decision = new GameDetectionDecision(false, "Process information unavailable"); }
+            return result;
+        }
+
+        private static bool HasProcessIdentityChanged(int pid, DateTime expected)
+        {
+            try
+            {
+                using (var process = Process.GetProcessById(pid))
+                    return process.HasExited || (expected != default(DateTime) && process.StartTime.ToUniversalTime() != expected);
+            }
+            catch (ArgumentException) { return true; }
+            catch (InvalidOperationException) { return true; }
+            catch (Win32Exception) { return false; }
+        }
+
+        private static bool IsForegroundProcess(int pid) =>
+            GetWindowThreadProcessId(GetForegroundWindow(), out uint current) != 0 && current == (uint)pid;
+
+        private void ReportDetection(int pid, string name, string reason)
+        {
+            string report = pid + ": " + name + " — " + reason;
+            if (_lastDetectionReport == report) return;
+            _lastDetectionReport = report;
+            LastDetectionReason = reason;
+            Trace.WriteLine("FPS discovery: " + report);
+            if (_attachedPid == 0)
+            {
+                StatusText = "Waiting for an eligible foreground game — " + reason;
+                Changed();
+            }
         }
 
         private static string GetExecutablePath(Process process)
@@ -265,19 +385,6 @@ namespace TrayTemps
             catch (InvalidOperationException) { return ""; }
             catch (NotSupportedException) { return ""; }
             catch (PathTooLongException) { return ""; }
-        }
-
-        private static bool LooksLikeGame(Process process, string path)
-        {
-            if (string.IsNullOrEmpty(path) || string.IsNullOrEmpty(process.MainWindowTitle) || process.MainWindowHandle == IntPtr.Zero) return false;
-            string lower = path.ToLowerInvariant();
-            if (lower.Contains("\\steamapps\\common\\") || lower.Contains("\\epic games\\") || lower.Contains("\\xboxgames\\") || lower.Contains("\\gog games\\")) return true;
-            foreach (ProcessModule module in process.Modules)
-            {
-                string name = module.ModuleName;
-                if (name.Equals("UnityPlayer.dll", StringComparison.OrdinalIgnoreCase) || name.Equals("GameAssembly.dll", StringComparison.OrdinalIgnoreCase) || name.StartsWith("Unreal", StringComparison.OrdinalIgnoreCase) || name.Equals("CrySystem.dll", StringComparison.OrdinalIgnoreCase)) return true;
-            }
-            return false;
         }
 
         internal Task StopAsync()
@@ -291,8 +398,13 @@ namespace TrayTemps
         private async Task StopCoreAsync()
         {
             // Cleanup must also complete after direct form disposal without a running UI context.
-            try { await _worker.ConfigureAwait(false); }
+            try { await Task.WhenAll(_worker, _inspection).ConfigureAwait(false); }
             catch (Exception error) { Debug.WriteLine("FPS limiter worker during shutdown: " + error); }
+            ReleaseController();
+        }
+
+        private void ReleaseController()
+        {
             _controller?.Dispose();
             _controller = null;
             // Retain ownership if cleanup fails; another publisher must not start.

@@ -1,4 +1,4 @@
-using LibreHardwareMonitor.Hardware;
+﻿using LibreHardwareMonitor.Hardware;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -82,13 +82,12 @@ namespace TrayTemps
         private Task<HardwareDiscoveryResult> _storageInfoTask;
         private Task<HardwareDiscoveryResult> _motherboardInfoTask;
         private bool _storageFallbackDiskQuerySucceeded;
-        private OsdConfiguration _osdConfiguration = new OsdConfiguration();
+        private OsdConfiguration _osdConfiguration = OsdConfiguration.CreateAppDefault();
         private OsdConfiguration _osdPreviewConfiguration;
         private OsdOverlay _osdOverlay;
         private OsdSettingsDialog _osdSettingsDialog;
         private ForegroundFpsMonitor _fpsMonitor;
         private List<OsdMetric> _lastOsdMetrics;
-        private OsdMetric _lastOsdFpsMetric;
         private int _fpsMonitoringStartFailures;
         private DateTime _nextFpsMonitoringStartAttemptUtc = DateTime.MinValue;
         private bool _osdHotkeyRegistered;
@@ -634,11 +633,8 @@ namespace TrayTemps
 
             if (m.Msg == WM_HOTKEY && m.WParam.ToInt32() == OsdHotkeyId)
             {
-                if (_osdSettingsDialog != null &&
-                    !_osdSettingsDialog.IsDisposed &&
-                    _osdSettingsDialog.CaptureRegisteredHotkey(
-                        _registeredOsdHotkeyModifiers,
-                        _registeredOsdHotkeyKey))
+                if (!_osdHotkeyRegistered) return;
+                if (CaptureHotkeyInSettings(_registeredOsdHotkeyModifiers, _registeredOsdHotkeyKey))
                 {
                     return;
                 }
@@ -1337,7 +1333,7 @@ namespace TrayTemps
             try
             {
                 OsdConfiguration displayConfiguration = _osdPreviewConfiguration ?? _osdConfiguration;
-                IHardware osdMemoryHardware = displayConfiguration.ShowRamUsage
+                IHardware osdMemoryHardware = osdEnable.Checked && displayConfiguration.ShowRamUsage
                     ? GetCompletedMemoryHardware()
                     : null;
 
@@ -2504,9 +2500,9 @@ namespace TrayTemps
             enableGpuTray.Checked = false;
             singleIconTray.Checked = false;
             colortempsEnable.Checked = false;
-            osdEnable.Checked = false;
-            osdSettings.Enabled = false;
-            _osdConfiguration = new OsdConfiguration();
+            _osdConfiguration = OsdConfiguration.CreateAppDefault();
+            osdEnable.Checked = _osdConfiguration.Enabled;
+            osdSettings.Enabled = osdEnable.Checked;
             _fpsLimiterConfiguration = new FpsLimiterConfiguration();
             SyncFpsLimiterControls();
 
@@ -2534,6 +2530,9 @@ namespace TrayTemps
             NormalColor = Color.FromArgb(240, 240, 255);
             WarningColor = Color.Yellow;
             CriticalColor = Color.Red;
+
+            UpdateCombinedTrayCheckboxAvailability();
+            UpdateTemperatureColorsCheckboxAvailability();
 
         }
 
@@ -3747,6 +3746,7 @@ namespace TrayTemps
             }
 
             singleIconTray.Enabled = canUseCombinedTray;
+            UpdateTrayAppearanceControlAvailability();
         }
 
         private void UpdateTemperatureColorsCheckboxAvailability()
@@ -3895,16 +3895,19 @@ namespace TrayTemps
 
         private void ApplySingleIconTrayControlState()
         {
-            if (singleIconTray.Checked)
-            {
-                iconsizeValue.Enabled = false;
-            }
-            else
-            {
-                iconsizeValue.Enabled = true;
-            }
+            UpdateTrayAppearanceControlAvailability();
+        }
 
-            fontFamilyValue.Enabled = true;
+        private void UpdateTrayAppearanceControlAvailability()
+        {
+            bool cpuEnabled = enableCpuTray.Checked;
+            bool gpuEnabled = enableGpuTray.Checked;
+            bool anyTrayEnabled = cpuEnabled || gpuEnabled;
+
+            cpuColorValue.Enabled = cpuEnabled;
+            gpuColorValue.Enabled = gpuEnabled;
+            fontFamilyValue.Enabled = anyTrayEnabled;
+            iconsizeValue.Enabled = anyTrayEnabled && !singleIconTray.Checked;
         }
 
         private void ApplyGpuTrayVisibilityForMultiIconMode()
@@ -4086,9 +4089,9 @@ namespace TrayTemps
             return configuration;
         }
 
-        private OsdConfiguration NormalizeOsdConfiguration(OsdConfiguration configuration)
+        internal OsdConfiguration NormalizeOsdConfiguration(OsdConfiguration configuration)
         {
-            OsdConfiguration result = configuration?.Clone() ?? new OsdConfiguration();
+            OsdConfiguration result = configuration?.Clone() ?? OsdConfiguration.CreateAppDefault();
             result.Position = (OsdPosition)ValueHelper.ClampInt((int)result.Position, 0, 8);
             result.LabelMode = result.LabelMode == OsdLabelMode.Custom
                 ? OsdLabelMode.Custom
@@ -4122,19 +4125,20 @@ namespace TrayTemps
             }
             result.ScreenMargin = ValueHelper.ClampInt(result.ScreenMargin, 0, 100);
             result.ExternalSpacing = ValueHelper.ClampInt(result.ExternalSpacing, 0, 100);
-            result.Columns = ValueHelper.ClampInt(result.Columns, 1, 8);
+            result.Columns = ValueHelper.ClampInt(result.Columns, 1, OsdMetricDefinitions.Keys.Length);
             result.RowsSpacing = ValueHelper.ClampInt(result.RowsSpacing, 0, 100);
             result.ColumnsSpacing = ValueHelper.ClampInt(result.ColumnsSpacing, 0, 100);
             if (result.FpsRefreshIntervalSeconds.HasValue)
                 result.FpsRefreshIntervalSeconds = GetEffectiveFpsRefreshIntervalSeconds(result);
-            result.CustomCpuLabel = NormalizeOsdLabel(result.CustomCpuLabel, "CPU Temp");
-            result.CustomGpuLabel = NormalizeOsdLabel(result.CustomGpuLabel, "GPU Temp");
-            result.CustomCpuUsageLabel = NormalizeOsdLabel(result.CustomCpuUsageLabel, "CPU Load");
-            result.CustomGpuUsageLabel = NormalizeOsdLabel(result.CustomGpuUsageLabel, "GPU Load");
-            result.CustomRamLabel = NormalizeOsdLabel(result.CustomRamLabel, "RAM Use");
-            result.CustomVramLabel = NormalizeOsdLabel(result.CustomVramLabel, "VRAM Use");
-            result.CustomFpsLabel = NormalizeOsdLabel(result.CustomFpsLabel, "FPS");
-            result.CustomTimeLabel = NormalizeOsdLabel(result.CustomTimeLabel, "Time");
+            if (result.LabelOverrides != null) result.LabelOverrides = OsdMetricDefinitions.CreateOverrides(result);
+            result.CustomCpuLabel = OsdMetricDefinitions.NormalizeLabel(result.CustomCpuLabel, "CPU Temp");
+            result.CustomGpuLabel = OsdMetricDefinitions.NormalizeLabel(result.CustomGpuLabel, "GPU Temp");
+            result.CustomCpuUsageLabel = OsdMetricDefinitions.NormalizeLabel(result.CustomCpuUsageLabel, "CPU Load");
+            result.CustomGpuUsageLabel = OsdMetricDefinitions.NormalizeLabel(result.CustomGpuUsageLabel, "GPU Load");
+            result.CustomRamLabel = OsdMetricDefinitions.NormalizeLabel(result.CustomRamLabel, "RAM Use");
+            result.CustomVramLabel = OsdMetricDefinitions.NormalizeLabel(result.CustomVramLabel, "VRAM Use");
+            result.CustomFpsLabel = OsdMetricDefinitions.NormalizeLabel(result.CustomFpsLabel, "FPS");
+            result.CustomTimeLabel = OsdMetricDefinitions.NormalizeLabel(result.CustomTimeLabel, "Time");
             int labelValueSpacing = result.HasExplicitLabelValueSpacing
                 ? result.LabelValueSpacing
                 : result.CpuTemperatureSpacing ??
@@ -4159,7 +4163,7 @@ namespace TrayTemps
             result.ItemOrder = OsdItemOrderHelper.Serialize(OsdItemOrderHelper.Parse(result.ItemOrder));
             if (!result.ShowCpu && !result.ShowGpu &&
                 !result.ShowCpuUsage && !result.ShowGpuUsage &&
-                !result.ShowRamUsage && !result.ShowVramUsage && !result.ShowFps && !result.ShowCurrentTime)
+                !result.ShowRamUsage && !result.ShowVramUsage && !result.ShowFps && !result.ShowFpsOnePercentLow && !result.ShowCurrentTime)
                 result.ShowCpu = true;
             OsdHotkeyModifiers modifiers =
                 (OsdHotkeyModifiers)result.HotkeyModifiers & OsdHotkeyHelper.AllowedModifiers;
@@ -4172,15 +4176,8 @@ namespace TrayTemps
             }
             result.HotkeyModifiers = (int)modifiers;
             result.HotkeyKey = (int)key;
+            OsdMetricDefinitions.Migrate(result);
             return result;
-        }
-
-        private static string NormalizeOsdLabel(string value, string fallback)
-        {
-            string text = HardwareReportFormatHelper.SanitizeSingleLineText(value);
-            return value == null
-                ? fallback
-                : string.IsNullOrWhiteSpace(text) ? string.Empty : text;
         }
 
         private void UpdateOsd(float? cpuTemp, float? gpuTemp)
@@ -4196,15 +4193,14 @@ namespace TrayTemps
 
             OsdConfiguration displayConfiguration = _osdPreviewConfiguration ?? _osdConfiguration;
             UpdateFpsMonitoring(
-                displayConfiguration.ShowFps,
-                GetEffectiveFpsRefreshIntervalMilliseconds(displayConfiguration));
+                displayConfiguration.ShowFps || displayConfiguration.ShowFpsOnePercentLow,
+                GetEffectiveFpsRefreshIntervalMilliseconds(displayConfiguration),
+                displayConfiguration.ShowFpsOnePercentLow);
             List<OsdMetric> metrics = BuildOsdMetrics(
                 cpuTemp,
                 gpuTemp,
-                displayConfiguration,
-                out OsdMetric fpsMetric);
+                displayConfiguration);
             _lastOsdMetrics = metrics;
-            _lastOsdFpsMetric = fpsMetric;
             Rectangle workingArea = Screen.FromControl(this).WorkingArea;
             _osdOverlay.UpdateDisplay(
                 displayConfiguration,
@@ -4218,30 +4214,16 @@ namespace TrayTemps
         private List<OsdMetric> BuildOsdMetrics(
             float? cpuTemp,
             float? gpuTemp,
-            OsdConfiguration configuration,
-            out OsdMetric fpsMetric)
+            OsdConfiguration configuration)
         {
-            fpsMetric = null;
-            OsdMetricGroupingMode groupingMode = configuration.MetricGroupingMode ??
-                (configuration.CombineTemperatureAndUsage
-                    ? OsdMetricGroupingMode.LoadAndTemps
-                    : OsdMetricGroupingMode.Disabled);
-            bool combineCpu = groupingMode != OsdMetricGroupingMode.Disabled && configuration.ShowCpu &&
-                (configuration.ShowCpuUsage || (groupingMode == OsdMetricGroupingMode.LoadTempsAndUsedMemory && configuration.ShowRamUsage));
-            bool combineGpu = groupingMode != OsdMetricGroupingMode.Disabled && configuration.ShowGpu &&
-                (configuration.ShowGpuUsage || (groupingMode == OsdMetricGroupingMode.LoadTempsAndUsedMemory && configuration.ShowVramUsage));
-            string cpuLabel = GetOsdLabel(
-                configuration,
-                configuration.CustomCpuLabel,
-                combineCpu ? "CPU" : "CPU Temp");
-            string gpuLabel = GetOsdLabel(
-                configuration,
-                configuration.CustomGpuLabel,
-                combineGpu ? "GPU" : "GPU Temp");
-            string cpuUsageLabel = GetOsdLabel(configuration, configuration.CustomCpuUsageLabel, "CPU Load");
-            string gpuUsageLabel = GetOsdLabel(configuration, configuration.CustomGpuUsageLabel, "GPU Load");
-            string ramLabel = GetOsdLabel(configuration, configuration.CustomRamLabel, "RAM Use");
-            string vramLabel = GetOsdLabel(configuration, configuration.CustomVramLabel, "VRAM Use");
+            if (configuration.MetricGroups == null || configuration.MetricStyles == null || configuration.GroupLabels == null)
+                OsdMetricDefinitions.Migrate(configuration);
+            string cpuLabel = GetOsdLabel(configuration, "CpuTemperature", "CPU Temp");
+            string gpuLabel = GetOsdLabel(configuration, "GpuTemperature", "GPU Temp");
+            string cpuUsageLabel = GetOsdLabel(configuration, "CpuUsage", "CPU Load");
+            string gpuUsageLabel = GetOsdLabel(configuration, "GpuUsage", "GPU Load");
+            string ramLabel = GetOsdLabel(configuration, "RamUsage", "RAM Use");
+            string vramLabel = GetOsdLabel(configuration, "VramUsage", "VRAM Use");
             bool useFahrenheit = tempsFahrenheit.Checked;
             string unit = TemperatureFormatHelper.GetUnit(useFahrenheit);
             string temperatureWidthTemplate = "###" + unit;
@@ -4268,148 +4250,58 @@ namespace TrayTemps
             string vramUsage = configuration.ShowVramUsage
                 ? FormatMemoryUsage(_selectedGpuHardware, "GPU Memory", out vramWidthTemplate)
                 : null;
-            bool combineCpuUsage = combineCpu && configuration.ShowCpuUsage;
-            bool combineGpuUsage = combineGpu && configuration.ShowGpuUsage;
-            bool combineCpuMemory = combineCpu && groupingMode == OsdMetricGroupingMode.LoadTempsAndUsedMemory && configuration.ShowRamUsage;
-            bool combineGpuMemory = combineGpu && groupingMode == OsdMetricGroupingMode.LoadTempsAndUsedMemory && configuration.ShowVramUsage;
-
             if (configuration.ShowCpu)
-            {
-                var metric = new OsdMetric(
-                    cpuLabel,
-                    cpuTemperature,
-                    combineCpuUsage ? cpuUsage : (combineCpuMemory ? ramUsage : null),
-                    cpuDisplayColor)
-                {
-                    ValueWidthTemplate = temperatureWidthTemplate,
-                    TrailingValueWidthTemplate = combineCpuMemory && !combineCpuUsage
-                        ? ramWidthTemplate
-                        : (combineCpuUsage ? "###%" : null),
-                    TrailingValueColor = combineCpuMemory && !combineCpuUsage
-                        ? Color.FromArgb(configuration.RamFontColor)
-                        : cpuDisplayColor,
-                    SecondTrailingValue = combineCpuUsage && combineCpuMemory ? ramUsage : null,
-                    SecondTrailingValueWidthTemplate = combineCpuUsage && combineCpuMemory ? ramWidthTemplate : null,
-                    SecondTrailingValueColor = Color.FromArgb(configuration.RamFontColor)
-                };
-                availableMetrics[OsdItemKind.CpuTemperature] = metric;
-                if (combineCpuUsage)
-                    availableMetrics[OsdItemKind.CpuUsage] = metric;
-                if (combineCpuMemory)
-                    availableMetrics[OsdItemKind.RamUsage] = metric;
-            }
-
+                availableMetrics[OsdItemKind.CpuTemperature] = new OsdMetric(cpuLabel, cpuTemperature, cpuDisplayColor) { ValueWidthTemplate = temperatureWidthTemplate };
             if (configuration.ShowGpu)
-            {
-                var metric = new OsdMetric(
-                    gpuLabel,
-                    gpuTemperature,
-                    combineGpuUsage ? gpuUsage : (combineGpuMemory ? vramUsage : null),
-                    gpuDisplayColor)
-                {
-                    ValueWidthTemplate = temperatureWidthTemplate,
-                    TrailingValueWidthTemplate = combineGpuMemory && !combineGpuUsage
-                        ? vramWidthTemplate
-                        : (combineGpuUsage ? "###%" : null),
-                    TrailingValueColor = combineGpuMemory && !combineGpuUsage
-                        ? Color.FromArgb(configuration.VramFontColor)
-                        : gpuDisplayColor,
-                    SecondTrailingValue = combineGpuUsage && combineGpuMemory ? vramUsage : null,
-                    SecondTrailingValueWidthTemplate = combineGpuUsage && combineGpuMemory ? vramWidthTemplate : null,
-                    SecondTrailingValueColor = Color.FromArgb(configuration.VramFontColor)
-                };
-                availableMetrics[OsdItemKind.GpuTemperature] = metric;
-                if (combineGpuUsage)
-                    availableMetrics[OsdItemKind.GpuUsage] = metric;
-                if (combineGpuMemory)
-                    availableMetrics[OsdItemKind.VramUsage] = metric;
-            }
-
-            if (cpuUsage != null && !combineCpuUsage)
-                availableMetrics[OsdItemKind.CpuUsage] = new OsdMetric(
-                    cpuUsageLabel,
-                    cpuUsage,
-                    cpuDisplayColor)
-                {
-                    ValueWidthTemplate = "###%"
-                };
-
-            if (gpuUsage != null && !combineGpuUsage)
-                availableMetrics[OsdItemKind.GpuUsage] = new OsdMetric(
-                    gpuUsageLabel,
-                    gpuUsage,
-                    gpuDisplayColor)
-                {
-                    ValueWidthTemplate = "###%"
-                };
-
+                availableMetrics[OsdItemKind.GpuTemperature] = new OsdMetric(gpuLabel, gpuTemperature, gpuDisplayColor) { ValueWidthTemplate = temperatureWidthTemplate };
+            if (cpuUsage != null)
+                availableMetrics[OsdItemKind.CpuUsage] = new OsdMetric(cpuUsageLabel, cpuUsage, cpuDisplayColor) { ValueWidthTemplate = "###%" };
+            if (gpuUsage != null)
+                availableMetrics[OsdItemKind.GpuUsage] = new OsdMetric(gpuUsageLabel, gpuUsage, gpuDisplayColor) { ValueWidthTemplate = "###%" };
             if (configuration.ShowRamUsage)
-            {
-                if (!combineCpuMemory)
-                {
-                    availableMetrics[OsdItemKind.RamUsage] = new OsdMetric(
-                        ramLabel,
-                        ramUsage,
-                        Color.FromArgb(configuration.RamFontColor))
-                    {
-                        ValueWidthTemplate = ramWidthTemplate
-                    };
-                }
-            }
-
+                availableMetrics[OsdItemKind.RamUsage] = new OsdMetric(ramLabel, ramUsage) { ValueWidthTemplate = ramWidthTemplate };
             if (configuration.ShowVramUsage)
-            {
-                if (!combineGpuMemory)
-                {
-                    availableMetrics[OsdItemKind.VramUsage] = new OsdMetric(
-                        vramLabel,
-                        vramUsage,
-                        Color.FromArgb(configuration.VramFontColor))
-                    {
-                        ValueWidthTemplate = vramWidthTemplate
-                    };
-                }
-            }
-
+                availableMetrics[OsdItemKind.VramUsage] = new OsdMetric(vramLabel, vramUsage) { ValueWidthTemplate = vramWidthTemplate };
+            if (configuration.ShowFpsOnePercentLow)
+                availableMetrics[OsdItemKind.FpsOnePercentLow] = CreateFpsMetric(configuration, true);
             if (configuration.ShowFps)
             {
-                fpsMetric = CreateFpsMetric(configuration);
-                availableMetrics[OsdItemKind.Fps] = fpsMetric;
+                availableMetrics[OsdItemKind.Fps] = CreateFpsMetric(configuration);
             }
 
             if (configuration.ShowCurrentTime)
                 availableMetrics[OsdItemKind.CurrentTime] = OsdClockHelper.CreateMetric(
-                    DateTime.Now, CultureInfo.CurrentCulture, GetOsdLabel(configuration, configuration.CustomTimeLabel, "Time"));
+                    DateTime.Now, CultureInfo.CurrentCulture, GetOsdLabel(configuration, "CurrentTime", "Time"));
 
-            return OsdItemOrderHelper.Parse(configuration.ItemOrder)
-                .Where(availableMetrics.ContainsKey)
-                .Select(item => availableMetrics[item])
-                .Distinct()
-                .ToList();
+            foreach (var pair in availableMetrics)
+            {
+                pair.Value.Key = pair.Key.ToString();
+                pair.Value.Style = configuration.MetricStyles[pair.Value.Key];
+            }
+            return OsdMetricDefinitions.Compose(configuration, availableMetrics.Values);
         }
 
-        private OsdMetric CreateFpsMetric(OsdConfiguration configuration)
+        private OsdMetric CreateFpsMetric(OsdConfiguration configuration, bool low = false)
         {
-            int? fps = _fpsMonitor?.GetLatestFps();
-            return new OsdMetric(
-                GetOsdLabel(configuration, configuration.CustomFpsLabel, "FPS"),
-                fps.HasValue ? fps.Value.ToString(CultureInfo.InvariantCulture) : "N/A",
-                Color.FromArgb(configuration.FpsFontColor))
+            int? fps = null, onePercentLow = null;
+            _fpsMonitor?.GetLatestValues(out fps, out onePercentLow);
+            string key = low ? "FpsOnePercentLow" : "Fps";
+            int? value = low ? onePercentLow : fps;
+            return new OsdMetric(OsdMetricDefinitions.ResolveLabel(configuration, key),
+                value.HasValue ? value.Value.ToString(CultureInfo.InvariantCulture) : "N/A")
             {
+                Key = key,
+                Style = configuration.MetricStyles != null ? configuration.MetricStyles[key] : OsdMetricDefinitions.LegacyStyle(configuration, key),
                 ValueWidthTemplate = "####",
-                LabelValueSpacingOverride = configuration.FpsLabelValueSpacing ?? configuration.LabelValueSpacing,
-                ValueFollowsLabel = true
+                LabelValueSpacingOverride = configuration.FpsLabelValueSpacing ?? configuration.LabelValueSpacing
             };
         }
-
         private static string GetOsdLabel(
             OsdConfiguration configuration,
-            string customLabel,
+            string metricKey,
             string fallback)
         {
-            return configuration.LabelMode == OsdLabelMode.Custom
-                ? NormalizeOsdLabel(customLabel, fallback)
-                : fallback;
+            return OsdMetricDefinitions.ResolveLabel(configuration, metricKey, fallback);
         }
 
         private static float? GetPreferredLoadValue(IHardware hardware, bool isCpu)
@@ -4473,14 +4365,14 @@ namespace TrayTemps
             if (usedGb.HasValue && totalGb.HasValue)
             {
                 widthTemplate = CreateMemoryWidthTemplate(Math.Max(usedGb.Value, totalGb.Value));
-                return $"{usedGb.Value:0.##}G";
+                return $"{usedGb.Value:0.00}G";
             }
 
             if (sensorPrefix == "Memory" &&
                 SystemMemoryUsageHelper.TryGetPhysicalMemoryUsage(out double systemUsedGb, out double systemTotalGb))
             {
                 widthTemplate = CreateMemoryWidthTemplate(systemTotalGb);
-                return $"{systemUsedGb:0.##}G";
+                return $"{systemUsedGb:0.00}G";
             }
 
             // The OSD shows used memory only. A partial but valid GPU-memory
@@ -4488,7 +4380,7 @@ namespace TrayTemps
             if (usedGb.HasValue)
             {
                 widthTemplate = CreateMemoryWidthTemplate(usedGb.Value);
-                return $"{usedGb.Value:0.##}G";
+                return $"{usedGb.Value:0.00}G";
             }
 
             return "N/A";
@@ -4552,7 +4444,6 @@ namespace TrayTemps
         {
             StopFpsMonitoring();
             _lastOsdMetrics = null;
-            _lastOsdFpsMetric = null;
 
             if (_osdOverlay == null)
                 return;
@@ -4572,7 +4463,7 @@ namespace TrayTemps
             }
         }
 
-        private void UpdateFpsMonitoring(bool enabled, int intervalMilliseconds)
+        private void UpdateFpsMonitoring(bool enabled, int intervalMilliseconds, bool collectOnePercentLow)
         {
             if (!enabled)
             {
@@ -4598,6 +4489,7 @@ namespace TrayTemps
                     return;
 
                 var monitor = new ForegroundFpsMonitor();
+                monitor.SetOnePercentLowEnabled(collectOnePercentLow);
                 if (!monitor.Start())
                 {
                     monitor.Dispose();
@@ -4618,6 +4510,7 @@ namespace TrayTemps
                 _fpsMonitor.UpdateForegroundProcess();
                 _fpsMonitor.FlushIfNeeded(safeInterval);
             }
+            else _fpsMonitor.SetOnePercentLowEnabled(collectOnePercentLow);
         }
 
         private void FpsTimer_Tick(object sender, EventArgs e)
@@ -4629,14 +4522,14 @@ namespace TrayTemps
             }
 
             OsdConfiguration displayConfiguration = _osdPreviewConfiguration ?? _osdConfiguration;
-            if (osdEnable == null || !osdEnable.Checked || !displayConfiguration.ShowFps)
+            if (osdEnable == null || !osdEnable.Checked || !(displayConfiguration.ShowFps || displayConfiguration.ShowFpsOnePercentLow))
             {
                 StopFpsMonitoring();
                 return;
             }
 
             int intervalMilliseconds = GetEffectiveFpsRefreshIntervalMilliseconds(displayConfiguration);
-            UpdateFpsMonitoring(enabled: true, intervalMilliseconds);
+            UpdateFpsMonitoring(enabled: true, intervalMilliseconds, displayConfiguration.ShowFpsOnePercentLow);
             if (_fpsMonitor == null)
                 return;
 
@@ -4647,26 +4540,26 @@ namespace TrayTemps
 
         private void RefreshFpsOsdMetric(OsdConfiguration configuration)
         {
-            if (_osdOverlay == null || _osdOverlay.IsDisposed ||
-                _lastOsdMetrics == null || _lastOsdFpsMetric == null)
-                return;
-
-            int fpsIndex = _lastOsdMetrics.IndexOf(_lastOsdFpsMetric);
-            if (fpsIndex < 0)
-                return;
-
-            OsdMetric nextFpsMetric = CreateFpsMetric(configuration);
-            _lastOsdMetrics[fpsIndex] = nextFpsMetric;
-            _lastOsdFpsMetric = nextFpsMetric;
-            _osdOverlay.UpdateDisplay(
-                configuration,
-                _lastOsdMetrics,
-                Screen.FromControl(this).WorkingArea);
-
-            if (!_osdOverlay.Visible)
-                _osdOverlay.Show();
+            if (_osdOverlay == null || _osdOverlay.IsDisposed || _lastOsdMetrics == null) return;
+            for (int row = 0; row < _lastOsdMetrics.Count; row++)
+            {
+                OsdMetric current = _lastOsdMetrics[row];
+                if (current.Members == null)
+                {
+                    if (current.Key == "Fps" || current.Key == "FpsOnePercentLow")
+                        _lastOsdMetrics[row] = CreateFpsMetric(configuration, current.Key == "FpsOnePercentLow");
+                }
+                else
+                {
+                    if (!current.Members.Any(metric => metric.Key == "Fps" || metric.Key == "FpsOnePercentLow")) continue;
+                    var members = current.Members.Select(metric => metric.Key == "Fps" || metric.Key == "FpsOnePercentLow"
+                        ? CreateFpsMetric(configuration, metric.Key == "FpsOnePercentLow") : metric).ToList();
+                    _lastOsdMetrics[row] = new OsdMetric(current.Label, "") { Key = current.Key, Style = members[0].Style, Members = members };
+                }
+            }
+            _osdOverlay.UpdateDisplay(configuration, _lastOsdMetrics, Screen.FromControl(this).WorkingArea);
+            if (!_osdOverlay.Visible) _osdOverlay.Show();
         }
-
         private decimal GetEffectiveFpsRefreshIntervalSeconds(OsdConfiguration configuration)
         {
             decimal interval = configuration?.FpsRefreshIntervalSeconds ?? GetSelectedRefreshInterval();
@@ -4710,7 +4603,8 @@ namespace TrayTemps
                 _registeredOsdHotkeyKey == key)
                 return true;
 
-            if (_fpsLimiterHotkeyRegistered && IsFpsLimiterShortcut(modifiers, key))
+            if (_fpsLimiterHotkeyRegistered && _registeredFpsLimiterHotkeyModifiers == modifiers &&
+                _registeredFpsLimiterHotkeyKey == (key & Keys.KeyCode))
                 return true; // OSD takes priority only when its edited configuration is saved.
 
             bool registered = RegisterHotKey(
@@ -6517,9 +6411,7 @@ namespace TrayTemps
                 {
                     Directory.CreateDirectory(InstallPath);
 
-                    string testFile = Path.Combine(InstallPath, "test.tmp");
-                    File.WriteAllText(testFile, "test");
-                    File.Delete(testFile);
+                    InstallationFileHelper.CheckWriteAccess(InstallPath);
                 }
                 catch
                 {
@@ -6707,62 +6599,30 @@ namespace TrayTemps
                 return;
             }
 
-            string batPath = Path.Combine(Path.GetTempPath(),
-                                          $"DeleteTrayTemps_{Guid.NewGuid():N}.bat");
-
-            // Batch expands percent signs even inside quotes. Preserve literal
-            // paths, including user profiles containing percent signs or '!'.
-            string batchInstallDirectory = installDirectory.Replace("%", "%%");
-            string batchSettingsFolder = settingsFolder.Replace("%", "%%");
-            string batchShortcutPath = shortcutPath.Replace("%", "%%");
-            string script = $@"@echo off
-setlocal DisableDelayedExpansion
-chcp 65001 > nul
-cd /d ""%~dp0""
-
-set ""install_folder={batchInstallDirectory}""
-set ""settings_folder={batchSettingsFolder}""
-set attempts=0
-
-:loop
-if %attempts% GEQ 15 goto settings
-if not exist ""%install_folder%"" goto settings
-
-rmdir /s /q ""%install_folder%""
-if not exist ""%install_folder%"" goto settings
-
-set /a attempts+=1
-ping 127.0.0.1 -n 2 > nul
-goto loop
-
-:settings
-if exist ""%settings_folder%"" rmdir /s /q ""%settings_folder%""
-
-:cleanup
-if exist ""{batchShortcutPath}"" del /f /q ""{batchShortcutPath}""
-
-(goto) 2>nul & del ""%~f0""";
-
-            File.WriteAllText(batPath, script);
-
-            using (Process process = Process.Start(new ProcessStartInfo(batPath)
+            string scriptPath = Path.Combine(Path.GetTempPath(), $"DeleteTrayTemps_{Guid.NewGuid():N}.ps1");
+            try
             {
-                UseShellExecute = true,
-                CreateNoWindow = true,
-                WindowStyle = ProcessWindowStyle.Hidden
-            }))
-            {
-                if (process == null)
+                string script = InstallationFileHelper.BuildDeferredUninstallScript(installDirectory, settingsFolder, shortcutPath);
+                File.WriteAllText(scriptPath, script, new System.Text.UTF8Encoding(true));
+                using (Process process = Process.Start(new ProcessStartInfo
                 {
-                    MessageBox.Show(
-                        this,
-                        "Uninstall could not start.",
-                        "Uninstall Error",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Error);
-
-                    return;
+                    FileName = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), @"WindowsPowerShell\v1.0\powershell.exe"),
+                    Arguments = "-NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"" + scriptPath + "\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    WindowStyle = ProcessWindowStyle.Hidden
+                }))
+                {
+                    if (process == null) throw new IOException("Uninstall could not start.");
                 }
+            }
+            catch (Exception error)
+            {
+                try { File.Delete(scriptPath); }
+                catch (IOException cleanupError) { Debug.WriteLine(cleanupError); }
+                catch (UnauthorizedAccessException cleanupError) { Debug.WriteLine(cleanupError); }
+                MessageBox.Show(this, error.Message, "Uninstall Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
             }
 
             _settingsLoaded = false;
@@ -6770,32 +6630,8 @@ if exist ""{batchShortcutPath}"" del /f /q ""{batchShortcutPath}""
             Close();
         }
 
-        private bool TryGetOwnedInstallDirectory(out string installDirectory)
-        {
-            installDirectory = string.Empty;
-
-            try
-            {
-                if (string.IsNullOrWhiteSpace(InstallPath))
-                    return false;
-
-                string fullPath = Path.GetFullPath(InstallPath)
-                    .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-
-                if (!string.Equals(Path.GetFileName(fullPath), AppName, StringComparison.OrdinalIgnoreCase) ||
-                    !File.Exists(Path.Combine(fullPath, AppName + ".exe")))
-                {
-                    return false;
-                }
-
-                installDirectory = fullPath;
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
+        private bool TryGetOwnedInstallDirectory(out string installDirectory) =>
+            InstallationFileHelper.TryGetInstallDirectory(InstallPath, out installDirectory);
 
         private bool TryDirectUninstallInstalledCopy(
             string installDirectory,
@@ -6807,14 +6643,12 @@ if exist ""{batchShortcutPath}"" del /f /q ""{batchShortcutPath}""
 
             try
             {
-                if (Directory.Exists(installDirectory))
-                    Directory.Delete(installDirectory, true);
+                InstallationFileHelper.RemoveInstalledFiles(installDirectory);
 
                 if (File.Exists(shortcutPath))
                     File.Delete(shortcutPath);
 
-                if (Directory.Exists(settingsFolder))
-                    Directory.Delete(settingsFolder, true);
+                InstallationFileHelper.RemoveSettingsFiles(settingsFolder);
 
                 return true;
             }

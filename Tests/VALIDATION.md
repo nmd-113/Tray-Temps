@@ -1,35 +1,48 @@
-# Release validation
+﻿# Release validation
 
-Checked on 2026-11-14. This is a portable summary; raw diagnostic logs and desktop captures are kept outside version control.
+## TrayTemps 2.5.0.0 — 2026-11-16
 
-## Build and Git workflow
+The current working tree builds in Debug and Release/x64. App version metadata is 2.5.0.0; native engine and protocol identities retain their independent versions. Release packaging produces the portable EXE, ZIP and SHA-256 checksums.
 
-- Actual Visual Studio Release/x64 Rebuild: **5 succeeded, 0 failed, 0 skipped**.
-- Debug/x64 Build: all projects succeeded or were up to date; Release artifacts were preserved.
-- Incremental Release Build recreated a missing ZIP automatically.
-- Build repaired a missing secondary x86 native DLL without a separate command.
-- Repeated native rebuilds produced stable payload hashes.
-- A clean export of the staged Git files built all projects and release packages without existing build caches or an external Vulkan SDK.
-- Both native payloads, the manifest and the embedded cache version agree. The current engine is `1.0.0-0B84C93A0E2A`.
+### Completed audit fixes
 
-## Runtime checks
+- Installation identity is checked before removal. Direct and deferred uninstall remove only the known executable and settings files, preserve unknown files/subdirectories and custom presets, and remove containing folders only when empty. Linked installation/settings directories are rejected.
+- Installation uses a uniquely named, exclusively created write probe, preserving existing files such as test.tmp.
+- Group priority follows its first configured member even when hidden; groups with no enabled members do not render empty rows.
+- RAM polling in the temperature refresh requires enabled OSD and RAM metric. RAM-details live updates remain independent.
+- Minimal transparent correctly captions its GPU group GPU:.
+- Failed atomic settings replacement preserves the previous primary and the flushed recovery file; it no longer falls back to a non-atomic overwrite.
+- Automatic limiter detection now accepts a visible custom-folder game with a recognized Steam/Epic game SDK and supported graphics runtime. Existing store/engine rules and exclusions remain in effect. Process/module inspection runs on a tracked worker; foreground, process start time and current profiles/exclusions are rechecked before automatic attachment. Inspection finishes during shutdown without holding up the UI thread.
 
-- Isolated exclusion and cache-cleanup regression checks passed.
-- Native Vulkan lifecycle checks passed: 192 instance cycles, 384 device cycles, shared dispatch, capacity rollback and recovery.
-- The controlled Direct3D 9/11/12 and OpenGL integration suite passed all 130 checks, including profiles, exclusions, OFF/ON, live cap changes and shutdown pass-through.
-- Mixed-privilege Vulkan checks passed for an elevated controller and a normal target, including rejection of an elevated candidate while preserving the active cap.
-- Shipping-EXE startup checks covered all OSD/limiter combinations, old/invalid settings and start minimized. User preference files were restored.
+Earlier OSD/preset fixes remain covered: deep-copy isolation, template 1 defaults with OSD disabled, independent 1% Low selection, editable labels/groups and per-metric styles, preset import/export and validation, Save/close behavior, preserved shortcuts, dynamic columns, spacing availability, stable numeric layout and complete values without ellipsis.
 
-## AMD host observations
+### Verification
 
-Radeon RX 7800 XT, driver 32.0.32015.16001, Windows 11 IoT Enterprise LTSC build 26100. Controlled windowed presentation intervals:
+| Check | Result |
+| --- | --- |
+| Debug build | Passed |
+| Release/x64 solution build and packaging | Passed |
+| Release safety suite | 21 checks passed in Debug and Release |
+| General settings/hotkey/lifecycle integration | 105 checks passed in Debug and Release |
+| OSD metrics/presets/rendering | 122 checks passed in Debug and Release |
+| Frame-time/source/concurrency/performance | Passed, Release |
+| Exhaustive numeric text fitting | 40 checks passed, Release |
+| Limiter audit hardening | Passed, Release |
+| Automatic game detection | 28 checks passed in Debug and Release |
+| Live Onimusha automatic attachment/profile/exclusion/stop | 8 checks passed in Debug and Release |
 
-| API | Caps checked | Typical measured interval |
-| --- | --- | --- |
-| Direct3D 9/11/12 | 60 and 90 FPS | About 16.67 and 11.11 ms |
-| OpenGL | 30 and 20 FPS | About 33.33 and 50.00 ms |
-| Vulkan | 45, 60 and 90 FPS | About 22.22, 16.67 and 11.11 ms |
+Final release recheck (2026-11-16): the Release solution build and the detection, general integration, release-safety, OSD and limiter audit suites passed again. The ZIP contains only the executable, quick-start text and three license/notice files. Its executable matches dist/TrayTemps.exe byte-for-byte; file/assembly versions are 2.5.0.0 and both distribution hashes match SHA256SUMS.txt. The packaged quick-start now mentions disabled defaults, presets and executable-profile fallback. No loose test logs, stale audit links or packaging temporary files remain in the workspace.
 
-The actual shipping TrayTemps host also capped a normal Vulkan target at 60 FPS. Earlier GTX 1050 tests exercised the preceding implementation; they are not a matched performance comparison with AMD.
+Source release note: required new implementation, preset-resource and regression-test files are still untracked. Include them with the modified project files when committing this release; the successful build covers the complete working tree.
 
-These are functional fixture results. Real games, exclusive fullscreen, VRR, anti-cheat compatibility, input latency, true device loss and long-duration pacing remain outside this validation. x86 attachment and elevated Vulkan targets remain unsupported.
+The safety suite executes the generated deferred-uninstall PowerShell script in temporary fixtures, including quoted paths, locked-executable retry, changed identity, unrelated-file preservation, script cleanup and failed settings replacement. It does not uninstall the user's app or alter preferences.
+
+The preceding audit also passed 14 native hook-failure checks and Vulkan instance/device lifecycle and capacity-recovery tests. Capture and native hook code did not change in these fixes.
+
+The live Onimusha process loaded steam_api64.dll and Direct3D 11/12 in its custom E:\GAMES folder. Automatic discovery attached without a saved profile at the requested 60 FPS default, applied an in-memory 75 FPS profile, respected exclusion, restored default attachment and disabled the cap at test shutdown. Preferences and game files were unchanged. These checks verify requested caps and successful hook initialization, not delivered FPS or frame-pacing quality.
+
+### Remaining manual acceptance
+
+Physical mixed-monitor DPI transitions, real-game MPO/VRR and exclusive-fullscreen behavior, anti-cheat compatibility, multi-hour resource stability and fault-injected disk failures require manual or dedicated environment testing. Synthetic timings do not guarantee identical game performance across hardware and drivers.
+
+Regression fixtures and migration readers remain intentional project inputs. No public release was published by these checks.

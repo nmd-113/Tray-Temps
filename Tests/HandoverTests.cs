@@ -225,9 +225,9 @@ internal static partial class ReviewTests
         Check(!Elevated(process), label + " actual token is non-elevated"); return process;
     }
 
-    private static async Task MixedVulkan()
+    private static async Task MixedVulkan(string executable = null)
     {
-        string executable = Path.Combine(Repos, "Tray-Temps", "Tests", "VulkanGraphicsTest", "x64", "Release", "VulkanGraphicsTest.exe");
+        executable = executable ?? Path.Combine(Repos, "Tray-Temps", "Tests", "VulkanGraphicsTest", "x64", "Release", "VulkanGraphicsTest.exe");
         using (var service = new FpsLimiterService(new FpsLimiterConfiguration()))
         {
             await service.SetEnabledAsync(true); StopDiscovery(service);
@@ -237,10 +237,21 @@ internal static partial class ReviewTests
                 try
                 {
                     await Task.Delay(700); await service.AttachTargetAsync(game.Id, game.ProcessName, executable, 60);
-                    Check(service.LastError == null, "elevated controller attaches normal Vulkan target");
+                    Check(service.LastError == null && service.StatusText.StartsWith("Attached"), "elevated controller attaches normal Vulkan target");
                     await Period(60); await service.ApplyConfigurationAsync(new FpsLimiterConfiguration { FramesPerSecond = 45 }); await Period(45);
                     await service.SetEnabledAsync(false); await Period(0);
+                    using (var probe = await MediumTarget(executable, label: "off-probe"))
+                    {
+                        try
+                        {
+                            await Task.Delay(700);
+                            Check(!probe.Modules.Cast<ProcessModule>().Any(module => module.ModuleName.Equals("FpsLimiter.Native.dll", StringComparison.OrdinalIgnoreCase)),
+                                "a new non-elevated Vulkan process after OFF does not load the implicit layer");
+                        }
+                        finally { if (!probe.HasExited) { probe.Kill(); probe.WaitForExit(); } }
+                    }
                     await service.SetEnabledAsync(true); StopDiscovery(service); await service.AttachTargetAsync(game.Id, game.ProcessName, executable, 60); await Period(60);
+                    Check(service.StatusText.StartsWith("Attached"), "OFF/ON reuses an existing Vulkan layer without a false restart warning");
                     string layers = Layers();
                     using (var candidate = Launch(executable))
                     {

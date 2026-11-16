@@ -43,6 +43,7 @@ namespace TrayTemps
             this.gpuConfigButton = new System.Windows.Forms.Button();
             this.osdSettings = new System.Windows.Forms.Button();
             this.colortempsConfig = new System.Windows.Forms.Button();
+            this.fpsLimiterSettings = new System.Windows.Forms.Button();
             this.cpuTempSensorSelect = new System.Windows.Forms.ComboBox();
             this.cpuIndexSelect = new System.Windows.Forms.ComboBox();
             this.gpuTempSensorSelect = new System.Windows.Forms.ComboBox();
@@ -128,11 +129,10 @@ namespace TrayTemps
             this.generalSettingsPanel = new System.Windows.Forms.TableLayoutPanel();
             this.minimizeOnStart = new System.Windows.Forms.CheckBox();
             this.clearSettings = new System.Windows.Forms.Button();
-            this.fpsLimiterPanel = new System.Windows.Forms.TableLayoutPanel();
-            this.fpsLimiterEnable = new System.Windows.Forms.CheckBox();
-            this.fpsLimiterSettings = new System.Windows.Forms.Button();
             this.osdPanel = new System.Windows.Forms.TableLayoutPanel();
             this.osdEnable = new System.Windows.Forms.CheckBox();
+            this.fpsLimiterPanel = new System.Windows.Forms.TableLayoutPanel();
+            this.fpsLimiterEnable = new System.Windows.Forms.CheckBox();
             this.refreshPanel = new System.Windows.Forms.TableLayoutPanel();
             this.refreshLabel = new System.Windows.Forms.Label();
             this.refreshValue = new System.Windows.Forms.ComboBox();
@@ -170,6 +170,7 @@ namespace TrayTemps
             this.githubLink = new System.Windows.Forms.Label();
             this.donatePic = new System.Windows.Forms.PictureBox();
             this.panelWrapper = new System.Windows.Forms.Panel();
+            this.resizeGrip = new TrayTemps.WindowResizeGripPanel();
             this.cpuTrayIcon = new System.Windows.Forms.NotifyIcon(this.components);
             this.contextMenuStrip = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.ShowForm = new System.Windows.Forms.ToolStripMenuItem();
@@ -187,7 +188,6 @@ namespace TrayTemps
             this.SettingsTray = new System.Windows.Forms.ToolStripMenuItem();
             this.gpuTrayIcon = new System.Windows.Forms.NotifyIcon(this.components);
             this.NotifyIcon = new System.Windows.Forms.NotifyIcon(this.components);
-            this.resizeGrip = new TrayTemps.WindowResizeGripPanel();
             this.mainMenu.SuspendLayout();
             this.aboutPanel.SuspendLayout();
             this.settingsPanel.SuspendLayout();
@@ -266,17 +266,17 @@ namespace TrayTemps
             // 
             // osdSettings
             // 
-            this.osdSettings.BackColor = System.Drawing.Color.SeaGreen;
-            this.osdSettings.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.osdSettings.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.osdSettings.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(120)))), ((int)(((byte)(212)))));
             this.osdSettings.Enabled = false;
             this.osdSettings.FlatAppearance.BorderColor = System.Drawing.Color.DarkGray;
             this.osdSettings.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.osdSettings.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.osdSettings.ForeColor = System.Drawing.Color.White;
-            this.osdSettings.Location = new System.Drawing.Point(240, 6);
+            this.osdSettings.Location = new System.Drawing.Point(193, 6);
             this.osdSettings.Margin = new System.Windows.Forms.Padding(6);
             this.osdSettings.Name = "osdSettings";
-            this.osdSettings.Size = new System.Drawing.Size(66, 29);
+            this.osdSettings.Size = new System.Drawing.Size(66, 28);
             this.osdSettings.TabIndex = 14;
             this.osdSettings.Text = "⚙";
             this.mainToolTip.SetToolTip(this.osdSettings, "Opens OSD metric, appearance, and layout settings.");
@@ -285,22 +285,41 @@ namespace TrayTemps
             // 
             // colortempsConfig
             // 
+            this.colortempsConfig.Anchor = System.Windows.Forms.AnchorStyles.Left;
             this.colortempsConfig.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(120)))), ((int)(((byte)(212)))));
-            this.colortempsConfig.Dock = System.Windows.Forms.DockStyle.Fill;
             this.colortempsConfig.Enabled = false;
             this.colortempsConfig.FlatAppearance.BorderColor = System.Drawing.Color.DarkGray;
             this.colortempsConfig.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.colortempsConfig.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.colortempsConfig.ForeColor = System.Drawing.Color.White;
-            this.colortempsConfig.Location = new System.Drawing.Point(240, 6);
+            this.colortempsConfig.Location = new System.Drawing.Point(193, 7);
             this.colortempsConfig.Margin = new System.Windows.Forms.Padding(6);
             this.colortempsConfig.Name = "colortempsConfig";
-            this.colortempsConfig.Size = new System.Drawing.Size(66, 30);
+            this.colortempsConfig.Size = new System.Drawing.Size(66, 28);
             this.colortempsConfig.TabIndex = 14;
             this.colortempsConfig.Text = "⚙";
             this.mainToolTip.SetToolTip(this.colortempsConfig, "Configures the temperature thresholds used for dynamic colors.");
             this.colortempsConfig.UseVisualStyleBackColor = false;
             this.colortempsConfig.Click += new System.EventHandler(this.ColortempsConfig_Click);
+            // 
+            // fpsLimiterSettings
+            // 
+            this.fpsLimiterSettings.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.fpsLimiterSettings.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(120)))), ((int)(((byte)(212)))));
+            this.fpsLimiterSettings.Enabled = false;
+            this.fpsLimiterSettings.FlatAppearance.BorderColor = System.Drawing.Color.DarkGray;
+            this.fpsLimiterSettings.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.fpsLimiterSettings.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.fpsLimiterSettings.ForeColor = System.Drawing.Color.White;
+            this.fpsLimiterSettings.Location = new System.Drawing.Point(193, 6);
+            this.fpsLimiterSettings.Margin = new System.Windows.Forms.Padding(6);
+            this.fpsLimiterSettings.Name = "fpsLimiterSettings";
+            this.fpsLimiterSettings.Size = new System.Drawing.Size(66, 28);
+            this.fpsLimiterSettings.TabIndex = 1;
+            this.fpsLimiterSettings.Text = "⚙";
+            this.mainToolTip.SetToolTip(this.fpsLimiterSettings, "Configure FPS caps, executable profiles, exclusions, and the limiter shortcut.");
+            this.fpsLimiterSettings.UseVisualStyleBackColor = false;
+            this.fpsLimiterSettings.Click += new System.EventHandler(this.FpsLimiterSettings_Click);
             // 
             // cpuTempSensorSelect
             // 
@@ -1576,7 +1595,7 @@ namespace TrayTemps
             this.mainComponentsTitle.Name = "mainComponentsTitle";
             this.mainComponentsTitle.Size = new System.Drawing.Size(619, 30);
             this.mainComponentsTitle.TabIndex = 14;
-            this.mainComponentsTitle.Text = "🧩 Components";
+            this.mainComponentsTitle.Text = "🧩 Components Info";
             this.mainComponentsTitle.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // tempTitle
@@ -1589,7 +1608,7 @@ namespace TrayTemps
             this.tempTitle.Name = "tempTitle";
             this.tempTitle.Size = new System.Drawing.Size(619, 30);
             this.tempTitle.TabIndex = 9;
-            this.tempTitle.Text = "🌡 Temperatures";
+            this.tempTitle.Text = "🌡 Temperatures and Usage";
             this.tempTitle.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // sysmonTitle
@@ -1667,23 +1686,23 @@ namespace TrayTemps
             this.generalSettingsPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 51F));
             this.generalSettingsPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 49F));
             this.generalSettingsPanel.Controls.Add(this.minimizeOnStart, 1, 0);
-            this.generalSettingsPanel.Controls.Add(this.clearSettings, 1, 2);
-            this.generalSettingsPanel.Controls.Add(this.osdPanel, 0, 3);
-            this.generalSettingsPanel.Controls.Add(this.fpsLimiterPanel, 1, 3);
-            this.generalSettingsPanel.Controls.Add(this.refreshPanel, 1, 1);
+            this.generalSettingsPanel.Controls.Add(this.clearSettings, 1, 3);
+            this.generalSettingsPanel.Controls.Add(this.osdPanel, 0, 2);
+            this.generalSettingsPanel.Controls.Add(this.fpsLimiterPanel, 0, 3);
+            this.generalSettingsPanel.Controls.Add(this.refreshPanel, 1, 2);
             this.generalSettingsPanel.Controls.Add(this.autostartInstall, 0, 0);
             this.generalSettingsPanel.Controls.Add(this.tempsFahrenheit, 0, 1);
-            this.generalSettingsPanel.Controls.Add(this.lightModeSwitch, 0, 2);
+            this.generalSettingsPanel.Controls.Add(this.lightModeSwitch, 1, 1);
             this.generalSettingsPanel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.generalSettingsPanel.Location = new System.Drawing.Point(0, 42);
             this.generalSettingsPanel.Margin = new System.Windows.Forms.Padding(0, 0, 3, 3);
             this.generalSettingsPanel.Name = "generalSettingsPanel";
             this.generalSettingsPanel.Padding = new System.Windows.Forms.Padding(3);
             this.generalSettingsPanel.RowCount = 4;
-            this.generalSettingsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 25.00062F));
-            this.generalSettingsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 25.00062F));
-            this.generalSettingsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 25.00062F));
-            this.generalSettingsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 24.99813F));
+            this.generalSettingsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 25F));
+            this.generalSettingsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 25F));
+            this.generalSettingsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 25F));
+            this.generalSettingsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 25F));
             this.generalSettingsPanel.Size = new System.Drawing.Size(622, 178);
             this.generalSettingsPanel.TabIndex = 7;
             // 
@@ -1705,81 +1724,30 @@ namespace TrayTemps
             // 
             // clearSettings
             // 
+            this.clearSettings.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.clearSettings.BackColor = System.Drawing.Color.Crimson;
-            this.clearSettings.Dock = System.Windows.Forms.DockStyle.Fill;
             this.clearSettings.FlatAppearance.BorderSize = 0;
             this.clearSettings.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.clearSettings.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.clearSettings.ForeColor = System.Drawing.Color.White;
-            this.clearSettings.Location = new System.Drawing.Point(326, 95);
-            this.clearSettings.Margin = new System.Windows.Forms.Padding(9, 6, 8, 6);
+            this.clearSettings.Location = new System.Drawing.Point(326, 139);
+            this.clearSettings.Margin = new System.Windows.Forms.Padding(9, 6, 6, 6);
             this.clearSettings.Name = "clearSettings";
-            this.clearSettings.Size = new System.Drawing.Size(285, 31);
+            this.clearSettings.Size = new System.Drawing.Size(287, 28);
             this.clearSettings.TabIndex = 24;
             this.clearSettings.Text = "🔁 Reset Settings";
             this.clearSettings.UseVisualStyleBackColor = false;
             this.clearSettings.Click += new System.EventHandler(this.ClearSettings_Click);
             // 
-            // fpsLimiterPanel
-            //
-            this.fpsLimiterPanel.ColumnCount = 2;
-            this.fpsLimiterPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 75F));
-            this.fpsLimiterPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 25F));
-            this.fpsLimiterPanel.Controls.Add(this.fpsLimiterEnable, 0, 0);
-            this.fpsLimiterPanel.Controls.Add(this.fpsLimiterSettings, 1, 0);
-            this.fpsLimiterPanel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.fpsLimiterPanel.Location = new System.Drawing.Point(318, 133);
-            this.fpsLimiterPanel.Margin = new System.Windows.Forms.Padding(1);
-            this.fpsLimiterPanel.Name = "fpsLimiterPanel";
-            this.fpsLimiterPanel.RowCount = 1;
-            this.fpsLimiterPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.fpsLimiterPanel.Size = new System.Drawing.Size(300, 41);
-            this.fpsLimiterPanel.TabIndex = 27;
-            //
-            // fpsLimiterEnable
-            //
-            this.fpsLimiterEnable.AutoSize = true;
-            this.fpsLimiterEnable.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.fpsLimiterEnable.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
-            this.fpsLimiterEnable.ForeColor = System.Drawing.Color.LightGray;
-            this.fpsLimiterEnable.Location = new System.Drawing.Point(1, 1);
-            this.fpsLimiterEnable.Margin = new System.Windows.Forms.Padding(1);
-            this.fpsLimiterEnable.Name = "fpsLimiterEnable";
-            this.fpsLimiterEnable.Padding = new System.Windows.Forms.Padding(5, 0, 0, 0);
-            this.fpsLimiterEnable.Size = new System.Drawing.Size(232, 39);
-            this.fpsLimiterEnable.TabIndex = 0;
-            this.fpsLimiterEnable.Text = "FPS limiter:";
-            this.fpsLimiterEnable.UseVisualStyleBackColor = true;
-            this.fpsLimiterEnable.CheckedChanged += new System.EventHandler(this.FpsLimiterEnable_CheckedChanged);
-            //
-            // fpsLimiterSettings
-            //
-            this.fpsLimiterSettings.BackColor = System.Drawing.Color.SeaGreen;
-            this.fpsLimiterSettings.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.fpsLimiterSettings.Enabled = false;
-            this.fpsLimiterSettings.FlatAppearance.BorderColor = System.Drawing.Color.DarkGray;
-            this.fpsLimiterSettings.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.fpsLimiterSettings.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.fpsLimiterSettings.ForeColor = System.Drawing.Color.White;
-            this.fpsLimiterSettings.Location = new System.Drawing.Point(240, 6);
-            this.fpsLimiterSettings.Margin = new System.Windows.Forms.Padding(6);
-            this.fpsLimiterSettings.Name = "fpsLimiterSettings";
-            this.fpsLimiterSettings.Size = new System.Drawing.Size(66, 29);
-            this.fpsLimiterSettings.TabIndex = 1;
-            this.fpsLimiterSettings.Text = "⚙";
-            this.mainToolTip.SetToolTip(this.fpsLimiterSettings, "Configure FPS caps, executable profiles, exclusions, and the limiter shortcut.");
-            this.fpsLimiterSettings.UseVisualStyleBackColor = false;
-            this.fpsLimiterSettings.Click += new System.EventHandler(this.FpsLimiterSettings_Click);
-            //
             // osdPanel
             // 
             this.osdPanel.ColumnCount = 2;
-            this.osdPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 75F));
-            this.osdPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 25F));
+            this.osdPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 60F));
+            this.osdPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 40F));
             this.osdPanel.Controls.Add(this.osdEnable, 0, 0);
             this.osdPanel.Controls.Add(this.osdSettings, 1, 0);
             this.osdPanel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.osdPanel.Location = new System.Drawing.Point(4, 133);
+            this.osdPanel.Location = new System.Drawing.Point(4, 90);
             this.osdPanel.Margin = new System.Windows.Forms.Padding(1);
             this.osdPanel.Name = "osdPanel";
             this.osdPanel.RowCount = 1;
@@ -1797,21 +1765,53 @@ namespace TrayTemps
             this.osdEnable.Margin = new System.Windows.Forms.Padding(1);
             this.osdEnable.Name = "osdEnable";
             this.osdEnable.Padding = new System.Windows.Forms.Padding(5, 0, 0, 0);
-            this.osdEnable.Size = new System.Drawing.Size(232, 39);
+            this.osdEnable.Size = new System.Drawing.Size(185, 39);
             this.osdEnable.TabIndex = 13;
             this.osdEnable.Text = "On-screen display:";
             this.osdEnable.UseVisualStyleBackColor = true;
             this.osdEnable.CheckedChanged += new System.EventHandler(this.OsdEnable_CheckedChanged);
             // 
+            // fpsLimiterPanel
+            // 
+            this.fpsLimiterPanel.ColumnCount = 2;
+            this.fpsLimiterPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 60F));
+            this.fpsLimiterPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 40F));
+            this.fpsLimiterPanel.Controls.Add(this.fpsLimiterEnable, 0, 0);
+            this.fpsLimiterPanel.Controls.Add(this.fpsLimiterSettings, 1, 0);
+            this.fpsLimiterPanel.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.fpsLimiterPanel.Location = new System.Drawing.Point(4, 133);
+            this.fpsLimiterPanel.Margin = new System.Windows.Forms.Padding(1);
+            this.fpsLimiterPanel.Name = "fpsLimiterPanel";
+            this.fpsLimiterPanel.RowCount = 1;
+            this.fpsLimiterPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.fpsLimiterPanel.Size = new System.Drawing.Size(312, 41);
+            this.fpsLimiterPanel.TabIndex = 27;
+            // 
+            // fpsLimiterEnable
+            // 
+            this.fpsLimiterEnable.AutoSize = true;
+            this.fpsLimiterEnable.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.fpsLimiterEnable.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.fpsLimiterEnable.ForeColor = System.Drawing.Color.LightGray;
+            this.fpsLimiterEnable.Location = new System.Drawing.Point(1, 1);
+            this.fpsLimiterEnable.Margin = new System.Windows.Forms.Padding(1);
+            this.fpsLimiterEnable.Name = "fpsLimiterEnable";
+            this.fpsLimiterEnable.Padding = new System.Windows.Forms.Padding(5, 0, 0, 0);
+            this.fpsLimiterEnable.Size = new System.Drawing.Size(185, 39);
+            this.fpsLimiterEnable.TabIndex = 0;
+            this.fpsLimiterEnable.Text = "FPS limiter:";
+            this.fpsLimiterEnable.UseVisualStyleBackColor = true;
+            this.fpsLimiterEnable.CheckedChanged += new System.EventHandler(this.FpsLimiterEnable_CheckedChanged);
+            // 
             // refreshPanel
             // 
             this.refreshPanel.ColumnCount = 2;
-            this.refreshPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 60F));
             this.refreshPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 40F));
+            this.refreshPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 60F));
             this.refreshPanel.Controls.Add(this.refreshLabel, 0, 0);
             this.refreshPanel.Controls.Add(this.refreshValue, 1, 0);
             this.refreshPanel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.refreshPanel.Location = new System.Drawing.Point(318, 47);
+            this.refreshPanel.Location = new System.Drawing.Point(318, 90);
             this.refreshPanel.Margin = new System.Windows.Forms.Padding(1);
             this.refreshPanel.Name = "refreshPanel";
             this.refreshPanel.Padding = new System.Windows.Forms.Padding(3, 0, 6, 0);
@@ -1830,7 +1830,7 @@ namespace TrayTemps
             this.refreshLabel.Margin = new System.Windows.Forms.Padding(1);
             this.refreshLabel.Name = "refreshLabel";
             this.refreshLabel.Padding = new System.Windows.Forms.Padding(3, 0, 0, 0);
-            this.refreshLabel.Size = new System.Drawing.Size(172, 39);
+            this.refreshLabel.Size = new System.Drawing.Size(114, 39);
             this.refreshLabel.TabIndex = 1;
             this.refreshLabel.Text = "Refresh (s):";
             this.refreshLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -1886,10 +1886,10 @@ namespace TrayTemps
             "9.5",
             "9.75",
             "10"});
-            this.refreshValue.Location = new System.Drawing.Point(183, 10);
+            this.refreshValue.Location = new System.Drawing.Point(125, 10);
             this.refreshValue.Margin = new System.Windows.Forms.Padding(6, 1, 6, 1);
             this.refreshValue.Name = "refreshValue";
-            this.refreshValue.Size = new System.Drawing.Size(105, 21);
+            this.refreshValue.Size = new System.Drawing.Size(163, 21);
             this.refreshValue.TabIndex = 3;
             this.refreshValue.SelectedIndexChanged += new System.EventHandler(this.RefreshValue_ValueChanged);
             // 
@@ -1931,11 +1931,11 @@ namespace TrayTemps
             this.lightModeSwitch.Dock = System.Windows.Forms.DockStyle.Fill;
             this.lightModeSwitch.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
             this.lightModeSwitch.ForeColor = System.Drawing.Color.LightGray;
-            this.lightModeSwitch.Location = new System.Drawing.Point(4, 90);
+            this.lightModeSwitch.Location = new System.Drawing.Point(318, 47);
             this.lightModeSwitch.Margin = new System.Windows.Forms.Padding(1);
             this.lightModeSwitch.Name = "lightModeSwitch";
-            this.lightModeSwitch.Padding = new System.Windows.Forms.Padding(6, 3, 3, 3);
-            this.lightModeSwitch.Size = new System.Drawing.Size(312, 41);
+            this.lightModeSwitch.Padding = new System.Windows.Forms.Padding(9, 3, 3, 3);
+            this.lightModeSwitch.Size = new System.Drawing.Size(300, 41);
             this.lightModeSwitch.TabIndex = 2;
             this.lightModeSwitch.Text = "Light theme ◐";
             this.lightModeSwitch.UseVisualStyleBackColor = true;
@@ -1971,8 +1971,8 @@ namespace TrayTemps
             // colortempsPanel
             // 
             this.colortempsPanel.ColumnCount = 2;
-            this.colortempsPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 75F));
-            this.colortempsPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 25F));
+            this.colortempsPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 60F));
+            this.colortempsPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 40F));
             this.colortempsPanel.Controls.Add(this.colortempsEnable, 0, 0);
             this.colortempsPanel.Controls.Add(this.colortempsConfig, 1, 0);
             this.colortempsPanel.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -1994,9 +1994,9 @@ namespace TrayTemps
             this.colortempsEnable.Margin = new System.Windows.Forms.Padding(1);
             this.colortempsEnable.Name = "colortempsEnable";
             this.colortempsEnable.Padding = new System.Windows.Forms.Padding(5, 0, 0, 0);
-            this.colortempsEnable.Size = new System.Drawing.Size(232, 40);
+            this.colortempsEnable.Size = new System.Drawing.Size(185, 40);
             this.colortempsEnable.TabIndex = 13;
-            this.colortempsEnable.Text = "Temperature-based colors:";
+            this.colortempsEnable.Text = "Colors by temperature:";
             this.colortempsEnable.UseVisualStyleBackColor = true;
             this.colortempsEnable.CheckedChanged += new System.EventHandler(this.ColortempsEnable_CheckedChanged);
             // 
@@ -2030,7 +2030,7 @@ namespace TrayTemps
             this.fontFamilyLabel.Size = new System.Drawing.Size(114, 39);
             this.fontFamilyLabel.TabIndex = 0;
             this.fontFamilyLabel.Text = "Font family:";
-            this.fontFamilyLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.fontFamilyLabel.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             // 
             // fontFamilyValue
             // 
@@ -2145,7 +2145,7 @@ namespace TrayTemps
             this.cpuColorLabel.Size = new System.Drawing.Size(114, 39);
             this.cpuColorLabel.TabIndex = 0;
             this.cpuColorLabel.Text = "CPU Color:";
-            this.cpuColorLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.cpuColorLabel.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             // 
             // gpuColorPanel
             // 
@@ -2194,13 +2194,13 @@ namespace TrayTemps
             this.gpuColorLabel.Size = new System.Drawing.Size(114, 39);
             this.gpuColorLabel.TabIndex = 0;
             this.gpuColorLabel.Text = "GPU Color:";
-            this.gpuColorLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.gpuColorLabel.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             // 
             // iconsizePanel
             // 
             this.iconsizePanel.ColumnCount = 2;
-            this.iconsizePanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 60F));
             this.iconsizePanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 40F));
+            this.iconsizePanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 60F));
             this.iconsizePanel.Controls.Add(this.iconsizeLabel, 0, 0);
             this.iconsizePanel.Controls.Add(this.iconsizeValue, 1, 0);
             this.iconsizePanel.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -2223,10 +2223,10 @@ namespace TrayTemps
             this.iconsizeLabel.Margin = new System.Windows.Forms.Padding(1);
             this.iconsizeLabel.Name = "iconsizeLabel";
             this.iconsizeLabel.Padding = new System.Windows.Forms.Padding(3, 0, 0, 0);
-            this.iconsizeLabel.Size = new System.Drawing.Size(172, 40);
+            this.iconsizeLabel.Size = new System.Drawing.Size(114, 40);
             this.iconsizeLabel.TabIndex = 1;
             this.iconsizeLabel.Text = "Icon size (%):";
-            this.iconsizeLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.iconsizeLabel.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             // 
             // iconsizeValue
             // 
@@ -2254,10 +2254,10 @@ namespace TrayTemps
             "90",
             "95",
             "100"});
-            this.iconsizeValue.Location = new System.Drawing.Point(183, 10);
+            this.iconsizeValue.Location = new System.Drawing.Point(125, 10);
             this.iconsizeValue.Margin = new System.Windows.Forms.Padding(6, 1, 6, 1);
             this.iconsizeValue.Name = "iconsizeValue";
-            this.iconsizeValue.Size = new System.Drawing.Size(105, 21);
+            this.iconsizeValue.Size = new System.Drawing.Size(163, 21);
             this.iconsizeValue.TabIndex = 2;
             this.iconsizeValue.SelectedIndexChanged += new System.EventHandler(this.IconsizeValue_ValueChanged);
             // 
@@ -2427,6 +2427,17 @@ namespace TrayTemps
             this.panelWrapper.Size = new System.Drawing.Size(688, 553);
             this.panelWrapper.TabIndex = 3;
             // 
+            // resizeGrip
+            // 
+            this.resizeGrip.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.resizeGrip.BackColor = System.Drawing.Color.Transparent;
+            this.resizeGrip.Cursor = System.Windows.Forms.Cursors.SizeNWSE;
+            this.resizeGrip.Location = new System.Drawing.Point(668, 533);
+            this.resizeGrip.Margin = new System.Windows.Forms.Padding(0);
+            this.resizeGrip.Name = "resizeGrip";
+            this.resizeGrip.Size = new System.Drawing.Size(20, 20);
+            this.resizeGrip.TabIndex = 1;
+            // 
             // cpuTrayIcon
             // 
             this.cpuTrayIcon.ContextMenuStrip = this.contextMenuStrip;
@@ -2574,17 +2585,6 @@ namespace TrayTemps
             this.NotifyIcon.Text = "TrayTemps";
             this.NotifyIcon.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.NotifyIcon_MouseDoubleClick);
             // 
-            // resizeGrip
-            // 
-            this.resizeGrip.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.resizeGrip.BackColor = System.Drawing.Color.Transparent;
-            this.resizeGrip.Cursor = System.Windows.Forms.Cursors.SizeNWSE;
-            this.resizeGrip.Location = new System.Drawing.Point(668, 533);
-            this.resizeGrip.Margin = new System.Windows.Forms.Padding(0);
-            this.resizeGrip.Name = "resizeGrip";
-            this.resizeGrip.Size = new System.Drawing.Size(20, 20);
-            this.resizeGrip.TabIndex = 1;
-            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
@@ -2641,10 +2641,10 @@ namespace TrayTemps
             this.tableLayoutPanel1.ResumeLayout(false);
             this.generalSettingsPanel.ResumeLayout(false);
             this.generalSettingsPanel.PerformLayout();
-            this.fpsLimiterPanel.ResumeLayout(false);
-            this.fpsLimiterPanel.PerformLayout();
             this.osdPanel.ResumeLayout(false);
             this.osdPanel.PerformLayout();
+            this.fpsLimiterPanel.ResumeLayout(false);
+            this.fpsLimiterPanel.PerformLayout();
             this.refreshPanel.ResumeLayout(false);
             this.refreshPanel.PerformLayout();
             this.traySettingsPanel.ResumeLayout(false);

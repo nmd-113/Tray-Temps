@@ -141,6 +141,12 @@ namespace TrayTemps
                 oldFont.Dispose();
         }
 
+        internal static Font CreateUiFont(Font source)
+        {
+            Initialize();
+            return CreateReplacementFont(source, false);
+        }
+
         private static Font CreateReplacementFont(Font source, bool preserveSystemFont, bool forceExtraBold = false)
         {
             if (source == null || source.FontFamily == null)
@@ -167,6 +173,8 @@ namespace TrayTemps
 
         private static bool IsSystemSpecialCase(Control control)
         {
+            if (string.Equals(control.Tag as string, "TrayTemps.Font.System", StringComparison.Ordinal))
+                return true;
             // NumericUpDown calculates the height of its native editor/spinner from
             // the assigned font. Keep its Designer system font so Windows can choose
             // the correct preferred height for the current monitor DPI.

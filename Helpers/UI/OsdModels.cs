@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
@@ -46,7 +46,8 @@ namespace TrayTemps
         RamUsage,
         VramUsage,
         Fps,
-        CurrentTime
+        CurrentTime,
+        FpsOnePercentLow
     }
 
     [Flags]
@@ -60,6 +61,13 @@ namespace TrayTemps
 
     public sealed class OsdConfiguration
     {
+        internal static OsdConfiguration CreateAppDefault()
+        {
+            var config = OsdPresets.LoadEmbedded(0);
+            config.Enabled = false;
+            return config;
+        }
+
         private int _labelValueSpacing = 15;
         private bool _hasExplicitLabelValueSpacing;
 
@@ -85,6 +93,7 @@ namespace TrayTemps
         public bool ShowRamUsage { get; set; }
         public bool ShowVramUsage { get; set; }
         public bool ShowFps { get; set; }
+        public bool ShowFpsOnePercentLow { get; set; }
         public bool ShowCurrentTime { get; set; }
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public decimal? FpsRefreshIntervalSeconds { get; set; }
@@ -99,6 +108,14 @@ namespace TrayTemps
         public string CustomVramLabel { get; set; } = "VRAM Use";
         public string CustomFpsLabel { get; set; } = "FPS";
         public string CustomTimeLabel { get; set; } = "Time";
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public Dictionary<string, string> LabelOverrides { get; set; }
+        public Dictionary<string, string> MetricGroups { get; set; }
+        public Dictionary<string, string> GroupLabels { get; set; }
+        // Legacy grouped children hid captions while retaining standalone labels.
+        public Dictionary<string, string> GroupedLabelOverrides { get; set; }
+        public Dictionary<string, OsdMetricStyle> MetricStyles { get; set; }
+        public string GroupSeparator { get; set; }
         public int LabelValueSpacing
         {
             get => _labelValueSpacing;
@@ -134,7 +151,7 @@ namespace TrayTemps
         public int ExternalSpacing { get; set; }
         public int Columns { get; set; } = 1;
         public string ItemOrder { get; set; } =
-            "CpuTemperature,GpuTemperature,CpuUsage,GpuUsage,RamUsage,VramUsage,Fps,CurrentTime";
+            "CpuTemperature,GpuTemperature,CpuUsage,GpuUsage,RamUsage,VramUsage,Fps,FpsOnePercentLow,CurrentTime";
         public bool HotkeyEnabled { get; set; }
         public int HotkeyModifiers { get; set; } =
             (int)(OsdHotkeyModifiers.Control | OsdHotkeyModifiers.Shift);
@@ -142,11 +159,30 @@ namespace TrayTemps
 
         internal OsdConfiguration Clone()
         {
-            return (OsdConfiguration)MemberwiseClone();
+            var clone = (OsdConfiguration)MemberwiseClone();
+            if (LabelOverrides != null) clone.LabelOverrides = new Dictionary<string, string>(LabelOverrides, StringComparer.Ordinal);
+            if (MetricGroups != null) clone.MetricGroups = new Dictionary<string, string>(MetricGroups, StringComparer.Ordinal);
+            if (GroupLabels != null)
+            {
+                clone.GroupLabels = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var pair in GroupLabels) clone.GroupLabels[pair.Key] = pair.Value;
+            }
+            if (GroupedLabelOverrides != null) clone.GroupedLabelOverrides = new Dictionary<string, string>(GroupedLabelOverrides, StringComparer.Ordinal);
+            if (MetricStyles != null) clone.MetricStyles = MetricStyles.ToDictionary(pair => pair.Key, pair => pair.Value?.Clone(), StringComparer.Ordinal);
+            return clone;
         }
 
         [JsonIgnore]
         internal bool HasExplicitLabelValueSpacing => _hasExplicitLabelValueSpacing;
+    }
+
+    public sealed class OsdMetricStyle
+    {
+        public string FontFamily { get; set; }
+        public float FontSize { get; set; }
+        public int LabelColor { get; set; }
+        public int ValueColor { get; set; }
+        internal OsdMetricStyle Clone() => (OsdMetricStyle)MemberwiseClone();
     }
 
     internal static class OsdColorHelper
@@ -168,6 +204,7 @@ namespace TrayTemps
         internal const string EmbeddedJetBrainsMonoExtraBoldDisplayName = "JetBrains Mono ExtraBold";
         internal const string EmbeddedJetBrainsMonoRegularDisplayName = "JetBrains Mono";
         internal const string DefaultFamily = EmbeddedJetBrainsMonoExtraBoldDisplayName;
+        private static readonly Lazy<string[]> AvailableFamilyNames = new Lazy<string[]>(LoadAvailableFamilyNames, true);
 
         // Keep saved settings from older releases working after replacing the embedded font.
         internal static string NormalizeFamilyName(string familyName)
@@ -182,6 +219,11 @@ namespace TrayTemps
         }
 
         internal static string[] GetAvailableFamilyNames()
+        {
+            return (string[])AvailableFamilyNames.Value.Clone();
+        }
+
+        private static string[] LoadAvailableFamilyNames()
         {
             FontFamily[] families = FontFamily.Families;
             try
@@ -271,24 +313,14 @@ namespace TrayTemps
             TextColor = textColor;
         }
 
-        internal OsdMetric(string label, string value, string trailingValue, Color? textColor)
-            : this(label, value, textColor)
-        {
-            TrailingValue = trailingValue;
-        }
-
         internal string Label { get; }
         internal string Value { get; }
-        internal string TrailingValue { get; }
-        internal string SecondTrailingValue { get; set; }
-        internal string TrailingValueWidthTemplate { get; set; }
-        internal string SecondTrailingValueWidthTemplate { get; set; }
-        internal Color? TrailingValueColor { get; set; }
-        internal Color? SecondTrailingValueColor { get; set; }
+        internal string Key { get; set; }
+        internal OsdMetricStyle Style { get; set; }
+        internal List<OsdMetric> Members { get; set; }
         internal string ValueWidthTemplate { get; set; }
         internal string AlternateValueWidthTemplate { get; set; }
         internal int? LabelValueSpacingOverride { get; set; }
-        internal bool ValueFollowsLabel { get; set; }
         internal Color? TextColor { get; }
     }
 
@@ -354,6 +386,25 @@ namespace TrayTemps
         internal const OsdHotkeyModifiers AllowedModifiers =
             OsdHotkeyModifiers.Alt | OsdHotkeyModifiers.Control | OsdHotkeyModifiers.Shift;
 
+        internal static bool TryParse(Keys keyData, out OsdHotkeyModifiers modifiers, out Keys key)
+        {
+            modifiers = OsdHotkeyModifiers.None;
+            if ((keyData & Keys.Control) != 0) modifiers |= OsdHotkeyModifiers.Control;
+            if ((keyData & Keys.Shift) != 0) modifiers |= OsdHotkeyModifiers.Shift;
+            if ((keyData & Keys.Alt) != 0) modifiers |= OsdHotkeyModifiers.Alt;
+            key = keyData & Keys.KeyCode;
+            return IsValid(modifiers, key);
+        }
+
+        internal static Keys ToKeyData(OsdHotkeyModifiers modifiers, Keys key)
+        {
+            Keys keyData = key & Keys.KeyCode;
+            if ((modifiers & OsdHotkeyModifiers.Control) != 0) keyData |= Keys.Control;
+            if ((modifiers & OsdHotkeyModifiers.Shift) != 0) keyData |= Keys.Shift;
+            if ((modifiers & OsdHotkeyModifiers.Alt) != 0) keyData |= Keys.Alt;
+            return keyData;
+        }
+
         internal static bool IsValid(OsdHotkeyModifiers modifiers, Keys key)
         {
             Keys keyCode = key & Keys.KeyCode;
@@ -415,6 +466,7 @@ namespace TrayTemps
             OsdItemKind.RamUsage,
             OsdItemKind.VramUsage,
             OsdItemKind.Fps,
+            OsdItemKind.FpsOnePercentLow,
             OsdItemKind.CurrentTime
         };
 
@@ -457,6 +509,7 @@ namespace TrayTemps
                 case OsdItemKind.RamUsage: return "RAM usage";
                 case OsdItemKind.VramUsage: return "VRAM usage";
                 case OsdItemKind.Fps: return "FPS";
+                case OsdItemKind.FpsOnePercentLow: return "1% Low";
                 case OsdItemKind.CurrentTime: return "Current time";
                 default: return item.ToString();
             }

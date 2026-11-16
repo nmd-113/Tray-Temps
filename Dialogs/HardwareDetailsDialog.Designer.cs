@@ -61,7 +61,7 @@ partial class HardwareDetailsDialog
             this.outerBorder.Controls.Add(this.mainPanel);
             this.outerBorder.Controls.Add(this.leftMenu);
             this.outerBorder.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.outerBorder.Font = new System.Drawing.Font("TrayTemps Mono", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.outerBorder.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.outerBorder.Location = new System.Drawing.Point(0, 0);
             this.outerBorder.Name = "outerBorder";
             this.outerBorder.Padding = new System.Windows.Forms.Padding(1);
@@ -121,7 +121,7 @@ partial class HardwareDetailsDialog
             this._detailsBox.BorderStyle = System.Windows.Forms.BorderStyle.None;
             this._detailsBox.DetectUrls = false;
             this._detailsBox.Dock = System.Windows.Forms.DockStyle.Fill;
-            this._detailsBox.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
+            this._detailsBox.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
             this._detailsBox.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(220)))), ((int)(((byte)(220)))), ((int)(((byte)(220)))));
             this._detailsBox.Location = new System.Drawing.Point(15, 15);
             this._detailsBox.Name = "_detailsBox";
@@ -149,7 +149,7 @@ partial class HardwareDetailsDialog
             this._liveBox.BorderStyle = System.Windows.Forms.BorderStyle.None;
             this._liveBox.DetectUrls = false;
             this._liveBox.Dock = System.Windows.Forms.DockStyle.Fill;
-            this._liveBox.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
+            this._liveBox.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
             this._liveBox.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(120)))), ((int)(((byte)(210)))), ((int)(((byte)(255)))));
             this._liveBox.Location = new System.Drawing.Point(15, 15);
             this._liveBox.Name = "_liveBox";
@@ -171,13 +171,13 @@ partial class HardwareDetailsDialog
             // contentHeaderLabel
             // 
             this.contentHeaderLabel.AutoSize = true;
-            this.contentHeaderLabel.Font = new System.Drawing.Font("TrayTemps Mono ExtraBold", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.contentHeaderLabel.Tag = "TrayTemps.Font.ExtraBold";
+            this.contentHeaderLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.contentHeaderLabel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(150)))), ((int)(((byte)(150)))), ((int)(((byte)(150)))));
             this.contentHeaderLabel.Location = new System.Drawing.Point(0, 9);
             this.contentHeaderLabel.Name = "contentHeaderLabel";
-            this.contentHeaderLabel.Size = new System.Drawing.Size(130, 15);
+            this.contentHeaderLabel.Size = new System.Drawing.Size(112, 15);
             this.contentHeaderLabel.TabIndex = 0;
+            this.contentHeaderLabel.Tag = "TrayTemps.Font.ExtraBold";
             this.contentHeaderLabel.Text = "System information";
             // 
             // bottomBar
@@ -202,7 +202,7 @@ partial class HardwareDetailsDialog
             this._closeBtn.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(75)))), ((int)(((byte)(75)))), ((int)(((byte)(75)))));
             this._closeBtn.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
             this._closeBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this._closeBtn.Font = new System.Drawing.Font("TrayTemps Mono", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this._closeBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this._closeBtn.ForeColor = System.Drawing.Color.WhiteSmoke;
             this._closeBtn.Location = new System.Drawing.Point(293, 10);
             this._closeBtn.Name = "_closeBtn";
@@ -219,7 +219,7 @@ partial class HardwareDetailsDialog
             this.copyAllBtn.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
             this.copyAllBtn.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(55)))), ((int)(((byte)(55)))), ((int)(((byte)(55)))));
             this.copyAllBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.copyAllBtn.Font = new System.Drawing.Font("TrayTemps Mono", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.copyAllBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.copyAllBtn.ForeColor = System.Drawing.Color.WhiteSmoke;
             this.copyAllBtn.Location = new System.Drawing.Point(393, 10);
             this.copyAllBtn.Margin = new System.Windows.Forms.Padding(5, 0, 0, 0);
@@ -238,7 +238,7 @@ partial class HardwareDetailsDialog
             this._copyBtn.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
             this._copyBtn.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(55)))), ((int)(((byte)(55)))), ((int)(((byte)(55)))));
             this._copyBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this._copyBtn.Font = new System.Drawing.Font("TrayTemps Mono", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this._copyBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this._copyBtn.ForeColor = System.Drawing.Color.WhiteSmoke;
             this._copyBtn.Location = new System.Drawing.Point(493, 10);
             this._copyBtn.Name = "_copyBtn";
@@ -265,7 +265,7 @@ partial class HardwareDetailsDialog
             // 
             this._subtitleLabel.AutoEllipsis = true;
             this._subtitleLabel.Dock = System.Windows.Forms.DockStyle.Top;
-            this._subtitleLabel.Font = new System.Drawing.Font("TrayTemps Mono", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this._subtitleLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this._subtitleLabel.ForeColor = System.Drawing.Color.DarkGray;
             this._subtitleLabel.Location = new System.Drawing.Point(0, 32);
             this._subtitleLabel.Name = "_subtitleLabel";
@@ -278,14 +278,14 @@ partial class HardwareDetailsDialog
             // 
             this.titleLabel.AutoEllipsis = true;
             this.titleLabel.Dock = System.Windows.Forms.DockStyle.Top;
-            this.titleLabel.Font = new System.Drawing.Font("TrayTemps Mono ExtraBold", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.titleLabel.Tag = "TrayTemps.Font.ExtraBold";
+            this.titleLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.titleLabel.ForeColor = System.Drawing.Color.WhiteSmoke;
             this.titleLabel.Location = new System.Drawing.Point(0, 0);
             this.titleLabel.Name = "titleLabel";
             this.titleLabel.Padding = new System.Windows.Forms.Padding(15, 8, 0, 0);
             this.titleLabel.Size = new System.Drawing.Size(538, 32);
             this.titleLabel.TabIndex = 0;
+            this.titleLabel.Tag = "TrayTemps.Font.ExtraBold";
             this.titleLabel.Text = "Component Name";
             // 
             // minimizeBtn
@@ -295,14 +295,14 @@ partial class HardwareDetailsDialog
             this.minimizeBtn.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(70)))), ((int)(((byte)(70)))), ((int)(((byte)(70)))));
             this.minimizeBtn.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(50)))), ((int)(((byte)(50)))), ((int)(((byte)(50)))));
             this.minimizeBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.minimizeBtn.Font = new System.Drawing.Font("TrayTemps Mono ExtraBold", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.minimizeBtn.Tag = "TrayTemps.Font.ExtraBold";
+            this.minimizeBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.minimizeBtn.ForeColor = System.Drawing.Color.WhiteSmoke;
             this.minimizeBtn.Location = new System.Drawing.Point(538, 0);
             this.minimizeBtn.Name = "minimizeBtn";
             this.minimizeBtn.Size = new System.Drawing.Size(50, 55);
             this.minimizeBtn.TabIndex = 3;
             this.minimizeBtn.TabStop = false;
+            this.minimizeBtn.Tag = "TrayTemps.Font.ExtraBold";
             this.minimizeBtn.Text = "─";
             this.minimizeBtn.UseVisualStyleBackColor = false;
             this.minimizeBtn.Click += new System.EventHandler(this.minimizeBtn_Click);
@@ -314,14 +314,14 @@ partial class HardwareDetailsDialog
             this.closeTopBtn.FlatAppearance.MouseDownBackColor = System.Drawing.Color.DarkRed;
             this.closeTopBtn.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(200)))), ((int)(((byte)(50)))), ((int)(((byte)(50)))));
             this.closeTopBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.closeTopBtn.Font = new System.Drawing.Font("TrayTemps Mono ExtraBold", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.closeTopBtn.Tag = "TrayTemps.Font.ExtraBold";
+            this.closeTopBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.closeTopBtn.ForeColor = System.Drawing.Color.WhiteSmoke;
             this.closeTopBtn.Location = new System.Drawing.Point(588, 0);
             this.closeTopBtn.Name = "closeTopBtn";
             this.closeTopBtn.Size = new System.Drawing.Size(50, 55);
             this.closeTopBtn.TabIndex = 2;
             this.closeTopBtn.TabStop = false;
+            this.closeTopBtn.Tag = "TrayTemps.Font.ExtraBold";
             this.closeTopBtn.Text = "✖";
             this.closeTopBtn.UseVisualStyleBackColor = false;
             this.closeTopBtn.Click += new System.EventHandler(this.closeTopBtn_Click);
@@ -347,8 +347,7 @@ partial class HardwareDetailsDialog
             this._sensorsMenuBtn.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(60)))), ((int)(((byte)(60)))), ((int)(((byte)(60)))));
             this._sensorsMenuBtn.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(50)))), ((int)(((byte)(50)))), ((int)(((byte)(50)))));
             this._sensorsMenuBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this._sensorsMenuBtn.Font = new System.Drawing.Font("TrayTemps Mono ExtraBold", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this._sensorsMenuBtn.Tag = "TrayTemps.Font.ExtraBold";
+            this._sensorsMenuBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this._sensorsMenuBtn.ForeColor = System.Drawing.Color.WhiteSmoke;
             this._sensorsMenuBtn.Location = new System.Drawing.Point(3, 146);
             this._sensorsMenuBtn.Name = "_sensorsMenuBtn";
@@ -356,6 +355,7 @@ partial class HardwareDetailsDialog
             this._sensorsMenuBtn.Size = new System.Drawing.Size(117, 45);
             this._sensorsMenuBtn.TabIndex = 4;
             this._sensorsMenuBtn.TabStop = false;
+            this._sensorsMenuBtn.Tag = "TrayTemps.Font.ExtraBold";
             this._sensorsMenuBtn.Text = "Sensors";
             this._sensorsMenuBtn.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this._sensorsMenuBtn.UseVisualStyleBackColor = false;
@@ -368,8 +368,7 @@ partial class HardwareDetailsDialog
             this._detailsMenuBtn.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(60)))), ((int)(((byte)(60)))), ((int)(((byte)(60)))));
             this._detailsMenuBtn.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(50)))), ((int)(((byte)(50)))), ((int)(((byte)(50)))));
             this._detailsMenuBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this._detailsMenuBtn.Font = new System.Drawing.Font("TrayTemps Mono ExtraBold", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this._detailsMenuBtn.Tag = "TrayTemps.Font.ExtraBold";
+            this._detailsMenuBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this._detailsMenuBtn.ForeColor = System.Drawing.Color.WhiteSmoke;
             this._detailsMenuBtn.Location = new System.Drawing.Point(3, 101);
             this._detailsMenuBtn.Name = "_detailsMenuBtn";
@@ -377,6 +376,7 @@ partial class HardwareDetailsDialog
             this._detailsMenuBtn.Size = new System.Drawing.Size(117, 45);
             this._detailsMenuBtn.TabIndex = 3;
             this._detailsMenuBtn.TabStop = false;
+            this._detailsMenuBtn.Tag = "TrayTemps.Font.ExtraBold";
             this._detailsMenuBtn.Text = "Details";
             this._detailsMenuBtn.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this._detailsMenuBtn.UseVisualStyleBackColor = false;
@@ -385,13 +385,13 @@ partial class HardwareDetailsDialog
             // menuTitle
             // 
             this.menuTitle.Dock = System.Windows.Forms.DockStyle.Top;
-            this.menuTitle.Font = new System.Drawing.Font("TrayTemps Mono ExtraBold", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.menuTitle.Tag = "TrayTemps.Font.ExtraBold";
+            this.menuTitle.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.menuTitle.ForeColor = System.Drawing.Color.Gray;
             this.menuTitle.Location = new System.Drawing.Point(3, 70);
             this.menuTitle.Name = "menuTitle";
             this.menuTitle.Size = new System.Drawing.Size(117, 31);
             this.menuTitle.TabIndex = 2;
+            this.menuTitle.Tag = "TrayTemps.Font.ExtraBold";
             this.menuTitle.Text = "CATEGORY";
             this.menuTitle.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
@@ -430,7 +430,7 @@ partial class HardwareDetailsDialog
             this.CancelButton = this._closeBtn;
             this.ClientSize = new System.Drawing.Size(760, 520);
             this.Controls.Add(this.outerBorder);
-            this.Font = new System.Drawing.Font("TrayTemps Mono", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.KeyPreview = true;

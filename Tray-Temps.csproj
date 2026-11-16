@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -156,6 +156,14 @@
     <Compile Include="Dialogs\OsdSettingsDialog.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Dialogs\OsdSettingsDialog.Metrics.cs">
+      <DependentUpon>OsdSettingsDialog.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Dialogs\OsdSettingsDialog.Presets.cs">
+      <DependentUpon>OsdSettingsDialog.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Dialogs\OsdSettingsDialog.Designer.cs">
       <DependentUpon>OsdSettingsDialog.cs</DependentUpon>
     </Compile>
@@ -183,6 +191,7 @@
     <Compile Include="Helpers\Hardware\HardwareLiveSensorsTextHelper.cs" />
     <Compile Include="Helpers\Hardware\SystemMemoryUsageHelper.cs" />
     <Compile Include="Helpers\Performance\ForegroundFpsMonitor.cs" />
+    <Compile Include="Helpers\Performance\FrameTimeWindow.cs" />
     <Compile Include="MainForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -194,11 +203,17 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="Helpers\UI\OsdModels.cs" />
+    <Compile Include="Helpers\UI\OsdPresets.cs" />
+    <Compile Include="Helpers\UI\OsdMetricDefinitions.cs" />
+    <Compile Include="Helpers\UI\OsdMetricsListView.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="Helpers\Storage\StorageReportHelper.cs" />
     <Compile Include="Helpers\Storage\StorageLiveSensorFallbackHelper.cs" />
     <Compile Include="Helpers\Storage\StorageSmartInfoHelper.cs" />
     <Compile Include="Helpers\Infrastructure\WmiQueryHelper.cs" />
     <Compile Include="Helpers\Infrastructure\PawnIoSetupHelper.cs" />
+    <Compile Include="Helpers\Infrastructure\InstallationFileHelper.cs" />
     <Compile Include="Helpers\Infrastructure\UpdateCheckHelper.cs" />
     <Compile Include="Helpers\Infrastructure\SettingsFileHelper.cs" />
     <Compile Include="MainForm.Designer.cs">
@@ -222,6 +237,9 @@
     <EmbeddedResource Include="Dialogs\ColorTempsConfig.resx">
       <DependentUpon>ColorTempsConfig.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="Dialogs\FpsLimiterNoticesDialog.resx">
+      <DependentUpon>FpsLimiterNoticesDialog.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Dialogs\HardwareDetailsDialog.resx">
       <DependentUpon>HardwareDetailsDialog.cs</DependentUpon>
     </EmbeddedResource>
@@ -230,6 +248,15 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Dialogs\OsdSettingsDialog.resx">
       <DependentUpon>OsdSettingsDialog.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\OsdPresets\1.json">
+      <LogicalName>TrayTemps.OsdPresets.1.json</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\OsdPresets\2.json">
+      <LogicalName>TrayTemps.OsdPresets.2.json</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\OsdPresets\3.json">
+      <LogicalName>TrayTemps.OsdPresets.3.json</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="MainForm.resx">
       <DependentUpon>MainForm.cs</DependentUpon>
@@ -333,10 +360,12 @@
     </ProjectReference>
     <Compile Include="MainForm.FpsLimiter.cs">
       <DependentUpon>MainForm.cs</DependentUpon>
+      <SubType>Form</SubType>
     </Compile>
     <Compile Include="Helpers\Performance\FpsLimiterConfiguration.cs" />
     <Compile Include="Helpers\Performance\FpsLimiterPayloads.cs" />
     <Compile Include="Helpers\Performance\FpsLimiterService.cs" />
+    <Compile Include="Helpers\Performance\FpsLimiterGameDetection.cs" />
     <Compile Include="Dialogs\FpsLimiterSettingsDialog.cs">
       <SubType>Form</SubType>
     </Compile>

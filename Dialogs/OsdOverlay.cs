@@ -29,7 +29,7 @@ namespace TrayTemps
         private static readonly IntPtr HtTransparent = new IntPtr(-1);
         private static readonly IntPtr HwndTopMost = new IntPtr(-1);
         private readonly List<OsdMetric> _metrics = new List<OsdMetric>();
-        private readonly List<MetricLayout> _metricLayouts = new List<MetricLayout>();
+        private readonly List<RowLayout> _metricLayouts = new List<RowLayout>();
         private readonly Dictionary<string, int> _valueTemplateWidthCache =
             new Dictionary<string, int>(StringComparer.Ordinal);
         private readonly Dictionary<string, FontFamily> _unicodeFallbackFamilies =
@@ -50,16 +50,13 @@ namespace TrayTemps
         private int _presentationDpi;
         private int _backgroundPathRadius = -1;
         private Font _displayFont;
-        private string _displayFontFamily;
-        private float _displayFontSize;
         private OsdConfiguration _configuration = new OsdConfiguration();
         private Rectangle _workingArea;
         private Color _textColor = Color.WhiteSmoke;
         private Color _backgroundColor = Color.FromArgb(24, 24, 24);
-        private int _trailingValueSlotWidth;
-        private int _secondTrailingValueSlotWidth;
-        private int _stablePercentSlotWidth;
-        private int _stablePercentSlotDpi;
+        private readonly Dictionary<string, Font> _metricFonts = new Dictionary<string, Font>(StringComparer.Ordinal);
+        private string _fontContextKey = "";
+        private float? _drawBaseline;
         private int _layoutDpi;
 
         public OsdOverlay()
@@ -138,6 +135,12 @@ namespace TrayTemps
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
+            DisposeRenderResources();
+            base.OnFormClosed(e);
+        }
+
+        private void DisposeRenderResources()
+        {
             DisposePresentationSurface();
             DisposeDisplayFont();
             DisposeUnicodeFallbackFonts();
@@ -145,9 +148,8 @@ namespace TrayTemps
             _unicodeFontChoiceCache.Clear();
             _unicodeFontCmapCache.Clear();
             foreach (FontFamily family in _unicodeFallbackFamilies.Values)
-                family.Dispose();
+                family?.Dispose();
             _unicodeFallbackFamilies.Clear();
-            base.OnFormClosed(e);
         }
 
         private void DisposePresentationSurface()
@@ -166,10 +168,9 @@ namespace TrayTemps
 
         private void DisposeDisplayFont()
         {
-            _displayFont?.Dispose();
+            foreach (Font font in _metricFonts.Values) font.Dispose();
+            _metricFonts.Clear();
             _displayFont = null;
-            _displayFontFamily = null;
-            _displayFontSize = 0f;
         }
 
         internal void UpdateDisplay(
@@ -184,7 +185,8 @@ namespace TrayTemps
                     nextConfiguration,
                     nextMetrics,
                     workingArea,
-                    out bool layoutChanged))
+                    out bool layoutChanged,
+                    out bool fontSettingsChanged))
             {
                 return;
             }
@@ -196,7 +198,15 @@ namespace TrayTemps
                 _workingArea != workingArea ||
                 _configuration.Position != nextConfiguration.Position ||
                 _configuration.ExternalSpacing != nextConfiguration.ExternalSpacing;
-            _configuration = nextConfiguration.Clone();
+            bool configurationSnapshotChanged = layoutChanged || _workingArea != workingArea ||
+                _configuration.Position != nextConfiguration.Position ||
+                _configuration.ExternalSpacing != nextConfiguration.ExternalSpacing ||
+                _configuration.BackgroundColor != nextConfiguration.BackgroundColor ||
+                _configuration.BackgroundCornerRoundness != nextConfiguration.BackgroundCornerRoundness ||
+                _configuration.OpacityPercent != nextConfiguration.OpacityPercent ||
+                _configuration.BackgroundOpacityPercent != nextConfiguration.BackgroundOpacityPercent;
+            if (configurationSnapshotChanged)
+                _configuration = nextConfiguration.Clone();
             _workingArea = workingArea;
             _metrics.Clear();
             _metrics.AddRange(nextMetrics);
@@ -209,6 +219,8 @@ namespace TrayTemps
 
             if (visualSettingsChanged)
                 ApplyVisualSettings();
+            if (fontSettingsChanged)
+                InvalidateFontSettings();
             if (layoutChanged)
                 RebuildLayout();
             if (positionChanged)
@@ -220,473 +232,267 @@ namespace TrayTemps
             OsdConfiguration configuration,
             IReadOnlyList<OsdMetric> metrics,
             Rectangle workingArea,
-            out bool layoutChanged)
+            out bool layoutChanged,
+            out bool fontSettingsChanged)
         {
-            layoutChanged = _displayFont == null || _layoutDpi != DeviceDpi ||
-                _metricLayouts.Count != metrics.Count ||
+            fontSettingsChanged = _displayFont == null || _layoutDpi != DeviceDpi ||
+                _configuration.FontFamily != configuration.FontFamily || _configuration.FontSize != configuration.FontSize;
+            layoutChanged = _displayFont == null || _layoutDpi != DeviceDpi || _metrics.Count != metrics.Count ||
                 _workingArea.Size != workingArea.Size ||
-                !string.Equals(
-                    _configuration.FontFamily,
-                    configuration.FontFamily,
-                    StringComparison.OrdinalIgnoreCase) ||
-                Math.Abs(_configuration.FontSize - configuration.FontSize) > 0.01f ||
-                _configuration.Columns != configuration.Columns ||
-                _configuration.ScreenMargin != configuration.ScreenMargin ||
-                _configuration.RowsSpacing != configuration.RowsSpacing ||
-                _configuration.ColumnsSpacing != configuration.ColumnsSpacing ||
-                _configuration.LabelValueSpacing != configuration.LabelValueSpacing;
-
-            bool displayChanged = layoutChanged ||
-                _workingArea != workingArea ||
-                _configuration.Position != configuration.Position ||
+                _configuration.Columns != configuration.Columns || _configuration.ScreenMargin != configuration.ScreenMargin ||
+                _configuration.RowsSpacing != configuration.RowsSpacing || _configuration.ColumnsSpacing != configuration.ColumnsSpacing ||
+                _configuration.LabelValueSpacing != configuration.LabelValueSpacing ||
+                !string.Equals(_configuration.GroupSeparator, configuration.GroupSeparator, StringComparison.Ordinal) ||
+                _configuration.FontFamily != configuration.FontFamily || _configuration.FontSize != configuration.FontSize;
+            bool changed = layoutChanged || _workingArea != workingArea ||
+                _configuration.Position != configuration.Position || _configuration.ExternalSpacing != configuration.ExternalSpacing ||
                 _configuration.BackgroundColor != configuration.BackgroundColor ||
                 _configuration.BackgroundCornerRoundness != configuration.BackgroundCornerRoundness ||
-                _configuration.ExternalSpacing != configuration.ExternalSpacing ||
-                _configuration.BackgroundOpacityPercent != configuration.BackgroundOpacityPercent ||
-                _configuration.OpacityPercent != configuration.OpacityPercent;
-
-            int comparableMetricCount = Math.Min(_metrics.Count, metrics.Count);
-            for (int index = 0; index < comparableMetricCount; index++)
+                _configuration.OpacityPercent != configuration.OpacityPercent ||
+                _configuration.BackgroundOpacityPercent != configuration.BackgroundOpacityPercent;
+            for (int i = 0; i < Math.Min(_metrics.Count, metrics.Count); i++)
             {
-                OsdMetric current = _metrics[index];
-                OsdMetric next = metrics[index];
-                bool valueChanged =
-                    !string.Equals(current.Value, next.Value, StringComparison.Ordinal);
-                bool metricLayoutChanged =
-                    !string.Equals(current.Label, next.Label, StringComparison.Ordinal) ||
-                    !string.Equals(current.ValueWidthTemplate, next.ValueWidthTemplate, StringComparison.Ordinal) ||
-                    !string.Equals(current.AlternateValueWidthTemplate, next.AlternateValueWidthTemplate, StringComparison.Ordinal) ||
-                    !string.Equals(current.TrailingValueWidthTemplate, next.TrailingValueWidthTemplate, StringComparison.Ordinal) ||
-                    !string.Equals(current.SecondTrailingValueWidthTemplate, next.SecondTrailingValueWidthTemplate, StringComparison.Ordinal) ||
-                    current.TrailingValueColor != next.TrailingValueColor ||
-                    current.SecondTrailingValueColor != next.SecondTrailingValueColor ||
-                    current.LabelValueSpacingOverride != next.LabelValueSpacingOverride ||
-                    current.ValueFollowsLabel != next.ValueFollowsLabel ||
-                    (current.TrailingValue == null) != (next.TrailingValue == null) ||
-                    (current.SecondTrailingValue == null) != (next.SecondTrailingValue == null) ||
-                    (string.IsNullOrEmpty(next.ValueWidthTemplate) && valueChanged);
-                if (metricLayoutChanged)
+                var before = _metrics[i]; var after = metrics[i];
+                if (before.Key != after.Key || before.Label != after.Label || (before.Members == null) != (after.Members == null))
                     layoutChanged = true;
-                if (metricLayoutChanged ||
-                    valueChanged ||
-                    !string.Equals(current.TrailingValue, next.TrailingValue, StringComparison.Ordinal) ||
-                    !string.Equals(current.SecondTrailingValue, next.SecondTrailingValue, StringComparison.Ordinal) ||
-                    !string.Equals(current.TrailingValueWidthTemplate, next.TrailingValueWidthTemplate, StringComparison.Ordinal) ||
-                    current.TextColor != next.TextColor)
-                    displayChanged = true;
+                int beforeCount = before.Members?.Count ?? 1, afterCount = after.Members?.Count ?? 1;
+                if (beforeCount != afterCount) layoutChanged = true;
+                for (int j = 0; j < Math.Min(beforeCount, afterCount); j++)
+                {
+                    var x = before.Members == null ? before : before.Members[j];
+                    var y = after.Members == null ? after : after.Members[j];
+                    var xs = x.Style ?? OsdMetricDefinitions.LegacyStyle(_configuration, x.Key ?? "");
+                    var ys = y.Style ?? OsdMetricDefinitions.LegacyStyle(configuration, y.Key ?? "");
+                    fontSettingsChanged |= xs.FontFamily != ys.FontFamily || xs.FontSize != ys.FontSize;
+                    if (x.Key != y.Key || x.Label != y.Label || xs.FontFamily != ys.FontFamily || xs.FontSize != ys.FontSize ||
+                        x.LabelValueSpacingOverride != y.LabelValueSpacingOverride || x.ValueWidthTemplate != y.ValueWidthTemplate ||
+                        x.AlternateValueWidthTemplate != y.AlternateValueWidthTemplate ||
+                        (string.IsNullOrEmpty(y.ValueWidthTemplate) && x.Value != y.Value))
+                        layoutChanged = true;
+                    changed |= x.Value != y.Value || x.TextColor != y.TextColor || xs.LabelColor != ys.LabelColor || xs.ValueColor != ys.ValueColor;
+                }
             }
-
-            return displayChanged;
+            return changed || layoutChanged;
         }
 
         private void ApplyVisualSettings()
         {
             _backgroundColor = _configuration.BackgroundColor.HasValue
-                ? OsdColorHelper.GetOpaqueColor(_configuration.BackgroundColor.Value)
-                : OsdColorHelper.GetDefaultBackground(lightMode: false);
-            _textColor = Color.WhiteSmoke;
+                ? OsdColorHelper.GetOpaqueColor(_configuration.BackgroundColor.Value) : OsdColorHelper.GetDefaultBackground(false);
+        }
 
-            string fontFamily = string.IsNullOrWhiteSpace(_configuration.FontFamily)
-                ? OsdFontHelper.DefaultFamily
-                : _configuration.FontFamily;
-            float fontSize = Math.Max(6f, Math.Min(48f, _configuration.FontSize));
-            if (_displayFont == null ||
-                !string.Equals(_displayFontFamily, fontFamily, StringComparison.OrdinalIgnoreCase) ||
-                Math.Abs(_displayFontSize - fontSize) > 0.01f)
-            {
-                Font nextFont = OsdFontHelper.CreateFont(fontFamily, fontSize);
-                _displayFont?.Dispose();
-                _displayFont = nextFont;
-                _displayFontFamily = fontFamily;
-                _displayFontSize = fontSize;
-                DisposeUnicodeFallbackFonts();
-                _unicodeFontChoiceCache.Clear();
-                _unicodeFontCmapCache.Clear();
-                _unicodeTextRunCache.Clear();
-                _trailingValueSlotWidth = 0;
-                _secondTrailingValueSlotWidth = 0;
-                _stablePercentSlotWidth = 0;
-                _stablePercentSlotDpi = 0;
-                _valueTemplateWidthCache.Clear();
-            }
+        private void InvalidateFontSettings()
+        {
+            // Font and DPI changes invalidate glyph measurements. Geometry-only edits reuse these contexts.
+            DisposeUnicodeFallbackFonts();
+            _unicodeTextRunCache.Clear(); _unicodeFontChoiceCache.Clear(); _valueTemplateWidthCache.Clear();
+            DisposeDisplayFont();
+        }
+
+        private void ActivateFont(OsdMetricStyle style)
+        {
+            string family = style?.FontFamily ?? _configuration.FontFamily;
+            float size = style?.FontSize ?? _configuration.FontSize;
+            if (string.IsNullOrWhiteSpace(family)) family = OsdFontHelper.DefaultFamily;
+            size = Math.Max(6, Math.Min(48, size));
+            string key = family + "|" + size.ToString("R", CultureInfo.InvariantCulture);
+            if (!_metricFonts.TryGetValue(key, out var font)) _metricFonts[key] = font = OsdFontHelper.CreateFont(family, size);
+            _displayFont = font; _fontContextKey = key;
+        }
+
+        private float Ascent(Graphics graphics) => GetFontBaseline(_displayFont.FontFamily, _displayFont.Style, graphics.DpiY * _displayFont.SizeInPoints / 72f);
+        private float Descent(Graphics graphics)
+        {
+            var family = _displayFont.FontFamily;
+            return graphics.DpiY * _displayFont.SizeInPoints / 72f * family.GetCellDescent(_displayFont.Style) / family.GetEmHeight(_displayFont.Style);
         }
 
         private void RebuildLayout()
         {
-            if (_displayFont == null)
-                ApplyVisualSettings();
-
             _metricLayouts.Clear();
-            int itemCount = Math.Max(1, _metrics.Count);
-            int columns = Math.Max(1, Math.Min(8, Math.Min(_configuration.Columns, itemCount)));
-            int rows = (int)Math.Ceiling(itemCount / (double)columns);
-            int padding = GetConfiguredPadding();
-            int rowGap = GetRowsSpacing();
-            int columnGap = GetColumnsSpacing();
-            int rowSpacing = rows > 1 ? rowGap * (rows - 1) : 0;
-            int columnSpacing = columns > 1 ? columnGap * (columns - 1) : 0;
-            int combinedValueGap = GetCombinedValueGap();
-            int labelGap = ScaleLogical(Math.Max(0, _configuration.LabelValueSpacing));
-            int[] columnContentWidths = new int[columns];
-            int[] rowHeights = new int[rows];
-            int[] valueBlockWidths = new int[_metrics.Count];
-            int[] labelWidths = new int[_metrics.Count];
-
-            using (var measurementBitmap = new Bitmap(1, 1, PixelFormat.Format32bppPArgb))
+            int count = _metrics.Count;
+            int columns = Math.Max(1, Math.Min(_configuration.Columns, Math.Max(1, count)));
+            int rows = Math.Max(1, (count + columns - 1) / columns);
+            int padding = GetConfiguredPadding(), rowGap = GetRowsSpacing(), columnGap = GetColumnsSpacing();
+            int[] widths = new int[columns], heights = new int[rows];
+            using (var bitmap = new Bitmap(1, 1))
             {
-                measurementBitmap.SetResolution(DeviceDpi, DeviceDpi);
-                using (Graphics graphics = Graphics.FromImage(measurementBitmap))
+                bitmap.SetResolution(DeviceDpi, DeviceDpi);
+                using (var graphics = Graphics.FromImage(bitmap))
                 {
-                    if (_metrics.Any(metric => metric.TrailingValue != null))
+                    foreach (var row in _metrics)
                     {
-                        bool percentValuesOnly = true;
-                        foreach (OsdMetric metric in _metrics)
+                        var layout = new RowLayout();
+                        var members = row.Members ?? new List<OsdMetric> { row };
+                        layout.IsGroup = row.Members != null;
+                        int x = 0; float ascent = 0, descent = 0;
+                        if (row.Members != null && !string.IsNullOrEmpty(row.Label))
                         {
-                            if (metric.TrailingValue == null)
-                                continue;
-
-                            percentValuesOnly &= metric.TrailingValueWidthTemplate == "###%";
+                            ActivateFont(members[0].Style);
+                            int width = MeasureDisplayTextWidth(graphics, row.Label);
+                            layout.Parts.Add(new TextPlacement(row.Label, members[0].Style, true, x, width, false) { Owner = 0, IsGroupCaption = true });
+                            x += width + ScaleLogical(_configuration.LabelValueSpacing);
+                            ascent = Ascent(graphics); descent = Descent(graphics);
                         }
-
-                        if (percentValuesOnly)
+                        for (int member = 0; member < members.Count; member++)
                         {
-                            if (_stablePercentSlotWidth <= 0 || _stablePercentSlotDpi != DeviceDpi)
+                            var metric = members[member]; ActivateFont(metric.Style);
+                            ascent = Math.Max(ascent, Ascent(graphics)); descent = Math.Max(descent, Descent(graphics));
+                            string label = metric.Label;
+                            int labelWidth = string.IsNullOrEmpty(label) ? 0 : MeasureDisplayTextWidth(graphics, label);
+                            if (labelWidth > 0)
                             {
-                                _stablePercentSlotWidth = MeasureStablePercentSlotWidth(graphics);
-                                _stablePercentSlotDpi = DeviceDpi;
+                                layout.Parts.Add(new TextPlacement(label, metric.Style, true, x, labelWidth, false) { Owner = member });
+                                x += labelWidth + GetMetricLabelGap(graphics, metric, ScaleLogical(_configuration.LabelValueSpacing));
                             }
-                            _trailingValueSlotWidth = _stablePercentSlotWidth;
-                        }
-                        else
-                        {
-                            int trailingValueWidth = 0;
-                            foreach (OsdMetric metric in _metrics)
+                            int valueWidth = GetPrimaryValueSlotWidth(graphics, metric, MeasureDisplayTextWidth(graphics, metric.Value));
+                            bool rightAlign = metric.Key != OsdItemKind.CurrentTime.ToString();
+                            layout.Parts.Add(new TextPlacement(metric.Value, metric.Style, false, x, valueWidth, rightAlign, member));
+                            x += valueWidth;
+                            if (member + 1 < members.Count)
                             {
-                                if (metric.TrailingValue == null)
-                                    continue;
-
-                                trailingValueWidth = Math.Max(
-                                    trailingValueWidth,
-                                    string.IsNullOrEmpty(metric.TrailingValueWidthTemplate)
-                                        ? MeasureDisplayTextWidth(graphics, metric.TrailingValue)
-                                        : MeasureStableValueTemplateWidth(graphics, metric.TrailingValueWidthTemplate));
+                                string separator = OsdMetricDefinitions.Separator(_configuration, metric, members[member + 1]);
+                                using (var format = StringFormat.GenericTypographic)
+                                {
+                                    format.FormatFlags |= StringFormatFlags.MeasureTrailingSpaces | StringFormatFlags.NoWrap;
+                                    float advance = graphics.MeasureString(separator, _displayFont, int.MaxValue, format).Width;
+                                    if (!IsAscii(separator)) advance = Math.Max(advance, GetUnicodeTextRuns(graphics, separator, graphics.DpiY * _displayFont.SizeInPoints / 72f).Sum(run => run.Advance));
+                                    int separatorWidth = (int)Math.Ceiling(Math.Max(advance, string.IsNullOrWhiteSpace(separator) ? 0 : MeasureDisplayTextWidth(graphics, separator)));
+                                    int prefix = 0;
+                                    while (prefix < separator.Length && char.IsWhiteSpace(separator[prefix])) prefix++;
+                                    float leading = prefix == 0 ? 0 : graphics.MeasureString(separator.Substring(0, prefix), _displayFont, int.MaxValue, format).Width;
+                                    layout.Parts.Add(new TextPlacement(separator, metric.Style, false, x, separatorWidth, false) { Owner = member, LeadingWidth = leading });
+                                    x += separatorWidth;
+                                }
                             }
-                            _trailingValueSlotWidth = trailingValueWidth;
                         }
+                        layout.Width = x; layout.Ascent = ascent;
+                        layout.Height = (int)Math.Ceiling(ascent + descent + GetStrokeWidth());
+                        int index = _metricLayouts.Count;
+                        widths[index % columns] = Math.Max(widths[index % columns], x);
+                        heights[index / columns] = Math.Max(heights[index / columns], layout.Height);
+                        _metricLayouts.Add(layout);
                     }
-                    if (_metrics.Any(metric => metric.SecondTrailingValue != null))
-                    {
-                        int secondTrailingValueWidth = 0;
-                        foreach (OsdMetric metric in _metrics)
-                        {
-                            if (metric.SecondTrailingValue == null)
-                                continue;
-
-                            secondTrailingValueWidth = Math.Max(
-                                secondTrailingValueWidth,
-                                string.IsNullOrEmpty(metric.SecondTrailingValueWidthTemplate)
-                                    ? MeasureDisplayTextWidth(graphics, metric.SecondTrailingValue)
-                                    : MeasureStableValueTemplateWidth(graphics, metric.SecondTrailingValueWidthTemplate));
-                        }
-                        _secondTrailingValueSlotWidth = secondTrailingValueWidth;
-                    }
-
-                    MeasureLayoutMetrics(
-                        graphics,
-                        columns,
-                        labelGap,
-                        combinedValueGap,
-                        columnContentWidths,
-                        rowHeights,
-                        valueBlockWidths,
-                        labelWidths);
                 }
             }
-
-            int contentWidth = 0;
-            for (int column = 0; column < columns; column++)
-                contentWidth += columnContentWidths[column];
-
-            int width = padding * 2 + contentWidth + columnSpacing;
-            int contentHeight = rowHeights.Sum();
-            int height = padding * 2 + contentHeight + rowSpacing;
-            int maxWidth = _workingArea.Width > 0
-                ? _workingArea.Width
-                : width;
-            int maxHeight = _workingArea.Height > 0
-                ? _workingArea.Height
-                : height;
-            ClientSize = new Size(
-                Math.Max(1, Math.Min(maxWidth, width)),
-                Math.Max(1, Math.Min(maxHeight, height)));
-
-            int availableContentWidth = Math.Max(
-                1,
-                ClientSize.Width - padding * 2 - columnSpacing);
-            bool constrained = availableContentWidth < contentWidth;
-            int[] columnWidths = new int[columns];
-            int[] columnLefts = new int[columns];
-            int columnLeft = padding;
-            for (int column = 0; column < columns; column++)
+            int fullWidth = padding * 2 + widths.Sum() + columnGap * (columns - 1);
+            int fullHeight = padding * 2 + heights.Sum() + rowGap * (rows - 1);
+            ClientSize = new Size(Math.Max(1, Math.Min(_workingArea.Width > 0 ? _workingArea.Width : fullWidth, fullWidth)),
+                Math.Max(1, Math.Min(_workingArea.Height > 0 ? _workingArea.Height : fullHeight, fullHeight)));
+            int available = Math.Max(1, ClientSize.Width - padding * 2 - columnGap * (columns - 1));
+            if (widths.Sum() > available)
+                for (int c = 0; c < columns; c++) widths[c] = available / columns + (c < available % columns ? 1 : 0);
+            AlignStandaloneMetricValues(widths, columns);
+            for (int i = 0; i < _metricLayouts.Count; i++)
             {
-                columnLefts[column] = columnLeft;
-                columnWidths[column] = constrained
-                    ? availableContentWidth / columns + (column < availableContentWidth % columns ? 1 : 0)
-                    : columnContentWidths[column];
-                columnLeft += columnWidths[column];
-                if (column < columns - 1)
-                    columnLeft += columnGap;
+                var row = _metricLayouts[i]; int column = i % columns, line = i / columns;
+                row.X = padding + widths.Take(column).Sum() + columnGap * column;
+                row.Y = padding + heights.Take(line).Sum() + rowGap * line;
+                row.Scale = row.Width > widths[column] ? widths[column] / (float)Math.Max(1, row.Width) : 1f;
             }
-
-            int[] rowTops = new int[rows];
-            int rowTop = padding;
-            for (int row = 0; row < rows; row++)
-            {
-                rowTops[row] = rowTop;
-                rowTop += rowHeights[row];
-                if (row < rows - 1)
-                    rowTop += rowGap;
-            }
-
-            for (int index = 0; index < _metrics.Count; index++)
-            {
-                int column = index % columns;
-                int row = index / columns;
-                OsdMetric metric = _metrics[index];
-                int x = columnLefts[column];
-                int y = rowTops[row];
-                int valueBlockWidth = Math.Min(valueBlockWidths[index], columnWidths[column]);
-                int metricLabelGap = GetMetricLabelGap(metric, labelGap);
-                int rightAlignedValueX = x + Math.Max(0, columnWidths[column] - valueBlockWidth);
-                int labelFollowingValueX = x + labelWidths[index] + metricLabelGap;
-                int valueBlockX = metric.ValueFollowsLabel
-                    ? Math.Min(labelFollowingValueX, rightAlignedValueX)
-                    : rightAlignedValueX;
-                int trailingValueWidth = metric.TrailingValue != null
-                    ? Math.Min(_trailingValueSlotWidth, valueBlockWidth)
-                    : 0;
-                int secondTrailingValueWidth = metric.SecondTrailingValue != null
-                    ? Math.Min(_secondTrailingValueSlotWidth, Math.Max(0, valueBlockWidth - trailingValueWidth))
-                    : 0;
-                int combinedGap = trailingValueWidth > 0
-                    ? Math.Min(combinedValueGap, valueBlockWidth - trailingValueWidth - secondTrailingValueWidth)
-                    : 0;
-                int secondCombinedGap = secondTrailingValueWidth > 0
-                    ? Math.Min(combinedValueGap, valueBlockWidth - trailingValueWidth - secondTrailingValueWidth - combinedGap)
-                    : 0;
-                int primaryValueRight = valueBlockX + valueBlockWidth;
-                if (metric.SecondTrailingValue != null)
-                    primaryValueRight -= secondCombinedGap + secondTrailingValueWidth;
-                if (metric.TrailingValue != null)
-                    primaryValueRight -= combinedGap + trailingValueWidth;
-
-                _metricLayouts.Add(new MetricLayout(
-                    new Rectangle(
-                        x,
-                        y,
-                        Math.Max(0, valueBlockX - x - metricLabelGap),
-                        rowHeights[row]),
-                    new Rectangle(
-                        valueBlockX,
-                        y,
-                        Math.Max(0, primaryValueRight - valueBlockX),
-                        rowHeights[row]),
-                    metric.TrailingValue != null
-                        ? new Rectangle(
-                            valueBlockX + valueBlockWidth - trailingValueWidth - secondTrailingValueWidth - secondCombinedGap,
-                            y,
-                            trailingValueWidth,
-                            rowHeights[row])
-                        : Rectangle.Empty,
-                    metric.SecondTrailingValue != null
-                        ? new Rectangle(valueBlockX + valueBlockWidth - secondTrailingValueWidth, y, secondTrailingValueWidth, rowHeights[row])
-                        : Rectangle.Empty));
-            }
-
             _layoutDpi = DeviceDpi;
         }
 
-        protected override void OnPaint(PaintEventArgs e)
+        private void AlignStandaloneMetricValues(int[] columnWidths, int columns)
         {
-            base.OnPaint(e);
-            DrawOverlay(e.Graphics);
+            for (int i = 0; i < _metricLayouts.Count; i++)
+            {
+                var row = _metricLayouts[i];
+                string key = _metrics[i].Key;
+                if (key == OsdItemKind.Fps.ToString() || key == OsdItemKind.FpsOnePercentLow.ToString() ||
+                    key == OsdItemKind.CurrentTime.ToString()) continue;
+
+                if (row.IsGroup)
+                {
+                    // Without a visible group caption, keep the row's first member at the left edge.
+                    if (string.IsNullOrEmpty(_metrics[i].Label)) continue;
+                    var memberParts = row.Parts.Where(part => !part.IsGroupCaption).ToList();
+                    if (memberParts.Count == 0) continue;
+                    int lastRight = memberParts.Max(part => part.X + part.Width);
+                    int shift = Math.Max(0, columnWidths[i % columns] - lastRight);
+                    foreach (var part in memberParts) part.X += shift;
+                    continue;
+                }
+
+                var value = row.Parts.FirstOrDefault(part => !part.Label && part.RightAlign && part.Member == 0);
+                if (value == null) continue;
+                int minimumValueX = value.X;
+                int columnWidth = columnWidths[i % columns];
+                value.X = Math.Max(minimumValueX, columnWidth - value.Width);
+            }
         }
+
+        protected override void OnPaint(PaintEventArgs e) { base.OnPaint(e); DrawOverlay(e.Graphics); }
 
         private void DrawOverlay(Graphics graphics)
         {
-            if (_displayFont == null || _metrics.Count == 0 ||
-                _metricLayouts.Count != _metrics.Count)
-                return;
-
-            GraphicsState graphicsState = graphics.Save();
+            if (_metricLayouts.Count != _metrics.Count) return;
+            var state = graphics.Save();
             graphics.SmoothingMode = SmoothingMode.AntiAlias;
             graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
-
             try
             {
-                for (int index = 0; index < _metrics.Count; index++)
+                for (int rowIndex = 0; rowIndex < _metricLayouts.Count; rowIndex++)
                 {
-                    OsdMetric metric = _metrics[index];
-                    MetricLayout layout = _metricLayouts[index];
-                    Color textColor = metric.TextColor ?? _textColor;
-
-                    DrawDisplayText(
-                        graphics,
-                        metric.Label,
-                        layout.LabelBounds,
-                        textColor,
-                        StringAlignment.Near);
-                    DrawDisplayText(
-                        graphics,
-                        metric.Value,
-                        layout.PrimaryValueBounds,
-                        textColor,
-                        StringAlignment.Far);
-                    if (metric.TrailingValue != null)
+                    var row = _metricLayouts[rowIndex];
+                    var metrics = _metrics[rowIndex].Members;
+                    foreach (var part in row.Parts)
                     {
-                        DrawDisplayText(
-                            graphics,
-                            metric.TrailingValue,
-                            layout.TrailingValueBounds,
-                            metric.TrailingValueColor ?? textColor,
-                            StringAlignment.Far);
-                    }
-                    if (metric.SecondTrailingValue != null)
-                    {
-                        DrawDisplayText(
-                            graphics,
-                            metric.SecondTrailingValue,
-                            layout.SecondTrailingValueBounds,
-                            metric.SecondTrailingValueColor ?? textColor,
-                            StringAlignment.Far);
+                        // Numeric values refresh without rebuilding their measured slots.
+                        string text = part.Member >= 0 ? (metrics == null ? _metrics[rowIndex].Value : metrics[part.Member].Value) : part.Text;
+                        var style = part.Member >= 0 ? (metrics == null ? _metrics[rowIndex].Style : metrics[part.Member].Style) : part.Style;
+                        // Resolve label/color-only edits from current metrics as well.
+                        if (metrics != null && part.Owner >= 0) style = metrics[part.Owner].Style;
+                        else if (metrics == null) style = _metrics[rowIndex].Style;
+                        ActivateFont(style);
+                        _drawBaseline = row.Y + row.Ascent;
+                        var color = style == null ? _metrics[rowIndex].TextColor ?? _textColor : Color.FromArgb(part.Label ? style.LabelColor : style.ValueColor);
+                        int leading = (int)Math.Round(part.LeadingWidth * row.Scale);
+                        int left = (int)Math.Round(part.X * row.Scale);
+                        int right = (int)Math.Round((part.X + part.Width) * row.Scale);
+                        DrawDisplayText(graphics, text,
+                            new Rectangle(row.X + left + leading, row.Y, Math.Max(0, right - left - leading), row.Height),
+                            color, part.RightAlign ? StringAlignment.Far : StringAlignment.Near);
                     }
                 }
             }
-            finally
-            {
-                graphics.Restore(graphicsState);
-            }
+            finally { _drawBaseline = null; graphics.Restore(state); }
         }
 
-        private void MeasureLayoutMetrics(
-            Graphics graphics,
-            int columns,
-            int labelGap,
-            int combinedValueGap,
-            int[] columnContentWidths,
-            int[] rowHeights,
-            int[] valueBlockWidths,
-            int[] labelWidths)
+        private void DrawDisplayText(Graphics graphics, string text, Rectangle bounds, Color textColor, StringAlignment alignment)
         {
-            int sharedRowHeight = MeasureDisplayTextSize(
-                graphics,
-                "N/A 100% 999\u00B0C 999\u00B0F 999.99G 9999").Height;
-
-            for (int index = 0; index < _metrics.Count; index++)
-            {
-                int column = index % columns;
-                int row = index / columns;
-                OsdMetric metric = _metrics[index];
-                Size labelSize = MeasureDisplayTextSize(graphics, metric.Label);
-                labelWidths[index] = labelSize.Width;
-                Size valueSize = MeasureDisplayTextSize(graphics, metric.Value);
-                int valueBlockWidth = GetPrimaryValueSlotWidth(
-                    graphics,
-                    metric,
-                    valueSize.Width);
-                int metricHeight = Math.Max(labelSize.Height, valueSize.Height);
-                if (metric.TrailingValue != null)
-                {
-                    valueBlockWidth += combinedValueGap + _trailingValueSlotWidth;
-                    metricHeight = Math.Max(
-                        metricHeight,
-                        MeasureDisplayTextSize(graphics, metric.TrailingValue).Height);
-                }
-                if (metric.SecondTrailingValue != null)
-                {
-                    valueBlockWidth += combinedValueGap + _secondTrailingValueSlotWidth;
-                    metricHeight = Math.Max(metricHeight, MeasureDisplayTextSize(graphics, metric.SecondTrailingValue).Height);
-                }
-
-                valueBlockWidths[index] = valueBlockWidth;
-                int rowWidth = labelSize.Width + GetMetricLabelGap(metric, labelGap) + valueBlockWidth;
-                columnContentWidths[column] = Math.Max(columnContentWidths[column], rowWidth);
-                rowHeights[row] = Math.Max(rowHeights[row], metricHeight);
-                sharedRowHeight = Math.Max(sharedRowHeight, rowHeights[row]);
-            }
-
-            for (int row = 0; row < rowHeights.Length; row++)
-                rowHeights[row] = sharedRowHeight;
-        }
-
-        private void DrawDisplayText(
-            Graphics graphics,
-            string text,
-            Rectangle bounds,
-            Color textColor,
-            StringAlignment alignment)
-        {
-            if (bounds.Width <= 0 || bounds.Height <= 0 || string.IsNullOrEmpty(text))
-                return;
-
-            Color opaqueTextColor = Color.FromArgb(textColor.R, textColor.G, textColor.B);
-            double luminance =
-                (0.299 * opaqueTextColor.R) +
-                (0.587 * opaqueTextColor.G) +
-                (0.114 * opaqueTextColor.B);
-            Color strokeColor = luminance >= 145
-                ? Color.FromArgb(TextStrokeAlpha, 0, 0, 0)
-                : Color.FromArgb(TextStrokeAlpha, 255, 255, 255);
+            if (bounds.Width <= 0 || bounds.Height <= 0 || string.IsNullOrWhiteSpace(text)) return;
+            Color opaque = Color.FromArgb(textColor.R, textColor.G, textColor.B);
+            Color stroke = (0.299 * opaque.R + 0.587 * opaque.G + 0.114 * opaque.B) >= 145
+                ? Color.FromArgb(TextStrokeAlpha, 0, 0, 0) : Color.FromArgb(TextStrokeAlpha, 255, 255, 255);
             float strokeWidth = GetStrokeWidth();
-            float strokeInset = strokeWidth / 2f;
-            float availableWidth = Math.Max(1f, bounds.Width - strokeWidth);
-            GraphicsPath path = CreateTextPath(graphics, text);
-            try
+            using (var path = CreateFittedTextPath(graphics, text, Math.Max(1, bounds.Width - strokeWidth)))
             {
-                RectangleF pathBounds = path.GetBounds();
-                if (pathBounds.Width > availableWidth)
-                {
-                    path.Dispose();
-                    path = null;
-
-                    string displayText = TrimDisplayTextToWidth(graphics, text, availableWidth);
-                    if (string.IsNullOrEmpty(displayText))
-                        return;
-
-                    path = CreateTextPath(graphics, displayText);
-                    pathBounds = path.GetBounds();
-                }
-
-                using (var textBrush = new SolidBrush(opaqueTextColor))
-                {
-                    float x = alignment == StringAlignment.Far
-                        ? bounds.Right - strokeInset - pathBounds.Width - pathBounds.X
-                        : bounds.Left + strokeInset - pathBounds.X;
-                    float y = bounds.Top + ((bounds.Height - pathBounds.Height) / 2f) - pathBounds.Y;
-
-                    using (var transform = new Matrix())
-                    {
-                        transform.Translate(x, y);
-                        path.Transform(transform);
-                    }
-
-                    if (strokeWidth > 0f)
-                    {
-                        using (var strokePen = new Pen(strokeColor, strokeWidth))
-                        {
-                            strokePen.LineJoin = LineJoin.Round;
-                            graphics.DrawPath(strokePen, path);
-                        }
-                    }
-                    graphics.FillPath(textBrush, path);
-                }
-            }
-            finally
-            {
-                path?.Dispose();
+                if (path == null || path.PointCount == 0) return;
+                var pathBounds = path.GetBounds();
+                float x = alignment == StringAlignment.Far ? bounds.Right - strokeWidth / 2 - pathBounds.Right : bounds.Left + strokeWidth / 2 - pathBounds.Left;
+                float y = _drawBaseline.HasValue ? _drawBaseline.Value - Ascent(graphics) : bounds.Top + (bounds.Height - pathBounds.Height) / 2 - pathBounds.Top;
+                using (var transform = new Matrix()) { transform.Translate(x, y); path.Transform(transform); }
+                using (var pen = new Pen(stroke, strokeWidth) { LineJoin = LineJoin.Round }) graphics.DrawPath(pen, path);
+                using (var brush = new SolidBrush(opaque)) graphics.FillPath(brush, path);
             }
         }
-
+        private GraphicsPath CreateFittedTextPath(Graphics graphics, string text, float availableWidth)
+        {
+            GraphicsPath path = CreateTextPath(graphics, text);
+            float width = path.GetBounds().Width;
+            if (width > availableWidth && width > 0)
+            {
+                // Fit the complete glyph path; labels, values and icons never become ellipses.
+                using (var transform = new Matrix())
+                {
+                    float scale = Math.Max(0, availableWidth) / width;
+                    transform.Scale(scale, scale);
+                    path.Transform(transform);
+                }
+            }
+            return path;
+        }
         private Size MeasureDisplayTextSize(Graphics graphics, string text)
         {
             using (GraphicsPath path = CreateTextPath(graphics, text))
@@ -702,15 +508,6 @@ namespace TrayTemps
         private int MeasureDisplayTextWidth(Graphics graphics, string text)
         {
             return MeasureDisplayTextSize(graphics, text).Width;
-        }
-
-        private int MeasureStablePercentSlotWidth(Graphics graphics)
-        {
-            int width = MeasureDisplayTextWidth(graphics, "N/A");
-            for (int value = 0; value <= 100; value++)
-                width = Math.Max(width, MeasureDisplayTextWidth(graphics, value + "%"));
-
-            return width;
         }
 
         private int GetPrimaryValueSlotWidth(
@@ -731,7 +528,7 @@ namespace TrayTemps
 
         private int MeasureStableValueTemplateWidth(Graphics graphics, string template)
         {
-            string cacheKey = DeviceDpi + "|" + template;
+            string cacheKey = _fontContextKey + "|" + DeviceDpi + "|" + template;
             if (_valueTemplateWidthCache.TryGetValue(cacheKey, out int cachedWidth))
                 return cachedWidth;
 
@@ -739,56 +536,33 @@ namespace TrayTemps
             for (char digit = '0'; digit <= '9'; digit++)
                 width = Math.Max(width, MeasureDisplayTextWidth(graphics, template.Replace('#', digit)));
 
+            if (template.All(character => character == '#'))
+            {
+                // Repeated digits alone miss mixed first/last glyph bearings:
+                // e.g. 6007 can be wider than any of 0000, 1111, ..., 9999.
+                float advance = 0, leftOverhang = 0, rightOverhang = 0;
+                using (StringFormat format = StringFormat.GenericTypographic)
+                {
+                    format.FormatFlags |= StringFormatFlags.NoWrap | StringFormatFlags.MeasureTrailingSpaces;
+                    for (char digit = '0'; digit <= '9'; ++digit)
+                    {
+                        string text = digit.ToString();
+                        float digitAdvance = graphics.MeasureString(text, _displayFont, int.MaxValue, format).Width;
+                        using (GraphicsPath path = CreateTextPath(graphics, text))
+                        {
+                            RectangleF bounds = path.GetBounds();
+                            advance = Math.Max(advance, digitAdvance);
+                            leftOverhang = Math.Max(leftOverhang, -bounds.Left);
+                            rightOverhang = Math.Max(rightOverhang, bounds.Right - digitAdvance);
+                        }
+                    }
+                }
+                width = Math.Max(width, (int)Math.Ceiling(template.Length * advance + leftOverhang + rightOverhang + GetStrokeWidth()));
+                width = Math.Max(width, MeasureDisplayTextWidth(graphics, "N/A"));
+            }
+
             _valueTemplateWidthCache[cacheKey] = width;
             return width;
-        }
-
-        private string TrimDisplayTextToWidth(Graphics graphics, string text, float maximumWidth)
-        {
-            const string ellipsis = "…";
-            if (MeasureTextPathWidth(graphics, ellipsis) > maximumWidth)
-                return string.Empty;
-
-            if (!IsAscii(text))
-            {
-                List<string> textElements = GetUnicodeTextElements(text);
-                int lowElementCount = 0;
-                int highElementCount = textElements.Count;
-                while (lowElementCount < highElementCount)
-                {
-                    int elementCount = lowElementCount + ((highElementCount - lowElementCount + 1) / 2);
-                    string candidate = string.Concat(textElements.Take(elementCount)).TrimEnd() + ellipsis;
-                    if (MeasureTextPathWidth(graphics, candidate) <= maximumWidth)
-                        lowElementCount = elementCount;
-                    else
-                        highElementCount = elementCount - 1;
-                }
-
-                return string.Concat(textElements.Take(lowElementCount)).TrimEnd() + ellipsis;
-            }
-
-            int low = 0;
-            int high = text.Length;
-            while (low < high)
-            {
-                int length = low + ((high - low + 1) / 2);
-                string candidate = text.Substring(0, length).TrimEnd() + ellipsis;
-                if (MeasureTextPathWidth(graphics, candidate) <= maximumWidth)
-                    low = length;
-                else
-                    high = length - 1;
-            }
-
-            if (low > 0 && low < text.Length && char.IsHighSurrogate(text[low - 1]))
-                low--;
-
-            return text.Substring(0, low).TrimEnd() + ellipsis;
-        }
-
-        private float MeasureTextPathWidth(Graphics graphics, string text)
-        {
-            using (GraphicsPath path = CreateTextPath(graphics, text))
-                return path.GetBounds().Width;
         }
 
         private GraphicsPath CreateTextPath(Graphics graphics, string text)
@@ -830,7 +604,7 @@ namespace TrayTemps
             string text,
             float emSize)
         {
-            string cacheKey = DeviceDpi.ToString(CultureInfo.InvariantCulture) + "\0" + text;
+            string cacheKey = _fontContextKey + "|" + DeviceDpi.ToString(CultureInfo.InvariantCulture) + "\0" + text;
             if (_unicodeTextRunCache.TryGetValue(cacheKey, out UnicodeTextRun[] cachedRuns))
                 return cachedRuns;
 
@@ -935,7 +709,7 @@ namespace TrayTemps
             if (IsAscii(textElement))
                 return _displayFont.FontFamily;
 
-            if (_unicodeFontChoiceCache.TryGetValue(textElement, out FontFamily cachedFamily))
+            if (_unicodeFontChoiceCache.TryGetValue(_fontContextKey + "|" + textElement, out FontFamily cachedFamily))
                 return cachedFamily;
 
             FontFamily selectedFamily = _displayFont.FontFamily;
@@ -971,7 +745,7 @@ namespace TrayTemps
         {
             if (_unicodeFontChoiceCache.Count >= 512)
                 _unicodeFontChoiceCache.Clear();
-            _unicodeFontChoiceCache[textElement] = family;
+            _unicodeFontChoiceCache[_fontContextKey + "|" + textElement] = family;
         }
 
         private bool FontSupportsTextElement(Graphics graphics, Font font, string textElement)
@@ -1180,7 +954,7 @@ namespace TrayTemps
             if (SameFontFamily(family, _displayFont.FontFamily))
                 return _displayFont;
 
-            if (_unicodeFallbackFonts.TryGetValue(family.Name, out Font cachedFont))
+            if (_unicodeFallbackFonts.TryGetValue(_fontContextKey + "|" + family.Name, out Font cachedFont))
                 return cachedFont;
 
             FontStyle style = _displayFont.Style;
@@ -1188,7 +962,7 @@ namespace TrayTemps
                 style = FontStyle.Regular;
 
             var font = new Font(family, _displayFont.Size, style, _displayFont.Unit);
-            _unicodeFallbackFonts[family.Name] = font;
+            _unicodeFallbackFonts[_fontContextKey + "|" + family.Name] = font;
             return font;
         }
 
@@ -1290,17 +1064,25 @@ namespace TrayTemps
             return Math.Max(0.85f, DeviceDpi / 96f);
         }
 
-        private int GetCombinedValueGap()
-        {
-            // Keep a small DPI-scaled gap between the two stable value slots.
-            return Math.Max(ScaleLogical(8), (int)Math.Ceiling(GetStrokeWidth()));
-        }
-
-        private int GetMetricLabelGap(OsdMetric metric, int defaultGap)
+        private int GetMetricLabelGap(Graphics graphics, OsdMetric metric, int defaultGap)
         {
             if (string.IsNullOrEmpty(metric.Label))
                 return 0;
 
+            if (metric.Key == OsdItemKind.CurrentTime.ToString())
+            {
+                using (var format = (StringFormat)StringFormat.GenericTypographic.Clone())
+                {
+                    format.FormatFlags |= StringFormatFlags.MeasureTrailingSpaces | StringFormatFlags.NoWrap;
+                    return (int)Math.Ceiling(graphics.MeasureString(" ", _displayFont, int.MaxValue, format).Width);
+                }
+            }
+
+            return GetConfiguredMetricLabelGap(metric, defaultGap);
+        }
+
+        private int GetConfiguredMetricLabelGap(OsdMetric metric, int defaultGap)
+        {
             return metric.LabelValueSpacingOverride.HasValue
                 ? ScaleLogical(Math.Max(0, metric.LabelValueSpacingOverride.Value))
                 : defaultGap;
@@ -1549,26 +1331,27 @@ namespace TrayTemps
             internal float BaselineOffset { get; }
         }
 
-        private struct MetricLayout
+        private sealed class RowLayout
         {
-            internal MetricLayout(
-                Rectangle labelBounds,
-                Rectangle primaryValueBounds,
-                Rectangle trailingValueBounds,
-                Rectangle secondTrailingValueBounds)
-            {
-                LabelBounds = labelBounds;
-                PrimaryValueBounds = primaryValueBounds;
-                TrailingValueBounds = trailingValueBounds;
-                SecondTrailingValueBounds = secondTrailingValueBounds;
-            }
-
-            internal Rectangle LabelBounds { get; }
-            internal Rectangle PrimaryValueBounds { get; }
-            internal Rectangle TrailingValueBounds { get; }
-            internal Rectangle SecondTrailingValueBounds { get; }
+            internal readonly List<TextPlacement> Parts = new List<TextPlacement>();
+            internal int Width, Height, X, Y;
+            internal float Ascent, Scale;
+            internal bool IsGroup;
         }
-
+        private sealed class TextPlacement
+        {
+            internal TextPlacement(string text, OsdMetricStyle style, bool label, int x, int width, bool right, int member = -1)
+            { Text = text; Style = style; Label = label; X = x; Width = width; RightAlign = right; Member = member; }
+            internal readonly string Text;
+            internal readonly OsdMetricStyle Style;
+            internal readonly bool Label;
+            internal bool RightAlign;
+            internal int X;
+            internal readonly int Width, Member;
+            internal int Owner = -1;
+            internal float LeadingWidth;
+            internal bool IsGroupCaption;
+        }
         [StructLayout(LayoutKind.Sequential)]
         private struct NativePoint
         {

@@ -76,23 +76,12 @@ namespace TrayTemps
         {
             string backupPath = settingsPath + ".bak";
 
-            try
-            {
-                if (File.Exists(settingsPath))
-                    File.Replace(tempPath, settingsPath, backupPath);
-                else
-                    File.Move(tempPath, settingsPath);
-            }
-            catch (PlatformNotSupportedException)
-            {
-                File.Copy(tempPath, settingsPath, true);
-                File.Delete(tempPath);
-            }
-            catch (IOException) when (File.Exists(tempPath))
-            {
-                File.Copy(tempPath, settingsPath, true);
-                File.Delete(tempPath);
-            }
+            // On failure keep both the old primary and the flushed temporary file.
+            // The reader can recover the newest valid candidate on the next launch.
+            if (File.Exists(settingsPath))
+                File.Replace(tempPath, settingsPath, backupPath);
+            else
+                File.Move(tempPath, settingsPath);
         }
     }
 }

@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using FpsLimiter.Core;
+using Microsoft.Win32;
 using TrayTemps;
 
 internal static class Program
@@ -29,12 +30,14 @@ internal static class Program
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static int Run(string[] args)
     {
+        Application.SetUnhandledExceptionMode(UnhandledExceptionMode.ThrowException);
         Application.EnableVisualStyles();
+        if (args.Length == 2 && args[0] == "--game-detection-live") return GameDetectionTests.RunLive(int.Parse(args[1]));
         using (var runner = new Form { ShowInTaskbar = false, Opacity = 0, Size = new Size(100, 100) })
         {
             runner.Shown += async (sender, e) =>
             {
-                try { if (args.Length == 1 && args[0] == "--audit-fixes") AuditFixTests.Run(); else if (args.Length > 0 && args[0] == "--review") await ReviewTests.Run(args.Skip(1).ToArray()); else await Suite.Run(args); Console.WriteLine("ALL INTEGRATION CHECKS PASSED"); }
+                try { if (args.Length == 1 && args[0] == "--metric-list") await OsdMetricListTests.Run(); else if (args.Length == 1 && args[0] == "--one-percent-text") FrameTimeTests.TextChecks(); else if (args.Length == 2 && args[0] == "--one-percent-live") await FrameTimeTests.Live(args[1]); else if (args.Length == 1 && args[0] == "--one-percent-low") await FrameTimeTests.Run(); else if (args.Length == 1 && args[0] == "--game-detection") await GameDetectionTests.Run(); else if (args.Length == 1 && args[0] == "--release-safety") await ReleaseSafetyTests.Run(); else if (args.Length == 1 && args[0] == "--audit-fixes") await AuditFixTests.Run(); else if (args.Length > 0 && args[0] == "--review") await ReviewTests.Run(args.Skip(1).ToArray()); else await Suite.Run(args); Console.WriteLine("ALL INTEGRATION CHECKS PASSED"); }
                 catch (Exception error) { Console.Error.WriteLine(error); _result = 1; }
                 finally { runner.Close(); }
             };
@@ -53,6 +56,9 @@ internal static class Suite
     [DllImport("kernel32.dll")] private static extern bool FreeLibrary(IntPtr handle);
     [DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr window);
     [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll", SetLastError = true)] private static extern bool RegisterHotKey(IntPtr window, int id, uint modifiers, uint key);
+    [DllImport("user32.dll")] private static extern bool UnregisterHotKey(IntPtr window, int id);
+    [DllImport("user32.dll")] private static extern IntPtr SendMessage(IntPtr window, int message, IntPtr wParam, IntPtr lParam);
     [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr window, out uint pid);
     [DllImport("kernel32.dll")] private static extern uint GetCurrentThreadId();
     [DllImport("user32.dll")] private static extern bool AttachThreadInput(uint first, uint second, bool attach);
@@ -93,7 +99,9 @@ internal static class Suite
         Check(module != IntPtr.Zero, "x64 native payload loads from extracted cache");
         if (module != IntPtr.Zero) FreeLibrary(module);
         await Ui();
+        await CustomHotkeys();
         await OwnershipAndShutdown(native);
+        await LayerCleanup(native);
         await HostLifecycle(native);
         if (args.Length > 1 && args[0] == "--discovery") { await Discovery(args[1]); return; }
         if (args.Length > 1 && args[0] == "--vulkan") { await Graphics(args[1], "Vulkan"); return; }
@@ -116,12 +124,19 @@ internal static class Suite
     {
         var old = JsonSerializer.Deserialize<AppSettings>("{\"LightMode\":true,\"UpdateInterval\":0.75,\"CpuIdentifier\":\"cpu-test\"}");
         Check(old.LightMode && old.UpdateInterval == .75m && !old.FpsLimiter.Enabled && old.FpsLimiter.FramesPerSecond == 60, "old settings preserve host values and default limiter off");
-        old.FpsLimiter = new FpsLimiterConfiguration { Enabled = true, FramesPerSecond = 72, ToggleHotkeyEnabled = true, ExcludedProcesses = "editor.exe" };
+        old.FpsLimiter = new FpsLimiterConfiguration { Enabled = true, FramesPerSecond = 72, ToggleHotkeyEnabled = true,
+            ToggleHotkeyModifiers = (int)(OsdHotkeyModifiers.Control | OsdHotkeyModifiers.Alt), ToggleHotkeyKey = (int)Keys.F10, ExcludedProcesses = "editor.exe" };
         old.FpsLimiter.GameLimits.Add(new GameLimit { ExecutablePath = @"C:\Games\test.exe", FramesPerSecond = 90 });
         string path = Path.Combine(_evidence, "settings.json");
         SettingsFileHelper.WriteSettings(path, old);
         var loaded = JsonSerializer.Deserialize<AppSettings>(SettingsFileHelper.ReadSettingsJson(path));
         Check(loaded.FpsLimiter.Enabled && loaded.FpsLimiter.ToggleHotkeyEnabled && loaded.FpsLimiter.GameLimits[0].FramesPerSecond == 90 && loaded.LightMode && loaded.CpuIdentifier == "cpu-test", "shared settings writer persists host and all limiter fields");
+        Check(loaded.FpsLimiter.ToggleHotkeyModifiers == 3 && loaded.FpsLimiter.ToggleHotkeyKey == (int)Keys.F10, "custom limiter shortcut survives settings serialization");
+        var legacy = JsonSerializer.Deserialize<FpsLimiterConfiguration>("{\"ToggleHotkeyEnabled\":true,\"FramesPerSecond\":90}");
+        Check(legacy.ToggleHotkeyEnabled && legacy.ToggleHotkeyModifiers == 6 && legacy.ToggleHotkeyKey == (int)Keys.F11, "existing limiter settings keep the default shortcut when key fields are absent");
+        legacy.ToggleHotkeyKey = (int)Keys.F12;
+        var normalized = FpsLimiterConfiguration.Normalize(legacy);
+        Check(normalized.FramesPerSecond == 90 && normalized.ToggleHotkeyEnabled && normalized.ToggleHotkeyKey == (int)Keys.F11, "invalid shortcut normalizes without losing limiter preferences");
         SettingsFileHelper.WriteSettings(path, loaded);
         File.WriteAllText(path, "broken");
         Check(JsonSerializer.Deserialize<AppSettings>(SettingsFileHelper.ReadSettingsJson(path)).FpsLimiter.Enabled, "existing settings backup recovery includes limiter");
@@ -138,7 +153,100 @@ internal static class Suite
     }
 
     // Skip real startup: never open hardware, run PawnIO/elevation, or read/write the user's settings.
-    private sealed class IsolatedMainForm : MainForm { protected override void OnLoad(EventArgs e) { } }
+    private sealed class IsolatedMainForm : MainForm
+    {
+        protected override void OnLoad(EventArgs e) { }
+        internal void RecreateForTest() { RecreateHandle(); }
+    }
+
+    private static async Task CustomHotkeys()
+    {
+        using (var owner = new IsolatedMainForm())
+        using (var other = new Form())
+        {
+            owner.Show(); Call(owner, "SetDefaultControlValues");
+            SetField(owner, "_settingsLoaded", false); SetField(owner, "_fpsLimiterRuntimeReady", true);
+            var config = (FpsLimiterConfiguration)Field(owner, "_fpsLimiterConfiguration");
+            var modifiers = OsdHotkeyModifiers.Control | OsdHotkeyModifiers.Alt;
+            config.ToggleHotkeyEnabled = true;
+            Call(owner, "ApplyFpsLimiterHotkey");
+            Check(owner.CanRegisterFpsLimiterHotkey(modifiers, Keys.F10) && (Keys)Field(owner, "_registeredFpsLimiterHotkeyKey") == Keys.F11,
+                "validating a new shortcut preserves the current registration");
+            config.ToggleHotkeyModifiers = (int)modifiers; config.ToggleHotkeyKey = (int)Keys.F10;
+            Call(owner, "ApplyFpsLimiterHotkey");
+            Check((bool)Field(owner, "_fpsLimiterHotkeyRegistered") && (Keys)Field(owner, "_registeredFpsLimiterHotkeyKey") == Keys.F10,
+                "applying a custom shortcut replaces the default binding");
+            bool oldBinding = RegisterHotKey(other.Handle, 1, 6, (uint)Keys.F11);
+            try { Check(oldBinding, "changing the shortcut releases its previous Windows binding"); }
+            finally { if (oldBinding) UnregisterHotKey(other.Handle, 1); }
+            bool occupied = RegisterHotKey(other.Handle, 2, (uint)modifiers, (uint)Keys.F9);
+            try { Check(occupied && !owner.CanRegisterFpsLimiterHotkey(modifiers, Keys.F9), "another window's shortcut is rejected"); }
+            finally { if (occupied) UnregisterHotKey(other.Handle, 2); }
+            Check(!owner.CanRegisterFpsLimiterHotkey(OsdHotkeyModifiers.None, Keys.K) &&
+                !owner.CanRegisterFpsLimiterHotkey(modifiers, Keys.F12), "unmodified keys and reserved F12 are rejected");
+            SetField(owner, "_settingsLoaded", true);
+            try { owner.RecreateForTest(); }
+            finally { SetField(owner, "_settingsLoaded", false); }
+            Check((bool)Field(owner, "_fpsLimiterHotkeyRegistered") && (Keys)Field(owner, "_registeredFpsLimiterHotkeyKey") == Keys.F10,
+                "custom shortcut survives window handle recreation");
+
+            var osd = (OsdConfiguration)Field(owner, "_osdConfiguration");
+            osd.HotkeyEnabled = true; osd.HotkeyModifiers = 5; osd.HotkeyKey = (int)Keys.F8;
+            Check((bool)Call(owner, "ApplyOsdHotkeyRegistration", false), "distinct OSD shortcut remains registered alongside custom FPS shortcut");
+            Check(!owner.CanRegisterFpsLimiterHotkey((OsdHotkeyModifiers)5, Keys.F8), "custom FPS shortcut cannot replace the configured OSD shortcut");
+            using (var dialog = new FpsLimiterSettingsDialog(owner, config, null))
+            {
+                SetField(owner, "_fpsLimiterDialog", dialog);
+                try
+                {
+                    dialog.Show(owner);
+                    var input = (TextBox)dialog.Controls.Find("hotkeyValue", true).Single();
+                    input.Focus(); await Task.Delay(50);
+                    Check(input.Focused && input.ReadOnly && input.Text == "Ctrl + Alt + F10", "FPS shortcut editor displays the saved binding and accepts focus");
+                    SendMessage(owner.Handle, 0x312, (IntPtr)0x5455, IntPtr.Zero);
+                    Check(!config.Enabled && Field(owner, "_fpsLimiterService") == null && input.Text == "Ctrl + Alt + F10",
+                        "capturing the registered FPS shortcut leaves the limiter off");
+                    bool osdEnabled = ((CheckBox)Field(owner, "osdEnable")).Checked;
+                    SendMessage(owner.Handle, 0x312, (IntPtr)0x5453, IntPtr.Zero);
+                    Check(input.Text == "Shift + Alt + F8" && ((CheckBox)Field(owner, "osdEnable")).Checked == osdEnabled,
+                        "capturing the registered OSD shortcut in FPS settings leaves OSD unchanged");
+                    var capture = typeof(FpsLimiterSettingsDialog).GetMethod("ProcessCmdKey", PrivateInstance);
+                    bool captured = (bool)capture.Invoke(dialog, new object[] { new Message(), Keys.Control | Keys.Shift | Keys.F9 });
+                    Check(captured && input.Text == "Ctrl + Shift + F9", "shortcut capture handles modified function keys through ProcessCmdKey");
+                    Check(!dialog.CaptureRegisteredHotkey(modifiers, Keys.F12) && input.Text == "Ctrl + Shift + F9", "invalid capture preserves the previous draft binding");
+                    ((Button)dialog.Controls.Find("save", true).Single()).PerformClick();
+                    Check(dialog.SelectedConfiguration.ToggleHotkeyModifiers == 6 && dialog.SelectedConfiguration.ToggleHotkeyKey == (int)Keys.F9 &&
+                        config.ToggleHotkeyKey == (int)Keys.F10, "Save returns the custom binding without mutating the live configuration draft");
+                    config = dialog.SelectedConfiguration.Clone();
+                    SetField(owner, "_fpsLimiterConfiguration", config); Call(owner, "ApplyFpsLimiterHotkey");
+                }
+                finally { SetField(owner, "_fpsLimiterDialog", null); }
+            }
+            using (var dialog = new FpsLimiterSettingsDialog(owner, config, null))
+            {
+                dialog.Show(owner);
+                var input = (TextBox)dialog.Controls.Find("hotkeyValue", true).Single(); input.Focus();
+                Check(input.Text == "Ctrl + Shift + F9", "reopening the dialog displays the applied custom shortcut");
+                dialog.CaptureRegisteredHotkey(modifiers, Keys.F7);
+                ((Button)dialog.Controls.Find("cancel", true).Single()).PerformClick();
+                Check(dialog.SelectedConfiguration == null && config.ToggleHotkeyKey == (int)Keys.F9 &&
+                    (Keys)Field(owner, "_registeredFpsLimiterHotkeyKey") == Keys.F9, "Cancel preserves the saved shortcut and its registration");
+            }
+            Check(owner.CanRegisterOsdHotkey((OsdHotkeyModifiers)6, Keys.F9), "OSD can validate the new custom FPS binding without taking it immediately");
+            Call(owner, "GiveOsdHotkeyPriority", (OsdHotkeyModifiers)6, Keys.F9);
+            Check(!config.ToggleHotkeyEnabled && !(bool)Field(owner, "_fpsLimiterHotkeyRegistered"), "saving an OSD conflict disables the custom FPS binding");
+            bool limiterEnabled = config.Enabled;
+            SendMessage(owner.Handle, 0x312, (IntPtr)0x5455, IntPtr.Zero);
+            Check(config.Enabled == limiterEnabled && Field(owner, "_fpsLimiterService") == null,
+                "queued FPS hotkey messages are ignored after unregistration");
+            bool previousOsdEnabled = ((CheckBox)Field(owner, "osdEnable")).Checked;
+            Call(owner, "UnregisterOsdHotkey");
+            SendMessage(owner.Handle, 0x312, (IntPtr)0x5453, IntPtr.Zero);
+            Check(((CheckBox)Field(owner, "osdEnable")).Checked == previousOsdEnabled,
+                "queued OSD hotkey messages are ignored after unregistration");
+            owner.Close();
+        }
+    }
     private static async Task Ui()
     {
         using (var owner = new IsolatedMainForm())
@@ -146,15 +254,40 @@ internal static class Suite
             owner.Show(); owner.Opacity = 1;
             Call(owner, "SetDefaultControlValues");
             Call(owner, "ApplyTheme");
+            var cpuTray = (CheckBox)Field(owner, "enableCpuTray");
+            var gpuTray = (CheckBox)Field(owner, "enableGpuTray");
+            var singleTray = (CheckBox)Field(owner, "singleIconTray");
+            var cpuColor = (Button)Field(owner, "cpuColorValue");
+            var gpuColor = (Button)Field(owner, "gpuColorValue");
+            var fontFamily = (ComboBox)Field(owner, "fontFamilyValue");
+            var iconSize = (ComboBox)Field(owner, "iconsizeValue");
+            Check(!cpuColor.Enabled && !gpuColor.Enabled && !fontFamily.Enabled && !iconSize.Enabled,
+                "tray appearance controls are disabled when both CPU and GPU tray icons are off");
+            cpuTray.Checked = true; Call(owner, "UpdateCombinedTrayCheckboxAvailability");
+            Check(cpuColor.Enabled && !gpuColor.Enabled && fontFamily.Enabled && iconSize.Enabled,
+                "CPU tray selection enables only CPU color plus the shared font and icon size");
+            gpuTray.Checked = true; Call(owner, "UpdateCombinedTrayCheckboxAvailability");
+            Check(cpuColor.Enabled && gpuColor.Enabled && fontFamily.Enabled && iconSize.Enabled && singleTray.Enabled,
+                "enabling both tray icons enables both colors and combined-style controls");
+            singleTray.Checked = true; Call(owner, "ApplySingleIconTrayControlState");
+            Check(!iconSize.Enabled && fontFamily.Enabled,
+                "single-icon style keeps icon size disabled while tray font remains available");
+            cpuTray.Checked = false; Call(owner, "UpdateCombinedTrayCheckboxAvailability");
+            Check(!cpuColor.Enabled && gpuColor.Enabled && fontFamily.Enabled && iconSize.Enabled && !singleTray.Checked,
+                "disabling CPU preserves GPU controls and clears the unavailable combined style");
+            gpuTray.Checked = false; Call(owner, "UpdateCombinedTrayCheckboxAvailability");
+            Check(!cpuColor.Enabled && !gpuColor.Enabled && !fontFamily.Enabled && !iconSize.Enabled,
+                "disabling the last tray icon disables its dependent appearance controls");
             var checkbox = (CheckBox)Field(owner, "fpsLimiterEnable");
             var settingsButton = (Button)Field(owner, "fpsLimiterSettings");
             Check(checkbox.Text == "FPS limiter:" && settingsButton.Text == "\u2699", "host limiter controls have Designer text and names");
+            Check(!checkbox.Checked && !settingsButton.Enabled, "FPS limiter settings are disabled with the limiter unchecked by default");
             checkbox.Checked = true;
             Check(((FpsLimiterConfiguration)Field(owner, "_fpsLimiterConfiguration")).Enabled && settingsButton.Enabled, "checkbox event updates configuration before runtime initialization");
             checkbox.Checked = false;
-            Check(!checkbox.Checked && !settingsButton.Enabled && Field(owner, "_fpsLimiterService") == null, "default host UI creates no limiter runtime or polling");
+            Check(!checkbox.Checked && !settingsButton.Enabled && Field(owner, "_fpsLimiterService") == null, "OFF disables settings without creating limiter runtime or polling");
             var panel = (TableLayoutPanel)Field(owner, "generalSettingsPanel");
-            Check(panel.GetControlFromPosition(1, 3) == Field(owner, "fpsLimiterPanel") && panel.RowCount == 4, "new controls occupy free settings cell without resizing existing rows");
+            Check(panel.GetControlFromPosition(0, 3) == Field(owner, "fpsLimiterPanel") && panel.RowCount == 4, "limiter controls occupy their current Designer cell without adding rows");
             var config = new FpsLimiterConfiguration { FramesPerSecond = 72 };
             config.GameLimits.Add(new GameLimit { ExecutablePath = @"C:\Games\draft.exe", FramesPerSecond = 90 });
             SetField(owner, "_fpsLimiterConfiguration", config);
@@ -235,11 +368,11 @@ internal static class Suite
             config.ToggleHotkeyEnabled = true;
             Call(owner, "ApplyFpsLimiterHotkey");
             Check((bool)Field(owner, "_fpsLimiterHotkeyRegistered"), "FPS toggle shortcut registers with host handle");
-            Check(owner.CanRegisterOsdHotkey(OsdHotkeyModifiers.Control | OsdHotkeyModifiers.Shift, Keys.F12), "OSD can validate FPS shortcut without changing live registration");
-            Call(owner, "GiveOsdHotkeyPriority", OsdHotkeyModifiers.Control | OsdHotkeyModifiers.Shift, Keys.F12);
+            Check(owner.CanRegisterOsdHotkey(OsdHotkeyModifiers.Control | OsdHotkeyModifiers.Shift, Keys.F11), "OSD can validate FPS shortcut without changing live registration");
+            Call(owner, "GiveOsdHotkeyPriority", OsdHotkeyModifiers.Control | OsdHotkeyModifiers.Shift, Keys.F11);
             Check(!config.ToggleHotkeyEnabled && !(bool)Field(owner, "_fpsLimiterHotkeyRegistered"), "committed OSD conflict disables only FPS shortcut");
             var osd = (OsdConfiguration)Field(owner, "_osdConfiguration");
-            osd.HotkeyEnabled = true; osd.HotkeyModifiers = 6; osd.HotkeyKey = (int)Keys.F12;
+            osd.HotkeyEnabled = true; osd.HotkeyModifiers = 6; osd.HotkeyKey = (int)Keys.F11;
             Check(!owner.CanRegisterFpsLimiterHotkey(), "FPS shortcut validation gives configured OSD binding priority");
             osd.HotkeyEnabled = false;
             owner.Hide(); Call(owner, "ShowWindow"); await Task.Delay(100);
@@ -259,6 +392,22 @@ internal static class Suite
                 Check(!denied.Enabled && denied.LastError is InvalidOperationException && typeof(FpsLimiterService).GetField("_controller", PrivateInstance).GetValue(denied) == null, "nonowner refuses activation without creating or stopping controller");
                 await denied.StopAsync();
             }
+        }
+        bool failStartup = true;
+        using (var service = new FpsLimiterService(new FpsLimiterConfiguration(), () =>
+        {
+            if (failStartup) throw new InvalidDataException("controlled startup failure");
+            return native;
+        }))
+        {
+            await service.SetEnabledAsync(true);
+            Check(!service.Enabled && service.LastError is InvalidDataException, "startup failure leaves the limiter disabled with its error available");
+            using (var lease = new Mutex(false, "Local\\TrayFPS.Instance", out bool created))
+                Check(created, "successful failure cleanup releases engine ownership");
+            failStartup = false;
+            await service.SetEnabledAsync(true); StopDiscovery(service);
+            Check(service.Enabled && service.LastError == null, "same service can recover after failed startup cleanup");
+            await service.StopAsync();
         }
         var started = new ManualResetEventSlim(); var release = new ManualResetEventSlim();
         using (var service = new FpsLimiterService(new FpsLimiterConfiguration(), () => { started.Set(); release.Wait(); return native; }))
@@ -289,12 +438,73 @@ internal static class Suite
             await service.SetEnabledAsync(true); StopDiscovery(service);
             Check(service.Enabled && service.LastError == null, "embedded runtime starts");
             await service.SetEnabledAsync(false);
-            using (var lease = new Mutex(false, "Local\\TrayFPS.Instance", out bool created)) Check(!created, "disabled controller retains exclusive lease until shutdown");
+            using (var lease = new Mutex(false, "Local\\TrayFPS.Instance", out bool created)) Check(created, "disabled controller releases ownership after layer cleanup");
             await service.SetEnabledAsync(true); StopDiscovery(service);
             Check(service.Enabled && service.LastError == null, "runtime resumes after disable");
             await service.ApplyConfigurationAsync(new FpsLimiterConfiguration { FramesPerSecond = 75 });
             Check(service.LastError == null && service.Enabled, "fallback cap updates while waiting for target");
             await service.StopAsync();
+        }
+    }
+
+    private static async Task LayerCleanup(string native)
+    {
+        var views = new[] { RegistryView.Registry64, RegistryView.Registry32 };
+        string token = "audit-test-" + Guid.NewGuid().ToString("N");
+        string ownRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TrayTemps", "FpsLimiter", token);
+        string otherRoot = Path.Combine(Path.GetTempPath(), token);
+        Func<RegistryView, string> fileName = view => "TrayFPS-Vulkan-" + (view == RegistryView.Registry64 ? "x64" : "x86") + ".json";
+        Func<RegistryView, string, bool> registered = (view, path) =>
+        {
+            using (var root = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, view))
+            using (var key = root.OpenSubKey("SOFTWARE\\Khronos\\Vulkan\\ImplicitLayers"))
+                return key?.GetValue(path) != null;
+        };
+        try
+        {
+            foreach (var view in views)
+            using (var root = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, view))
+            using (var key = root.CreateSubKey("SOFTWARE\\Khronos\\Vulkan\\ImplicitLayers"))
+            {
+                // Disabled values avoid involving Vulkan loaders during the test.
+                key.SetValue(Path.Combine(ownRoot, fileName(view)), 1, RegistryValueKind.DWord);
+                key.SetValue(Path.Combine(otherRoot, fileName(view)), 1, RegistryValueKind.DWord);
+            }
+            using (var lease = new Mutex(false, "Local\\TrayFPS.Instance", out bool created))
+            {
+                Check(created, "stale-layer test starts without another owner");
+                FpsLimiterService.CleanupStaleVulkanRegistrations();
+                Check(views.All(view => registered(view, Path.Combine(ownRoot, fileName(view)))), "OFF startup leaves another live owner's registrations alone");
+            }
+            FpsLimiterService.CleanupStaleVulkanRegistrations();
+            Check(views.All(view => !registered(view, Path.Combine(ownRoot, fileName(view)))), "OFF startup removes stale own registrations even when manifests are missing");
+            Check(views.All(view => registered(view, Path.Combine(otherRoot, fileName(view)))), "cleanup preserves identical manifest filenames outside our cache");
+            using (var service = new FpsLimiterService(new FpsLimiterConfiguration(), () => native))
+            {
+                try
+                {
+                    await service.SetEnabledAsync(true); StopDiscovery(service);
+                    string manifests = Path.GetDirectoryName(native);
+                    Check(service.Enabled && views.All(view => registered(view, Path.Combine(manifests, fileName(view)))), "ON registers both exact architecture manifests");
+                    foreach (var view in views) File.Delete(Path.Combine(manifests, fileName(view)));
+                    await service.SetEnabledAsync(false);
+                    Check(!service.Enabled && views.All(view => !registered(view, Path.Combine(manifests, fileName(view)))), "OFF unregisters exact manifests even after their files disappear");
+                    using (var lease = new Mutex(false, "Local\\TrayFPS.Instance", out bool created))
+                        Check(created, "OFF releases ownership after registry cleanup");
+                    Check(views.All(view => registered(view, Path.Combine(otherRoot, fileName(view)))), "OFF preserves unrelated registrations");
+                }
+                finally { await service.StopAsync(); }
+            }
+        }
+        finally
+        {
+            foreach (var view in views)
+            using (var root = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, view))
+            using (var key = root.OpenSubKey("SOFTWARE\\Khronos\\Vulkan\\ImplicitLayers", true))
+            {
+                key?.DeleteValue(Path.Combine(ownRoot, fileName(view)), false);
+                key?.DeleteValue(Path.Combine(otherRoot, fileName(view)), false);
+            }
         }
     }
 
@@ -398,11 +608,11 @@ internal static class Suite
     private static async Task WaitIdle(FpsLimiterService service)
     {
         var timeout = Stopwatch.StartNew();
-        while (service.IsBusy && timeout.ElapsedMilliseconds < 25000) await Task.Delay(25);
-        Check(!service.IsBusy && service.LastError == null, "discovery worker finishes successfully");
+        while ((service.IsBusy || service.IsDiscovering) && timeout.ElapsedMilliseconds < 25000) await Task.Delay(25);
+        Check(!service.IsBusy && !service.IsDiscovering && service.LastError == null, "discovery worker finishes successfully");
     }
 
-    private static async Task SelectForeground(Process process)
+    internal static async Task SelectForeground(Process process)
     {
         var deadline = Stopwatch.StartNew();
         while (deadline.ElapsedMilliseconds < 5000)
@@ -449,7 +659,7 @@ internal static class Suite
             {
                 await Task.Delay(800);
                 await service.AttachTargetAsync(process.Id, process.ProcessName, executable, initialCap);
-                Check(service.LastError == null, api + " attaches");
+                Check(service.LastError == null && service.StatusText.StartsWith("Attached"), api + " attaches: " + service.StatusText);
                 DateTime begin = DateTime.UtcNow; await Task.Delay(2500);
                 AssertPeriod(samples, begin, DateTime.UtcNow, initialCap, api + " enabled at " + initialCap);
                 await service.SetEnabledAsync(false);

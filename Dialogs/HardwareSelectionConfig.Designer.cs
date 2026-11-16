@@ -34,12 +34,12 @@ namespace TrayTemps
             this.exitBtn.FlatAppearance.BorderSize = 0;
             this.exitBtn.FlatAppearance.MouseOverBackColor = System.Drawing.Color.Red;
             this.exitBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.exitBtn.Font = new System.Drawing.Font("TrayTemps Mono ExtraBold", 9.75F, System.Drawing.FontStyle.Regular);
-            this.exitBtn.Tag = "TrayTemps.Font.ExtraBold";
+            this.exitBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F);
             this.exitBtn.Location = new System.Drawing.Point(284, 1);
             this.exitBtn.Name = "exitBtn";
             this.exitBtn.Size = new System.Drawing.Size(46, 44);
             this.exitBtn.TabIndex = 0;
+            this.exitBtn.Tag = "TrayTemps.Font.ExtraBold";
             this.exitBtn.Text = "✖";
             this.exitBtn.UseVisualStyleBackColor = true;
             this.exitBtn.Click += new System.EventHandler(this.ExitBtn_Click);
@@ -62,12 +62,12 @@ namespace TrayTemps
             // saveBtn
             // 
             this.saveBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.saveBtn.Font = new System.Drawing.Font("TrayTemps Mono ExtraBold", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.saveBtn.Tag = "TrayTemps.Font.ExtraBold";
+            this.saveBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.saveBtn.Location = new System.Drawing.Point(22, 109);
             this.saveBtn.Name = "saveBtn";
             this.saveBtn.Size = new System.Drawing.Size(282, 34);
             this.saveBtn.TabIndex = 4;
+            this.saveBtn.Tag = "TrayTemps.Font.ExtraBold";
             this.saveBtn.Text = "💾 SAVE";
             this.saveBtn.UseVisualStyleBackColor = false;
             this.saveBtn.Click += new System.EventHandler(this.SaveBtn_Click);
@@ -76,7 +76,7 @@ namespace TrayTemps
             // 
             this.sensorSelect.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.sensorSelect.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.sensorSelect.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
+            this.sensorSelect.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
             this.sensorSelect.FormattingEnabled = true;
             this.sensorSelect.Location = new System.Drawing.Point(22, 75);
             this.sensorSelect.Name = "sensorSelect";
@@ -86,7 +86,7 @@ namespace TrayTemps
             // sensorLabel
             // 
             this.sensorLabel.AutoSize = true;
-            this.sensorLabel.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
+            this.sensorLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
             this.sensorLabel.Location = new System.Drawing.Point(22, 54);
             this.sensorLabel.Name = "sensorLabel";
             this.sensorLabel.Size = new System.Drawing.Size(102, 13);
@@ -97,7 +97,7 @@ namespace TrayTemps
             // 
             this.hardwareSelect.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.hardwareSelect.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.hardwareSelect.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
+            this.hardwareSelect.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
             this.hardwareSelect.FormattingEnabled = true;
             this.hardwareSelect.Location = new System.Drawing.Point(22, 26);
             this.hardwareSelect.Name = "hardwareSelect";
@@ -108,7 +108,7 @@ namespace TrayTemps
             // hardwareLabel
             // 
             this.hardwareLabel.AutoSize = true;
-            this.hardwareLabel.Font = new System.Drawing.Font("TrayTemps Mono", 7.5F);
+            this.hardwareLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
             this.hardwareLabel.Location = new System.Drawing.Point(22, 5);
             this.hardwareLabel.Name = "hardwareLabel";
             this.hardwareLabel.Size = new System.Drawing.Size(92, 13);
@@ -118,12 +118,12 @@ namespace TrayTemps
             // formTitle
             // 
             this.formTitle.AutoSize = true;
-            this.formTitle.Font = new System.Drawing.Font("TrayTemps Mono ExtraBold", 9.75F, System.Drawing.FontStyle.Regular);
-            this.formTitle.Tag = "TrayTemps.Font.ExtraBold";
+            this.formTitle.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.formTitle.Location = new System.Drawing.Point(22, 15);
             this.formTitle.Name = "formTitle";
             this.formTitle.Size = new System.Drawing.Size(73, 16);
             this.formTitle.TabIndex = 2;
+            this.formTitle.Tag = "TrayTemps.Font.ExtraBold";
             this.formTitle.Text = "Configure";
             // 
             // HardwareSelectionConfig
@@ -135,7 +135,7 @@ namespace TrayTemps
             this.Controls.Add(this.mainPanel);
             this.Controls.Add(this.exitBtn);
             this.DoubleBuffered = true;
-            this.Font = new System.Drawing.Font("TrayTemps Mono", 9.75F);
+            this.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MaximizeBox = false;

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -90,7 +90,7 @@ internal static partial class ReviewTests
             if (args[0] == "hardware") await Hardware();
             if (args[0] == "dpi") await DpiRestart();
             if (args[0] == "dpi-roundtrip") await DpiRoundTrips();
-            if (args[0] == "mixed-vulkan") await MixedVulkan();
+            if (args[0] == "mixed-vulkan") await MixedVulkan(args.Length > 1 ? args[1] : null);
             if (args[0] == "host-vulkan") await HostVulkan();
             if (args[0] == "host-vulkan-60") await HostVulkan60();
             if (args[0] == "real-osd") await RealOsd();
@@ -511,7 +511,7 @@ internal static partial class ReviewTests
             var config = (FpsLimiterConfiguration)Get(owner, "_fpsLimiterConfiguration"); config.ToggleHotkeyEnabled = true;
             Call(owner, "ApplyFpsLimiterHotkey"); Check((bool)Get(owner, "_fpsLimiterHotkeyRegistered"), "FPS shortcut first registration");
             owner.Recreate(); Check((bool)Get(owner, "_fpsLimiterHotkeyRegistered"), "FPS shortcut survives HWND recreation");
-            var osd = (OsdConfiguration)Get(owner, "_osdConfiguration"); osd.HotkeyEnabled = true; osd.HotkeyModifiers = 6; osd.HotkeyKey = (int)Keys.F12;
+            var osd = (OsdConfiguration)Get(owner, "_osdConfiguration"); osd.HotkeyEnabled = true; osd.HotkeyModifiers = 6; osd.HotkeyKey = (int)Keys.F11;
             Check((bool)Call(owner, "ApplyOsdHotkeyRegistration", false), "OSD takes shortcut priority when saved later");
             Check(!config.ToggleHotkeyEnabled && !(bool)Get(owner, "_fpsLimiterHotkeyRegistered"), "OSD binding clears only conflicting FPS preference");
             owner.Recreate(); Check((bool)Get(owner, "_osdHotkeyRegistered") && !owner.CanRegisterFpsLimiterHotkey(), "OSD shortcut preserved after HWND recreation and reverse conflict");
@@ -554,7 +554,7 @@ internal static partial class ReviewTests
                         var input = (TextBox)dialog.Controls.Find("hotkeyValue",true).Single(); input.Focus(); await Task.Delay(100);
                         Check(input.Focused,"modal OSD shortcut editor has keyboard focus");
                         PostMessage(owner.Handle,0x312,(IntPtr)0x5455,IntPtr.Zero); await Task.Delay(200);
-                        captured = !config.Enabled && input.Text.Contains("F12");
+                        captured = !config.Enabled && input.Text.Contains("F11");
                     }
                     catch (Exception error) { failure = error; }
                     finally { dialog.DialogResult = DialogResult.Cancel; dialog.Close(); }

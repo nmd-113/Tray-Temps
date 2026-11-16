@@ -4,6 +4,7 @@
 #include <MinHook.h>
 #include <atomic>
 #include "include/TrayFpsProtocol.h"
+#include "include/HookInstall.h"
 extern "C" void TrayFpsUpdateConfig(TrayFpsConfig*);
 extern "C" void TrayFpsBeforePresent(const void* stream);
 extern "C" void TrayFpsStop();
@@ -19,13 +20,27 @@ static HANDLE g_configMap = nullptr;
 static std::atomic<DWORD> g_lastConfigRead(0);
 static thread_local bool g_insidePresentation = false;
 static volatile LONG g_initialized = 0;
+static SRWLOCK g_initializeLock = SRWLOCK_INIT;
+static SRWLOCK g_configViewLock = SRWLOCK_INIT;
+struct InitializeLock {
+    InitializeLock() { AcquireSRWLockExclusive(&g_initializeLock); }
+    ~InitializeLock() { ReleaseSRWLockExclusive(&g_initializeLock); }
+};
+static void releaseConfig() {
+    AcquireSRWLockExclusive(&g_configViewLock);
+    if (g_config) { UnmapViewOfFile(g_config); g_config = nullptr; }
+    if (g_configMap) { CloseHandle(g_configMap); g_configMap = nullptr; }
+    ReleaseSRWLockExclusive(&g_configViewLock);
+}
 
 static void refreshConfigOccasionally() {
     const DWORD tick = GetTickCount();
     DWORD previous = g_lastConfigRead.load(std::memory_order_relaxed);
     if (static_cast<DWORD>(tick - previous) < 100) return;
     if (!g_lastConfigRead.compare_exchange_strong(previous, tick, std::memory_order_relaxed)) return;
+    AcquireSRWLockShared(&g_configViewLock);
     if (g_config) TrayFpsUpdateConfig(g_config);
+    ReleaseSRWLockShared(&g_configViewLock);
 }
 extern "C" __declspec(dllexport) BOOL WINAPI TrayFpsBeginPresentation(const void* stream) {
     if (g_insidePresentation) return FALSE;
@@ -52,8 +67,13 @@ static HRESULT STDMETHODCALLTYPE hookedPresent1(IDXGISwapChain1* chain, UINT int
 
 static LRESULT CALLBACK dummyWindowProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) { return DefWindowProcW(hwnd, msg, wp, lp); }
 
-extern "C" __declspec(dllexport) BOOL WINAPI TrayFpsInitialize() {
-    if (InterlockedCompareExchange(&g_initialized, 0, 0)) return TRUE;
+extern "C" __declspec(dllexport) DWORD WINAPI TrayFpsInitialize(void* requested) {
+    InitializeLock lock;
+    DWORD required = static_cast<DWORD>(reinterpret_cast<ULONG_PTR>(requested));
+    LONG installed = InterlockedCompareExchange(&g_initialized, 0, 0);
+    if (!required && installed) return installed;
+    if (!required) required = 1;
+    if (installed) return (installed & required) == required ? installed : 0;
     const DWORD pid = GetCurrentProcessId();
     wchar_t mapName[80];
     wsprintfW(mapName, L"Local\\TrayFPS.Config.%lu", pid);
@@ -68,15 +88,18 @@ extern "C" __declspec(dllexport) BOOL WINAPI TrayFpsInitialize() {
         }
         // A mapped view alone does not preserve the name after all handles close.
         // Keep a handle so controller reconnects update the view used by our hooks.
-        g_configMap = map;
-        g_config = config;
+        AcquireSRWLockExclusive(&g_configViewLock);
+        g_configMap = map; g_config = config;
+        ReleaseSRWLockExclusive(&g_configViewLock);
     }
 
     HINSTANCE instance = GetModuleHandleW(nullptr);
     WNDCLASSW wc = {}; wc.lpfnWndProc = dummyWindowProc; wc.hInstance = instance; wc.lpszClassName = L"TrayFPS.HookBootstrap";
     RegisterClassW(&wc);
     HWND hwnd = CreateWindowW(wc.lpszClassName, L"", WS_OVERLAPPEDWINDOW, 0, 0, 8, 8, nullptr, nullptr, instance, nullptr);
-    if (!hwnd) return FALSE;
+    if (!hwnd) { releaseConfig(); return 0; }
+    MH_STATUS init = MH_Initialize();
+    if (init != MH_OK && init != MH_ERROR_ALREADY_INITIALIZED) { DestroyWindow(hwnd); releaseConfig(); return 0; }
     DXGI_SWAP_CHAIN_DESC desc = {}; desc.BufferCount = 1; desc.BufferDesc.Width = 8; desc.BufferDesc.Height = 8;
     desc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     desc.OutputWindow = hwnd; desc.SampleDesc.Count = 1; desc.Windowed = TRUE; desc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
@@ -85,31 +108,33 @@ extern "C" __declspec(dllexport) BOOL WINAPI TrayFpsInitialize() {
         &desc, &chain, &device, &level, &context);
     if (FAILED(hr)) hr = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_WARP, nullptr, 0, nullptr, 0, D3D11_SDK_VERSION,
         &desc, &chain, &device, &level, &context);
-    if (FAILED(hr)) { DestroyWindow(hwnd); return FALSE; }
-
-    void** vtable = *reinterpret_cast<void***>(chain);
     IDXGISwapChain1* chain1 = nullptr;
     void* present1Target = nullptr;
-    if (SUCCEEDED(chain->QueryInterface(__uuidof(IDXGISwapChain1), reinterpret_cast<void**>(&chain1)))) {
+    if (SUCCEEDED(hr) && SUCCEEDED(chain->QueryInterface(__uuidof(IDXGISwapChain1), reinterpret_cast<void**>(&chain1)))) {
         present1Target = (*reinterpret_cast<void***>(chain1))[22];
     }
-    MH_STATUS init = MH_Initialize();
-    if (init != MH_OK && init != MH_ERROR_ALREADY_INITIALIZED) { if(chain1) chain1->Release(); chain->Release(); context->Release(); device->Release(); DestroyWindow(hwnd); return FALSE; }
-    MH_STATUS a = MH_CreateHook(vtable[8], &hookedPresent, reinterpret_cast<void**>(&g_present));
-    MH_STATUS b = present1Target ? MH_CreateHook(present1Target, &hookedPresent1, reinterpret_cast<void**>(&g_present1)) : MH_ERROR_UNSUPPORTED_FUNCTION;
-    if (a == MH_OK || a == MH_ERROR_ALREADY_CREATED) MH_EnableHook(vtable[8]);
-    if (present1Target && (b == MH_OK || b == MH_ERROR_ALREADY_CREATED)) MH_EnableHook(present1Target);
-    TrayFpsHookD3D9(hwnd);
-    TrayFpsHookOpenGL();
-    if (chain1) chain1->Release(); chain->Release(); context->Release(); device->Release(); DestroyWindow(hwnd);
-    if ((a == MH_OK || a == MH_ERROR_ALREADY_CREATED) && (b == MH_OK || b == MH_ERROR_ALREADY_CREATED)) { InterlockedExchange(&g_initialized, 1); return TRUE; }
-    return FALSE;
+    bool a = chain && TrayFpsInstallHook((*reinterpret_cast<void***>(chain))[8], &hookedPresent, reinterpret_cast<void**>(&g_present));
+    bool b = present1Target && TrayFpsInstallHook(present1Target, &hookedPresent1, reinterpret_cast<void**>(&g_present1));
+    DWORD adapters = (a || b) ? 1u : 0u;
+    if (TrayFpsHookD3D9(hwnd)) adapters |= 2u;
+    if (TrayFpsHookOpenGL()) adapters |= 4u;
+    if (chain1) chain1->Release();
+    if (chain) chain->Release();
+    if (context) context->Release();
+    if (device) device->Release();
+    DestroyWindow(hwnd);
+    if ((adapters & required) == required) { InterlockedExchange(&g_initialized, adapters); return adapters; }
+    MH_DisableHook(MH_ALL_HOOKS);
+    MH_Uninitialize();
+    releaseConfig();
+    TrayFpsStop();
+    return 0;
 }
 
 extern "C" __declspec(dllexport) void WINAPI TrayFpsShutdown() {
+    InitializeLock lock;
     MH_DisableHook(MH_ALL_HOOKS); MH_Uninitialize();
     InterlockedExchange(&g_initialized, 0);
-    if (g_config) { UnmapViewOfFile(g_config); g_config = nullptr; }
-    if (g_configMap) { CloseHandle(g_configMap); g_configMap = nullptr; }
+    releaseConfig();
     TrayFpsStop();
 }
