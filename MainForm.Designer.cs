@@ -1,4 +1,4 @@
-namespace TrayTemps
+﻿namespace TrayTemps
 {
     partial class MainForm
     {
@@ -121,6 +121,8 @@ namespace TrayTemps
             this.motherboardDetails = new System.Windows.Forms.Label();
             this.mainComponentsTitle = new System.Windows.Forms.Label();
             this.tempTitle = new System.Windows.Forms.Label();
+            this.temperatureHeader = new System.Windows.Forms.TableLayoutPanel();
+            this.historyButton = new System.Windows.Forms.Button();
             this.sysmonTitle = new System.Windows.Forms.Label();
             this.divider2 = new System.Windows.Forms.Panel();
             this.settingsPage = new System.Windows.Forms.TabPage();
@@ -774,7 +776,7 @@ namespace TrayTemps
             this.sysmonitorPanel.Controls.Add(this.tempsWrapper, 0, 1);
             this.sysmonitorPanel.Controls.Add(this.mainComponentsPanel, 0, 3);
             this.sysmonitorPanel.Controls.Add(this.mainComponentsTitle, 0, 2);
-            this.sysmonitorPanel.Controls.Add(this.tempTitle, 0, 0);
+            this.sysmonitorPanel.Controls.Add(this.temperatureHeader, 0, 0);
             this.sysmonitorPanel.Location = new System.Drawing.Point(33, 74);
             this.sysmonitorPanel.Margin = new System.Windows.Forms.Padding(0);
             this.sysmonitorPanel.Name = "sysmonitorPanel";
@@ -1597,6 +1599,31 @@ namespace TrayTemps
             this.mainComponentsTitle.TabIndex = 14;
             this.mainComponentsTitle.Text = "🧩 Components Info";
             this.mainComponentsTitle.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            // temperatureHeader
+            this.temperatureHeader.ColumnCount = 2;
+            this.temperatureHeader.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.temperatureHeader.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 42F));
+            this.temperatureHeader.RowCount = 1;
+            this.temperatureHeader.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.temperatureHeader.Controls.Add(this.tempTitle, 0, 0);
+            this.temperatureHeader.Controls.Add(this.historyButton, 1, 0);
+            this.temperatureHeader.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.temperatureHeader.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.temperatureHeader.Name = "temperatureHeader";
+            this.temperatureHeader.Size = new System.Drawing.Size(619, 34);
+            this.historyButton.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.historyButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.historyButton.FlatAppearance.BorderSize = 0;
+            this.historyButton.Font = new System.Drawing.Font("Segoe UI Emoji", 14F);
+            this.historyButton.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.historyButton.Margin = new System.Windows.Forms.Padding(1);
+            this.historyButton.Tag = "TrayTemps.Font.System";
+            this.historyButton.Name = "historyButton";
+            this.historyButton.Text = "📈";
+            this.historyButton.UseVisualStyleBackColor = false;
+            this.historyButton.TabIndex = 0;
+            this.historyButton.Click += new System.EventHandler(this.HistoryButton_Click);
+            this.mainToolTip.SetToolTip(this.historyButton, "Performance history");
             // 
             // tempTitle
             // 
@@ -1604,7 +1631,7 @@ namespace TrayTemps
             this.tempTitle.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.tempTitle.ForeColor = System.Drawing.Color.WhiteSmoke;
             this.tempTitle.Location = new System.Drawing.Point(3, 6);
-            this.tempTitle.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.tempTitle.Margin = new System.Windows.Forms.Padding(0);
             this.tempTitle.Name = "tempTitle";
             this.tempTitle.Size = new System.Drawing.Size(619, 30);
             this.tempTitle.TabIndex = 9;
@@ -2698,6 +2725,8 @@ namespace TrayTemps
         private System.Windows.Forms.TableLayoutPanel gpuPanel;
         private System.Windows.Forms.Label gpuTempLabel;
         private System.Windows.Forms.Label tempTitle;
+        private System.Windows.Forms.TableLayoutPanel temperatureHeader;
+        private System.Windows.Forms.Button historyButton;
         private System.Windows.Forms.Label gpuTempMaxLabel;
         private System.Windows.Forms.Label gpuTempMinLabel;
         private System.Windows.Forms.Label gpuTempCurLabel;

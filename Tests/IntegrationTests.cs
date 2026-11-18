@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -37,7 +37,7 @@ internal static class Program
         {
             runner.Shown += async (sender, e) =>
             {
-                try { if (args.Length == 1 && args[0] == "--metric-list") await OsdMetricListTests.Run(); else if (args.Length == 1 && args[0] == "--one-percent-text") FrameTimeTests.TextChecks(); else if (args.Length == 2 && args[0] == "--one-percent-live") await FrameTimeTests.Live(args[1]); else if (args.Length == 1 && args[0] == "--one-percent-low") await FrameTimeTests.Run(); else if (args.Length == 1 && args[0] == "--game-detection") await GameDetectionTests.Run(); else if (args.Length == 1 && args[0] == "--release-safety") await ReleaseSafetyTests.Run(); else if (args.Length == 1 && args[0] == "--audit-fixes") await AuditFixTests.Run(); else if (args.Length > 0 && args[0] == "--review") await ReviewTests.Run(args.Skip(1).ToArray()); else await Suite.Run(args); Console.WriteLine("ALL INTEGRATION CHECKS PASSED"); }
+                try { if (args.Length == 1 && args[0] == "--metric-list") await OsdMetricListTests.Run(); else if (args.Length == 1 && args[0] == "--performance-history") await PerformanceHistoryTests.Run(); else if (args.Length == 1 && args[0] == "--history-ui-audit") await PerformanceHistoryTests.AuditUi(); else if (args.Length == 2 && args[0] == "--performance-history-live") await PerformanceHistoryTests.Live(args[1]); else if (args.Length == 1 && args[0] == "--osd-spacing") OsdSpacingTests.Run(); else if (args.Length == 1 && args[0] == "--one-percent-text") FrameTimeTests.TextChecks(); else if (args.Length == 2 && args[0] == "--one-percent-live") await FrameTimeTests.Live(args[1]); else if (args.Length == 1 && args[0] == "--one-percent-low") await FrameTimeTests.Run(); else if (args.Length == 1 && args[0] == "--game-detection") await GameDetectionTests.Run(); else if (args.Length == 1 && args[0] == "--release-safety") await ReleaseSafetyTests.Run(); else if (args.Length == 1 && args[0] == "--audit-fixes") await AuditFixTests.Run(); else if (args.Length > 0 && args[0] == "--review") await ReviewTests.Run(args.Skip(1).ToArray()); else await Suite.Run(args); Console.WriteLine("ALL INTEGRATION CHECKS PASSED"); }
                 catch (Exception error) { Console.Error.WriteLine(error); _result = 1; }
                 finally { runner.Close(); }
             };

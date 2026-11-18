@@ -192,6 +192,21 @@
     <Compile Include="Helpers\Hardware\SystemMemoryUsageHelper.cs" />
     <Compile Include="Helpers\Performance\ForegroundFpsMonitor.cs" />
     <Compile Include="Helpers\Performance\FrameTimeWindow.cs" />
+    <Compile Include="Helpers\Performance\FrameStatistics.cs" />
+    <Compile Include="Helpers\Performance\PerformanceHistory.cs" />
+    <Compile Include="Helpers\UI\HistoryGraphControl.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="MainForm.History.cs">
+      <DependentUpon>MainForm.cs</DependentUpon>
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Dialogs\PerformanceHistoryDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Dialogs\PerformanceHistoryDialog.Designer.cs">
+      <DependentUpon>PerformanceHistoryDialog.cs</DependentUpon>
+    </Compile>
     <Compile Include="MainForm.cs">
       <SubType>Form</SubType>
     </Compile>

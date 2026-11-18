@@ -66,7 +66,11 @@ internal static class FrameTimeTests
                 if (value.HasValue && value != 100) throw new Exception("Concurrent history mixed generations or corrupted intervals.");
             }
         });
-        await Task.WhenAll(writer, reader);
+        var timing = Task.Run(() =>
+        {
+            for (int i = 0; i < 300; i++) window.SetTimingEnabled((i & 1) == 0);
+        });
+        await Task.WhenAll(writer, reader, timing);
         window.Reset(31);
         Check(window.GetValue(now, 31) == null, "concurrent capture, snapshot sorting and source resets do not publish stale or mixed samples");
     }
@@ -122,7 +126,7 @@ internal static class FrameTimeTests
             Marshal.WriteInt16(_record, 86, 12); Marshal.WriteIntPtr(_record, 96, _data);
             Marshal.WriteInt64(_data, 1);
             Set(Monitor, "_targetProcessId", 777); Set(Monitor, "_targetGeneration", 1); Set(Monitor, "_running", true);
-            Monitor.SetOnePercentLowEnabled(collect);
+            Monitor.SetFrameStatisticsEnabled(collect, false);
             Callback = (Action<IntPtr>)Delegate.CreateDelegate(typeof(Action<IntPtr>), Monitor,
                 typeof(ForegroundFpsMonitor).GetMethod("OnEventRecord", Fields));
         }
@@ -167,13 +171,13 @@ internal static class FrameTimeTests
             Fill(primary, start, 100, frequency / 50);
             on.Present(now + frequency, swapChain: 2);
             Check(primary.GetValue(now + frequency, 1) == null, "accepted swap-chain changes reset the low history");
-            on.Monitor.UpdateForegroundProcess(); on.Monitor.UpdateForegroundProcess();
+            on.Monitor.UpdateTargetProcess(123456789);
             Check((int)Field(on.Monitor, "_targetGeneration") > 1 &&
                 primary.GetValue(now + frequency, (int)Field(on.Monitor, "_targetGeneration")) == null,
                 "foreground process changes immediately invalidate the previous history");
-            on.Monitor.SetOnePercentLowEnabled(false);
+            on.Monitor.SetFrameStatisticsEnabled(false, false);
             Check(Field(on.Monitor, "_frameTimes") == null, "disabling the option releases optional history");
-            on.Monitor.SetOnePercentLowEnabled(true);
+            on.Monitor.SetFrameStatisticsEnabled(true, false);
             Check(Window(on.Monitor, "Primary").GetValue(now, 1) == null, "re-enabling starts with fresh samples");
             on.Monitor.Stop();
             Check(Field(on.Monitor, "_frameTimes") == null && on.Monitor.GetLatestFps() == null, "OSD monitoring stop drops history and cached values");

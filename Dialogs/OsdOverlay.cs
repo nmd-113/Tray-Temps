@@ -58,6 +58,7 @@ namespace TrayTemps
         private string _fontContextKey = "";
         private float? _drawBaseline;
         private int _layoutDpi;
+        private float _contentScale = 1f;
 
         public OsdOverlay()
         {
@@ -241,8 +242,9 @@ namespace TrayTemps
                 _workingArea.Size != workingArea.Size ||
                 _configuration.Columns != configuration.Columns || _configuration.ScreenMargin != configuration.ScreenMargin ||
                 _configuration.RowsSpacing != configuration.RowsSpacing || _configuration.ColumnsSpacing != configuration.ColumnsSpacing ||
+                _configuration.GroupedValuesGapPercent != configuration.GroupedValuesGapPercent ||
                 _configuration.LabelValueSpacing != configuration.LabelValueSpacing ||
-                !string.Equals(_configuration.GroupSeparator, configuration.GroupSeparator, StringComparison.Ordinal) ||
+                !MetricGapsEqual(_configuration.MetricLabelValueGaps, configuration.MetricLabelValueGaps) ||
                 _configuration.FontFamily != configuration.FontFamily || _configuration.FontSize != configuration.FontSize;
             bool changed = layoutChanged || _workingArea != workingArea ||
                 _configuration.Position != configuration.Position || _configuration.ExternalSpacing != configuration.ExternalSpacing ||
@@ -267,12 +269,22 @@ namespace TrayTemps
                     if (x.Key != y.Key || x.Label != y.Label || xs.FontFamily != ys.FontFamily || xs.FontSize != ys.FontSize ||
                         x.LabelValueSpacingOverride != y.LabelValueSpacingOverride || x.ValueWidthTemplate != y.ValueWidthTemplate ||
                         x.AlternateValueWidthTemplate != y.AlternateValueWidthTemplate ||
+                        (configuration.RowsSpacing == 0 && (x.Value == "N/A") != (y.Value == "N/A")) ||
                         (string.IsNullOrEmpty(y.ValueWidthTemplate) && x.Value != y.Value))
                         layoutChanged = true;
-                    changed |= x.Value != y.Value || x.TextColor != y.TextColor || xs.LabelColor != ys.LabelColor || xs.ValueColor != ys.ValueColor;
+                    changed |= x.Value != y.Value || x.TextColor != y.TextColor || xs.LabelColor != ys.LabelColor || xs.ValueColor != ys.ValueColor || !ReferenceEquals(x.Graph, y.Graph);
                 }
             }
             return changed || layoutChanged;
+        }
+
+        private static bool MetricGapsEqual(Dictionary<string, int> first, Dictionary<string, int> second)
+        {
+            if (ReferenceEquals(first, second)) return true;
+            if (first == null || second == null || first.Count != second.Count) return false;
+            foreach (var pair in first)
+                if (!second.TryGetValue(pair.Key, out int value) || value != pair.Value) return false;
+            return true;
         }
 
         private void ApplyVisualSettings()
@@ -315,6 +327,7 @@ namespace TrayTemps
             int rows = Math.Max(1, (count + columns - 1) / columns);
             int padding = GetConfiguredPadding(), rowGap = GetRowsSpacing(), columnGap = GetColumnsSpacing();
             int[] widths = new int[columns], heights = new int[rows];
+            int fullWidth;
             using (var bitmap = new Bitmap(1, 1))
             {
                 bitmap.SetResolution(DeviceDpi, DeviceDpi);
@@ -325,64 +338,86 @@ namespace TrayTemps
                         var layout = new RowLayout();
                         var members = row.Members ?? new List<OsdMetric> { row };
                         layout.IsGroup = row.Members != null;
+                        layout.IsGraph = row.Key == "FrameTimeGraph";
                         int x = 0; float ascent = 0, descent = 0;
                         if (row.Members != null && !string.IsNullOrEmpty(row.Label))
                         {
                             ActivateFont(members[0].Style);
                             int width = MeasureDisplayTextWidth(graphics, row.Label);
-                            layout.Parts.Add(new TextPlacement(row.Label, members[0].Style, true, x, width, false) { Owner = 0, IsGroupCaption = true });
-                            x += width + ScaleLogical(_configuration.LabelValueSpacing);
+                            layout.Parts.Add(new TextPlacement(row.Label, members[0].Style, true, x, width) { Owner = 0, IsGroupCaption = true });
+                            x += width + ScaleLogical(OsdMetricDefinitions.LabelGap(_configuration, row.Key, row.Label));
                             ascent = Ascent(graphics); descent = Descent(graphics);
                         }
                         for (int member = 0; member < members.Count; member++)
                         {
                             var metric = members[member]; ActivateFont(metric.Style);
-                            ascent = Math.Max(ascent, Ascent(graphics)); descent = Math.Max(descent, Descent(graphics));
+                            if (!layout.IsGraph || !string.IsNullOrWhiteSpace(metric.Label))
+                            { ascent = Math.Max(ascent, Ascent(graphics)); descent = Math.Max(descent, Descent(graphics)); }
                             string label = metric.Label;
                             int labelWidth = string.IsNullOrEmpty(label) ? 0 : MeasureDisplayTextWidth(graphics, label);
                             if (labelWidth > 0)
                             {
-                                layout.Parts.Add(new TextPlacement(label, metric.Style, true, x, labelWidth, false) { Owner = member });
-                                x += labelWidth + GetMetricLabelGap(graphics, metric, ScaleLogical(_configuration.LabelValueSpacing));
+                                layout.Parts.Add(new TextPlacement(label, metric.Style, true, x, labelWidth) { Owner = member });
+                                int labelGap = row.Members == null
+                                    ? ScaleLogical(OsdMetricDefinitions.LabelGap(_configuration, metric.Key, null))
+                                    : GetMetricLabelGap(graphics, metric, ScaleLogical(_configuration.LabelValueSpacing));
+                                x += labelWidth + labelGap;
                             }
-                            int valueWidth = GetPrimaryValueSlotWidth(graphics, metric, MeasureDisplayTextWidth(graphics, metric.Value));
-                            bool rightAlign = metric.Key != OsdItemKind.CurrentTime.ToString();
-                            layout.Parts.Add(new TextPlacement(metric.Value, metric.Style, false, x, valueWidth, rightAlign, member));
+                            int valueWidth = layout.IsGraph ? ScaleLogical(160) : GetPrimaryValueSlotWidth(graphics, metric, MeasureDisplayTextWidth(graphics, metric.Value));
+                            layout.Parts.Add(new TextPlacement(metric.Value, metric.Style, false, x, valueWidth, member));
                             x += valueWidth;
                             if (member + 1 < members.Count)
                             {
-                                string separator = OsdMetricDefinitions.Separator(_configuration, metric, members[member + 1]);
+                                string separator = OsdMetricDefinitions.Separator(metric, members[member + 1]);
                                 using (var format = StringFormat.GenericTypographic)
                                 {
                                     format.FormatFlags |= StringFormatFlags.MeasureTrailingSpaces | StringFormatFlags.NoWrap;
-                                    float advance = graphics.MeasureString(separator, _displayFont, int.MaxValue, format).Width;
-                                    if (!IsAscii(separator)) advance = Math.Max(advance, GetUnicodeTextRuns(graphics, separator, graphics.DpiY * _displayFont.SizeInPoints / 72f).Sum(run => run.Advance));
-                                    int separatorWidth = (int)Math.Ceiling(Math.Max(advance, string.IsNullOrWhiteSpace(separator) ? 0 : MeasureDisplayTextWidth(graphics, separator)));
-                                    int prefix = 0;
-                                    while (prefix < separator.Length && char.IsWhiteSpace(separator[prefix])) prefix++;
-                                    float leading = prefix == 0 ? 0 : graphics.MeasureString(separator.Substring(0, prefix), _displayFont, int.MaxValue, format).Width;
-                                    layout.Parts.Add(new TextPlacement(separator, metric.Style, false, x, separatorWidth, false) { Owner = member, LeadingWidth = leading });
+                                    // Keep numeric slots and the dedicated FPS pair spacing intact.
+                                    float gapScale = separator.Length == 1
+                                        ? ValueHelper.ClampInt(_configuration.GroupedValuesGapPercent, 100, 200) / 100f : 1f;
+                                    int separatorWidth = (int)Math.Ceiling(graphics.MeasureString(separator, _displayFont, int.MaxValue, format).Width * gapScale);
+                                    layout.Parts.Add(new TextPlacement(separator, metric.Style, false, x, separatorWidth) { Owner = member });
                                     x += separatorWidth;
                                 }
                             }
                         }
                         layout.Width = x; layout.Ascent = ascent;
                         layout.Height = (int)Math.Ceiling(ascent + descent + GetStrokeWidth());
+                        if (layout.IsGraph) layout.Height = Math.Max(layout.Height, ScaleLogical(42));
                         int index = _metricLayouts.Count;
                         widths[index % columns] = Math.Max(widths[index % columns], x);
                         heights[index / columns] = Math.Max(heights[index / columns], layout.Height);
                         _metricLayouts.Add(layout);
                     }
+                    fullWidth = padding * 2 + widths.Sum() + columnGap * (columns - 1);
+                    int clientWidth = Math.Max(1, Math.Min(_workingArea.Width > 0 ? _workingArea.Width : fullWidth, fullWidth));
+                    int available = clientWidth - padding * 2 - columnGap * (columns - 1);
+                    // When padding/gaps consume the screen, retain usable columns
+                    // and let the whole-layout fit below scale them together.
+                    if (available >= columns && widths.Sum() > available)
+                        for (int c = 0; c < columns; c++) widths[c] = available / columns + (c < available % columns ? 1 : 0);
+                    fullWidth = padding * 2 + widths.Sum() + columnGap * (columns - 1);
+                    if (_configuration.RowsSpacing == 0)
+                    {
+                        Array.Clear(heights, 0, heights.Length);
+                        for (int i = 0; i < _metricLayouts.Count; i++)
+                        {
+                            var layout = _metricLayouts[i];
+                            float scale = layout.Width > widths[i % columns] ? widths[i % columns] / (float)Math.Max(1, layout.Width) : 1f;
+                            if (!layout.IsGraph) MeasureCompactRow(graphics, layout, _metrics[i], scale);
+                            heights[i / columns] = Math.Max(heights[i / columns], layout.Height);
+                        }
+                    }
                 }
             }
-            int fullWidth = padding * 2 + widths.Sum() + columnGap * (columns - 1);
             int fullHeight = padding * 2 + heights.Sum() + rowGap * (rows - 1);
-            ClientSize = new Size(Math.Max(1, Math.Min(_workingArea.Width > 0 ? _workingArea.Width : fullWidth, fullWidth)),
-                Math.Max(1, Math.Min(_workingArea.Height > 0 ? _workingArea.Height : fullHeight, fullHeight)));
-            int available = Math.Max(1, ClientSize.Width - padding * 2 - columnGap * (columns - 1));
-            if (widths.Sum() > available)
-                for (int c = 0; c < columns; c++) widths[c] = available / columns + (c < available % columns ? 1 : 0);
-            AlignStandaloneMetricValues(widths, columns);
+            // Fit the whole layout uniformly when it exceeds the screen.
+            // Normal-sized layouts retain their exact configured glyphs and spacing.
+            int fittedHeight = Math.Max(1, Math.Min(_workingArea.Height > 0 ? _workingArea.Height : fullHeight, fullHeight));
+            int fittedWidth = Math.Max(1, Math.Min(_workingArea.Width > 0 ? _workingArea.Width : fullWidth, fullWidth));
+            _contentScale = Math.Min(1f, Math.Min(fittedHeight / (float)Math.Max(1, fullHeight), fittedWidth / (float)Math.Max(1, fullWidth)));
+            ClientSize = new Size(Math.Max(1, Math.Min(fittedWidth, (int)Math.Ceiling(fullWidth * _contentScale))),
+                Math.Max(1, Math.Min(fittedHeight, (int)Math.Ceiling(fullHeight * _contentScale))));
             for (int i = 0; i < _metricLayouts.Count; i++)
             {
                 var row = _metricLayouts[i]; int column = i % columns, line = i / columns;
@@ -393,33 +428,39 @@ namespace TrayTemps
             _layoutDpi = DeviceDpi;
         }
 
-        private void AlignStandaloneMetricValues(int[] columnWidths, int columns)
+        private void MeasureCompactRow(Graphics graphics, RowLayout layout, OsdMetric row, float scale)
         {
-            for (int i = 0; i < _metricLayouts.Count; i++)
+            float top = 0, bottom = 0;
+            foreach (var part in layout.Parts)
             {
-                var row = _metricLayouts[i];
-                string key = _metrics[i].Key;
-                if (key == OsdItemKind.Fps.ToString() || key == OsdItemKind.FpsOnePercentLow.ToString() ||
-                    key == OsdItemKind.CurrentTime.ToString()) continue;
-
-                if (row.IsGroup)
+                OsdMetric metric = part.Member < 0 ? null : row.Members == null ? row : row.Members[part.Member];
+                ActivateFont(part.Style);
+                float baseline = Ascent(graphics);
+                float inset = GetStrokeWidth() / 2f + 0.5f; // outline plus antialias coverage
+                Action<string> include = text =>
                 {
-                    // Without a visible group caption, keep the row's first member at the left edge.
-                    if (string.IsNullOrEmpty(_metrics[i].Label)) continue;
-                    var memberParts = row.Parts.Where(part => !part.IsGroupCaption).ToList();
-                    if (memberParts.Count == 0) continue;
-                    int lastRight = memberParts.Max(part => part.X + part.Width);
-                    int shift = Math.Max(0, columnWidths[i % columns] - lastRight);
-                    foreach (var part in memberParts) part.X += shift;
-                    continue;
+                    if (string.IsNullOrWhiteSpace(text)) return;
+                    // Use the same fitting as drawing; narrow layouts can scale glyphs vertically.
+                    using (var path = CreateFittedTextPath(graphics, text, Math.Max(1, part.Width * scale - GetStrokeWidth())))
+                    {
+                        if (path.PointCount == 0) return;
+                        var bounds = path.GetBounds();
+                        top = Math.Min(top, bounds.Top - baseline - inset);
+                        bottom = Math.Max(bottom, bounds.Bottom - baseline + inset);
+                    }
+                };
+                include(part.Text);
+                if (metric != null && !string.IsNullOrEmpty(metric.ValueWidthTemplate))
+                {
+                    // Reserve every digit and both clock periods so
+                    // normal value refreshes keep their baseline and never clip descenders.
+                    for (char digit = '0'; digit <= '9'; digit++) include(digit.ToString());
+                    include(metric.ValueWidthTemplate.Replace('#', '0'));
+                    include(metric.AlternateValueWidthTemplate?.Replace('#', '0'));
                 }
-
-                var value = row.Parts.FirstOrDefault(part => !part.Label && part.RightAlign && part.Member == 0);
-                if (value == null) continue;
-                int minimumValueX = value.X;
-                int columnWidth = columnWidths[i % columns];
-                value.X = Math.Max(minimumValueX, columnWidth - value.Width);
             }
+            layout.Ascent = (float)Math.Ceiling(-top);
+            layout.Height = Math.Max(1, (int)Math.Ceiling(layout.Ascent + bottom));
         }
 
         protected override void OnPaint(PaintEventArgs e) { base.OnPaint(e); DrawOverlay(e.Graphics); }
@@ -432,6 +473,7 @@ namespace TrayTemps
             graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
             try
             {
+                graphics.ScaleTransform(_contentScale, _contentScale);
                 for (int rowIndex = 0; rowIndex < _metricLayouts.Count; rowIndex++)
                 {
                     var row = _metricLayouts[rowIndex];
@@ -445,21 +487,61 @@ namespace TrayTemps
                         if (metrics != null && part.Owner >= 0) style = metrics[part.Owner].Style;
                         else if (metrics == null) style = _metrics[rowIndex].Style;
                         ActivateFont(style);
-                        _drawBaseline = row.Y + row.Ascent;
+                        _drawBaseline = row.IsGraph ? (float?)null : row.Y + row.Ascent;
                         var color = style == null ? _metrics[rowIndex].TextColor ?? _textColor : Color.FromArgb(part.Label ? style.LabelColor : style.ValueColor);
-                        int leading = (int)Math.Round(part.LeadingWidth * row.Scale);
                         int left = (int)Math.Round(part.X * row.Scale);
                         int right = (int)Math.Round((part.X + part.Width) * row.Scale);
+                        if (row.IsGraph && part.Member >= 0)
+                        {
+                            DrawFrameGraph(graphics, _metrics[rowIndex].Graph,
+                                new Rectangle(row.X + left, row.Y + (row.Height - ScaleLogical(42)) / 2,
+                                    Math.Max(1, right - left), ScaleLogical(42)), color);
+                            continue;
+                        }
+                        if (row.IsGraph && string.IsNullOrEmpty(_metrics[rowIndex].Label)) continue;
+                        // Reserve numeric padding for numbers. N/A starts at the slot's
+                        // left edge, without inheriting unused digits or unit spacing.
+                        bool numericValue = part.Member >= 0 && !row.IsGraph && text != "N/A" &&
+                            (metrics == null ? _metrics[rowIndex].Key : metrics[part.Member].Key) != "CurrentTime";
                         DrawDisplayText(graphics, text,
-                            new Rectangle(row.X + left + leading, row.Y, Math.Max(0, right - left - leading), row.Height),
-                            color, part.RightAlign ? StringAlignment.Far : StringAlignment.Near);
+                            new Rectangle(row.X + left, row.Y, Math.Max(0, right - left), row.Height),
+                            color, numericValue);
                     }
                 }
             }
             finally { _drawBaseline = null; graphics.Restore(state); }
         }
 
-        private void DrawDisplayText(Graphics graphics, string text, Rectangle bounds, Color textColor, StringAlignment alignment)
+        private void DrawFrameGraph(Graphics graphics, FrameGraphPoint[] points, Rectangle bounds, Color color)
+        {
+            points = points ?? Array.Empty<FrameGraphPoint>();
+            var plot = Rectangle.Inflate(bounds, -2, -2);
+            if (plot.Width <= 0 || plot.Height <= 0) return;
+            double max = 33.34;
+            foreach (var point in points) if (!double.IsNaN(point.Peak)) max = Math.Max(max, point.Peak * 1.05);
+            Color guideColor = _backgroundColor.GetBrightness() < 0.5f ? Color.White : Color.Black;
+            using (var guide = new Pen(Color.FromArgb(45, guideColor)))
+            using (var line = new Pen(color, Math.Max(1f, DeviceDpi / 96f)))
+            {
+                graphics.DrawLine(guide, plot.Left, plot.Bottom, plot.Right, plot.Bottom);
+                graphics.DrawLine(guide, plot.Left, plot.Bottom - plot.Height / 2f, plot.Right, plot.Bottom - plot.Height / 2f);
+                PointF? previous = null;
+                for (int i = 0; i < points.Length; i++)
+                {
+                    var point = points[i];
+                    if (double.IsNaN(point.Mean)) { previous = null; continue; }
+                    float x = plot.Left + i * plot.Width / (float)Math.Max(1, points.Length - 1);
+                    float y = plot.Bottom - (float)(point.Mean / max * plot.Height);
+                    float peak = plot.Bottom - (float)(point.Peak / max * plot.Height);
+                    graphics.DrawLine(line, x, y, x, peak);
+                    var current = new PointF(x, y);
+                    if (previous.HasValue) graphics.DrawLine(line, previous.Value, current);
+                    previous = current;
+                }
+            }
+        }
+
+        private void DrawDisplayText(Graphics graphics, string text, Rectangle bounds, Color textColor, bool padToSlot)
         {
             if (bounds.Width <= 0 || bounds.Height <= 0 || string.IsNullOrWhiteSpace(text)) return;
             Color opaque = Color.FromArgb(textColor.R, textColor.G, textColor.B);
@@ -470,7 +552,8 @@ namespace TrayTemps
             {
                 if (path == null || path.PointCount == 0) return;
                 var pathBounds = path.GetBounds();
-                float x = alignment == StringAlignment.Far ? bounds.Right - strokeWidth / 2 - pathBounds.Right : bounds.Left + strokeWidth / 2 - pathBounds.Left;
+                float x = padToSlot ? bounds.Right - strokeWidth / 2 - pathBounds.Right
+                    : bounds.Left + strokeWidth / 2 - pathBounds.Left;
                 float y = _drawBaseline.HasValue ? _drawBaseline.Value - Ascent(graphics) : bounds.Top + (bounds.Height - pathBounds.Height) / 2 - pathBounds.Top;
                 using (var transform = new Matrix()) { transform.Translate(x, y); path.Transform(transform); }
                 using (var pen = new Pen(stroke, strokeWidth) { LineJoin = LineJoin.Round }) graphics.DrawPath(pen, path);
@@ -1336,20 +1419,18 @@ namespace TrayTemps
             internal readonly List<TextPlacement> Parts = new List<TextPlacement>();
             internal int Width, Height, X, Y;
             internal float Ascent, Scale;
-            internal bool IsGroup;
+            internal bool IsGroup, IsGraph;
         }
         private sealed class TextPlacement
         {
-            internal TextPlacement(string text, OsdMetricStyle style, bool label, int x, int width, bool right, int member = -1)
-            { Text = text; Style = style; Label = label; X = x; Width = width; RightAlign = right; Member = member; }
+            internal TextPlacement(string text, OsdMetricStyle style, bool label, int x, int width, int member = -1)
+            { Text = text; Style = style; Label = label; X = x; Width = width; Member = member; }
             internal readonly string Text;
             internal readonly OsdMetricStyle Style;
             internal readonly bool Label;
-            internal bool RightAlign;
             internal int X;
             internal readonly int Width, Member;
             internal int Owner = -1;
-            internal float LeadingWidth;
             internal bool IsGroupCaption;
         }
         [StructLayout(LayoutKind.Sequential)]

@@ -1,4 +1,4 @@
-﻿# Testing TrayTemps
+# Testing TrayTemps
 
 Build `Tray-Temps.sln` in Visual Studio. The managed test harness and native lifecycle test are built automatically; interactive tests are not run by the build.
 
@@ -12,6 +12,9 @@ From a Developer PowerShell after a Release/x64 build:
 .\Tests\bin\Release\TrayTemps.FpsLimiterTests.exe --audit-fixes
 .\Tests\bin\Release\TrayTemps.FpsLimiterTests.exe --release-safety
 .\Tests\bin\Release\TrayTemps.FpsLimiterTests.exe --game-detection
+.\Tests\bin\Release\TrayTemps.FpsLimiterTests.exe --osd-spacing
+.\Tests\bin\Release\TrayTemps.FpsLimiterTests.exe --performance-history
+.\Tests\bin\Release\TrayTemps.FpsLimiterTests.exe --history-ui-audit
 .\Tests\VulkanLayerLifecycleTest\x64\Release\VulkanLayerLifecycleTest.exe
 ```
 
@@ -29,9 +32,19 @@ The native test runs the production layer against a controlled next layer: insta
 
 ## Integration and graphics
 
-The --metric-list mode checks three-column metric editing, arbitrary groups, optional captions, group/member ordering, the five-column appearance grid, migration/JSON/deep-copy isolation, independent low selection, native group double-click behavior, Unicode separator insertion, themes, scaling, mixed-font baselines, exact whitespace advances, stable numeric slots and color-only repaint behavior. It saves local UI/OSD screenshots without changing user preferences.
+The `--performance-history` mode checks rolling average FPS, refresh-window frametime, peak-preserving buckets, delayed ETW delivery, stale/source resets, allocation-free numeric reads, bounded history, settings migration, optional capture lifetime, closed-window recording, OSD refresh preservation, themes, DPI margins and standalone graph layout. Screenshots stay in the temporary folder. Recording preferences and real hardware are not changed.
 
-It also checks the Presets page, template 1 defaults with OSD disabled, embedded preset isolation, custom JSON round trips and overwrite, extraction from full settings files, rejection of unrelated JSON, repeated appearance refresh, preserved OSD enable state and shortcut, the existing preview/Save behavior, legacy label editing, migration ordering, active-edit preview suppression, failed overwrite cleanup, oversized input/output rejection, and minimum-size Presets layout.
+The `--history-ui-audit` mode checks history header alignment, graph widths, minimum/large window sizes, vertical scrolling, stable metric colors, light/dark legend contrast and hover colors, window sizing, OSD field alignment and per-row gap editing. It captures all four OSD pages at minimum and larger sizes in both themes; evidence stays in the temporary folder. Graph tests also cover larger fonts at simulated 96/120/144/192 DPI.
+
+The optional `--performance-history-live <absolute-D3D11-fixture-path>` mode checks actual ETW timing metrics with the limiter and OSD off, opening/closing the history window, continued recording, OSD graph rendering and shared-session cleanup. Keep keyboard/mouse idle while it selects the controlled fixture; no user settings or game files are changed.
+
+The --metric-list mode checks three-column metric editing, group-name captions, group/member ordering, the five-column appearance grid, migration/JSON/deep-copy isolation, independent low selection, native group double-click behavior, Unicode group editing, themes, scaling, mixed-font baselines, built-in gaps, stable numeric slots and color-only repaint behavior. It saves local UI/OSD screenshots without changing user preferences.
+
+The --osd-spacing mode checks two-digit RAM/VRAM slots and capacities above 100 GB, natural left-to-right grouped rows, editable per-row and group gaps, compact zero-spacing row glyph/outline bounds, positive spacing compatibility, N/A transitions, numeric layout reuse, Unicode fallback and narrow/multiple-column layouts. It simulates renderer DeviceDpi plus matching bitmap resolution at 96/144/192 DPI, with Segoe UI, JetBrains Mono and Consolas. Physical monitor handover remains a separate manual check. Legacy group-caption and separator fields remain JSON-loadable and are ignored for rendering.
+
+The metric-list suite also checks the Presets page, neutral fresh defaults with OSD disabled, embedded preset isolation, custom JSON round trips and overwrite, extraction from full settings files, rejection of unrelated JSON, repeated appearance refresh, preserved OSD enable state and shortcut, the existing preview/Save behavior, legacy label editing, migration ordering, active-edit preview suppression, failed overwrite cleanup, oversized input/output rejection, and minimum-size Presets layout.
+
+Audit regressions also cover empty OSD sections versus explicit legacy appearance, height fitting for oversized layouts, hardware updates respecting the displayed FPS interval while history records current values, immediate source/appearance changes, history reset synchronization, and optional timing collection without resetting 1% Low samples.
 
 For the optional FPS 1% low metric, run `TrayTemps.FpsLimiterTests.exe --one-percent-low`. This checks the slowest-1% average, 100-interval warm-up, ten-second expiry, stale gaps, source/generation resets, concurrent capture/sorting, overflow handling, and reports capture/sort timings at 60/144/1000/9999 FPS. Use `--metric-list` separately for the OSD metric selection, grouping, appearance, Save/Cancel, and rendering UI checks. These timings are local microbenchmarks, not a guarantee for all games.
 

@@ -1,5 +1,5 @@
 {
-    "Enabled":  true,
+    "Enabled":  false,
     "Position":  0,
     "ShowCpu":  true,
     "ShowGpu":  true,
@@ -22,9 +22,12 @@
     "ShowFps":  true,
     "ShowFpsOnePercentLow":  true,
     "ShowCurrentTime":  false,
+    "ShowAverageFps":  false,
+    "ShowFrameTime":  false,
+    "ShowFrameTimeGraph":  false,
     "FpsRefreshIntervalSeconds":  0.5,
     "CombineTemperatureAndUsage":  false,
-    "MetricGroupingMode":  0,
+    "MetricGroupingMode":  null,
     "LabelMode":  0,
     "CustomCpuLabel":  "CPU Temp",
     "CustomGpuLabel":  "GPU Temp",
@@ -43,26 +46,19 @@
                            "VramUsage":  "VRAM use:",
                            "Fps":  "FPS:",
                            "FpsOnePercentLow":  "1%Low:",
-                           "CurrentTime":  "Time:"
+                           "CurrentTime":  "Time",
+                           "AverageFps":  "Avg FPS",
+                           "FrameTime":  "Frametime",
+                           "FrameTimeGraph":  "Frametime"
                        },
     "MetricGroups":  {
-                         "Fps":  "",
-                         "FpsOnePercentLow":  "",
-                         "CpuTemperature":  "CPU",
-                         "CpuUsage":  "CPU",
-                         "RamUsage":  "",
-                         "GpuTemperature":  "GPU",
-                         "GpuUsage":  "GPU",
-                         "VramUsage":  ""
+                         "GpuTemperature":  "GPU:",
+                         "CpuUsage":  "CPU:",
+                         "GpuUsage":  "GPU:",
+                         "CpuTemperature":  "CPU:"
                      },
-    "GroupLabels":  {
-                        "FPS":  "",
-                        "GPU":  "GPU:",
-                        "CPU":  "CPU:"
-                    },
-    "GroupedLabelOverrides":  {
-
-                              },
+    "GroupLabels":  null,
+    "GroupedLabelOverrides":  null,
     "MetricStyles":  {
                          "CpuTemperature":  {
                                                 "FontFamily":  "JetBrains Mono ExtraBold",
@@ -117,18 +113,46 @@
                                              "FontSize":  10,
                                              "LabelColor":  -1,
                                              "ValueColor":  -1
-                                         }
+                                         },
+                         "AverageFps":  {
+                                            "FontFamily":  "JetBrains Mono ExtraBold",
+                                            "FontSize":  10,
+                                            "LabelColor":  -1,
+                                            "ValueColor":  -1
+                                        },
+                         "FrameTime":  {
+                                           "FontFamily":  "JetBrains Mono ExtraBold",
+                                           "FontSize":  10,
+                                           "LabelColor":  -1,
+                                           "ValueColor":  -1
+                                       },
+                         "FrameTimeGraph":  {
+                                                "FontFamily":  "JetBrains Mono ExtraBold",
+                                                "FontSize":  10,
+                                                "LabelColor":  -1,
+                                                "ValueColor":  -1
+                                            }
                      },
-    "GroupSeparator":  "",
+    "MetricLabelValueGaps":  {
+
+                             },
+    "GroupSeparator":  null,
     "LabelValueSpacing":  10,
-    "FpsLabelValueSpacing":  5,
+    "FpsLabelValueSpacing":  10,
     "RowsSpacing":  5,
-    "ColumnsSpacing":  30,
+    "ColumnsSpacing":  20,
+    "CpuTemperatureSpacing":  null,
+    "GpuTemperatureSpacing":  null,
+    "CpuUsageSpacing":  null,
+    "GpuUsageSpacing":  null,
+    "RamUsageSpacing":  null,
+    "VramUsageSpacing":  null,
+    "FpsSpacing":  null,
     "ScreenMargin":  10,
     "ExternalSpacing":  5,
     "Columns":  1,
-    "ItemOrder":  "CurrentTime,CpuTemperature,CpuUsage,GpuTemperature,GpuUsage,RamUsage,VramUsage,FpsOnePercentLow,Fps",
-    "HotkeyEnabled":  true,
+    "ItemOrder":  "CpuTemperature,CpuUsage,GpuTemperature,GpuUsage,RamUsage,VramUsage,FpsOnePercentLow,Fps,CurrentTime,AverageFps,FrameTime,FrameTimeGraph",
+    "HotkeyEnabled":  false,
     "HotkeyModifiers":  6,
     "HotkeyKey":  79
 }

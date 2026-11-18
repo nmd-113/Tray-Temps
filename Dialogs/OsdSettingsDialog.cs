@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
@@ -30,7 +30,7 @@ namespace TrayTemps
             new Dictionary<string, ToolStripMenuItem>(StringComparer.Ordinal);
         private readonly List<string> _iconCategoryOrder = new List<string>();
         private TextBox _activeCustomLabelTextBox;
-        private OsdSettingsPage _currentPage = OsdSettingsPage.Metrics;
+        private OsdSettingsPage _currentPage = OsdSettingsPage.Presets;
         private Color _navigationBack = Color.FromArgb(30, 30, 30);
         private Color _navigationSelected = Color.FromArgb(50, 50, 50);
         private Color _navigationText = Color.WhiteSmoke;
@@ -51,7 +51,7 @@ namespace TrayTemps
             appearanceGrid.DefaultCellStyle.Font = _appearanceBodyFont;
             appearanceGrid.ColumnHeadersDefaultCellStyle.Font = _appearanceHeaderFont;
             _mainForm = mainForm;
-            _configuration = configuration?.Clone() ?? new OsdConfiguration();
+            _configuration = configuration?.Clone() ?? OsdConfiguration.CreateAppDefault();
             _metricDraft = _configuration.Clone();
             _metricDraft.LabelOverrides = OsdMetricDefinitions.CreateOverrides(_configuration);
             OsdMetricDefinitions.Migrate(_metricDraft);
@@ -184,9 +184,10 @@ namespace TrayTemps
         private void PopulateOptions()
         {
             PopulateNumericOptions(screenMarginValue, 0m, 100m, 1m);
-            PopulateNumericOptions(labelValueSpacing, 0m, 100m, 1m);
+
             PopulateNumericOptions(rowsSpacing, 0m, 100m, 1m);
             PopulateNumericOptions(columnsSpacing, 0m, 100m, 1m);
+            PopulateNumericOptions(groupedValuesGapPercent, 100m, 200m, 10m);
             PopulateNumericOptions(columnsValue, 1m, 1m, 1m);
             PopulateNumericOptions(fpsRefreshIntervalValue, 0.25m, 10m, 0.25m);
             PopulateNumericOptions(fpsLabelValueSpacing, 0m, 100m, 1m);
@@ -202,6 +203,7 @@ namespace TrayTemps
             opacityValue.Value = 100 - ValueHelper.ClampInt(source.OpacityPercent, 20, 100);
             SelectNumericOption(screenMarginValue, ValueHelper.ClampInt(source.ScreenMargin, 0, 100));
             SelectNumericOption(externalSpacingValue, ValueHelper.ClampInt(source.ExternalSpacing, 0, 100));
+            SelectNumericOption(groupedValuesGapPercent, ValueHelper.ClampInt(source.GroupedValuesGapPercent, 100, 200));
             SelectNumericOption(cornerRoundnessValue, ValueHelper.ClampInt(source.BackgroundCornerRoundness, 0, 50));
             SelectNumericOption(columnsValue, ValueHelper.ClampInt(source.Columns, 1, OsdMetricDefinitions.Keys.Length));
             SelectNumericOption(
@@ -210,20 +212,11 @@ namespace TrayTemps
                     source.FpsRefreshIntervalSeconds ?? 0.5m,
                     0.25m,
                     10m));
-            SelectNumericOption(
-                fpsLabelValueSpacing,
-                ValueHelper.ClampInt(
-                    source.FpsLabelValueSpacing ?? source.LabelValueSpacing,
-                    0,
-                    100));
             _hasCustomBackgroundColor = source.BackgroundColor.HasValue;
             backgroundColor.BackColor = _hasCustomBackgroundColor
                 ? OsdColorHelper.GetOpaqueColor(source.BackgroundColor.Value)
                 : OsdColorHelper.GetDefaultBackground(_mainForm != null && _mainForm.IsLightModeEnabled);
             backgroundOpacityValue.Value = source.TransparentBackground ? 100 : 100 - ValueHelper.ClampInt(source.BackgroundOpacityPercent, 0, 100);
-            SelectNumericOption(
-                labelValueSpacing,
-                ValueHelper.ClampInt(source.LabelValueSpacing, 0, 100));
             SelectNumericOption(
                 rowsSpacing,
                 ValueHelper.ClampInt(source.RowsSpacing, 0, 100));
@@ -240,7 +233,6 @@ namespace TrayTemps
             hotkeyEnabled.Checked = source.HotkeyEnabled;
 
             PopulateMetricList();
-            groupSeparator.Text = _metricDraft.GroupSeparator;
             RebuildItemOrder();
             UpdateHotkeyDisplay();
             UpdateHardwareVisibility();
@@ -279,7 +271,7 @@ namespace TrayTemps
         {
             if (!_metricDraft.ShowCpu && !_metricDraft.ShowGpu &&
                 !_metricDraft.ShowCpuUsage && !_metricDraft.ShowGpuUsage &&
-                !_metricDraft.ShowRamUsage && !_metricDraft.ShowVramUsage && !_metricDraft.ShowFps && !_metricDraft.ShowFpsOnePercentLow && !_metricDraft.ShowCurrentTime)
+                !_metricDraft.ShowRamUsage && !_metricDraft.ShowVramUsage && !OsdMetricDefinitions.NeedsFrames(_metricDraft) && !_metricDraft.ShowCurrentTime)
             {
                 ShowPage(OsdSettingsPage.Metrics);
                 MessageBox.Show(
@@ -299,21 +291,23 @@ namespace TrayTemps
             ApplyCellEdit(result);
             result.Enabled = _configuration.Enabled;
             result.Position = (OsdPosition)Math.Max(0, positionValue.SelectedIndex);
-            result.BackgroundColor = _hasCustomBackgroundColor ? backgroundColor.BackColor.ToArgb() : (int?)null;
+            // Preview the same resolved color shown by the button, including a
+            // legacy configuration that relies on the current theme's default.
+            result.BackgroundColor = backgroundColor.BackColor.ToArgb();
             result.BackgroundOpacityPercent = 100 - backgroundOpacityValue.Value;
             result.TransparentBackground = result.BackgroundOpacityPercent == 0;
             result.OpacityPercent = 100 - opacityValue.Value;
             result.BackgroundCornerRoundness = (int)GetNumericOptionValue(cornerRoundnessValue, 0);
             result.FpsRefreshIntervalSeconds = GetNumericOptionValue(fpsRefreshIntervalValue, 0.5m);
-            result.FpsLabelValueSpacing = (int)GetNumericOptionValue(fpsLabelValueSpacing, 15);
-            result.LabelValueSpacing = (int)GetNumericOptionValue(labelValueSpacing, 15);
+
+
             result.RowsSpacing = (int)GetNumericOptionValue(rowsSpacing, 5);
             result.ColumnsSpacing = (int)GetNumericOptionValue(columnsSpacing, 20);
+            result.GroupedValuesGapPercent = (int)GetNumericOptionValue(groupedValuesGapPercent, 100);
             result.ScreenMargin = (int)GetNumericOptionValue(screenMarginValue, 10);
             result.ExternalSpacing = (int)GetNumericOptionValue(externalSpacingValue, 0);
             result.Columns = (int)GetNumericOptionValue(columnsValue, 1);
             result.ItemOrder = OsdItemOrderHelper.Serialize(_separateItemOrder);
-            result.GroupSeparator = OsdMetricDefinitions.SingleLine(groupSeparator.Text, 40, false);
             result.HotkeyEnabled = hotkeyEnabled.Checked;
             result.HotkeyModifiers = (int)_hotkeyModifiers; result.HotkeyKey = (int)_hotkeyKey;
             return result;
@@ -329,6 +323,12 @@ namespace TrayTemps
         private void VisualSettingChanged(object sender, EventArgs e)
         {
             PreviewVisualSettings();
+        }
+
+        private void GroupedValuesGapPercent_Format(object sender, ListControlConvertEventArgs e)
+        {
+            if (e.ListItem is OsdNumericOption option)
+                e.Value = option.ToString() + "%";
         }
 
         private void ColumnsValue_SelectedIndexChanged(object sender, EventArgs e)
@@ -675,6 +675,7 @@ namespace TrayTemps
         private void MainForm_ThemeChanged(object sender, EventArgs e)
         {
             ApplyTheme();
+            PreviewVisualSettings();
         }
 
         private void MetricsNavButton_Click(object sender, EventArgs e)
@@ -737,8 +738,6 @@ namespace TrayTemps
                 : page == OsdSettingsPage.Appearance ? appearanceNavButton : page == OsdSettingsPage.Layout ? layoutNavButton : presetsNavButton;
             if (accentLine.Parent != selectedButton)
                 selectedButton.Controls.Add(accentLine);
-            accentLine.Dock = DockStyle.Left;
-            accentLine.Width = 3;
             accentLine.BringToFront();
         }
 
@@ -804,7 +803,7 @@ namespace TrayTemps
             appearancePage.BackColor = theme.WindowBack;
             layoutPage.BackColor = theme.WindowBack;
             presetsPage.BackColor = theme.WindowBack;
-            presetsLayout.BackColor = theme.WindowBack;
+            presetsLayout.BackColor = theme.SurfaceBack;
             presetsHelp.ForeColor = theme.Text;
             presetsTitle.ForeColor = theme.TitleText;
             metricsPage.UseVisualStyleBackColor = false;
@@ -839,7 +838,6 @@ namespace TrayTemps
             }
             metricsListHeader.BackColor = theme.BarBack;
             groupFieldsLayout.BackColor = theme.SurfaceBack;
-            groupCaptionLabel.ForeColor = groupSeparatorLabel.ForeColor = theme.Text;
             metricNameHeader.BackColor = theme.BarBack; metricNameHeader.ForeColor = theme.TitleText;
             metricLabelHeader.BackColor = theme.BarBack; metricLabelHeader.ForeColor = theme.TitleText;
             metricLabelsInfoIcon.ForeColor = theme.MutedText;
@@ -849,9 +847,9 @@ namespace TrayTemps
             spacingLayout.BackColor = theme.SurfaceBack;
             foreach (Label label in new[]
             {
-                spacingHeader,
                 rowsGapHeader,
                 columnsGapHeader,
+                groupedValuesGapLabel,
                 fpsRefreshIntervalLabel,
                 fpsLabelValueSpacingLabel,
                 externalSpacingLabel,
@@ -864,8 +862,8 @@ namespace TrayTemps
 
             foreach (Control input in new Control[]
             {
-                positionValue, groupSeparator, groupCaption, itemOrder, presetList,
-                metricsList, metricLabelEditor, labelValueSpacing, rowsSpacing, columnsSpacing,
+                positionValue, itemOrder, presetList,
+                metricsList, metricLabelEditor, rowsSpacing, columnsSpacing, groupedValuesGapPercent,
                 columnsValue, screenMarginValue, fpsRefreshIntervalValue,
 
                 fpsLabelValueSpacing, externalSpacingValue, cornerRoundnessValue, hotkeyValue
@@ -915,8 +913,6 @@ namespace TrayTemps
             exitBtn.BackColor = theme.BarBack;
             exitBtn.ForeColor = theme.TitleText;
             exitBtn.FlatAppearance.BorderColor = theme.BarBack;
-            exitBtn.FlatAppearance.MouseOverBackColor = Color.FromArgb(220, 38, 38);
-            exitBtn.FlatAppearance.MouseDownBackColor = Color.DarkRed;
             ShowPage(_currentPage);
         }
 

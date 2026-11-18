@@ -8,26 +8,24 @@ namespace TrayTemps
 {
     internal static class OsdMetricDefinitions
     {
-        internal static readonly string[] Keys = { "CpuTemperature", "GpuTemperature", "CpuUsage", "GpuUsage", "RamUsage", "VramUsage", "Fps", "FpsOnePercentLow", "CurrentTime" };
-        internal static readonly string[] Names = { "CPU temperature", "GPU temperature", "CPU load", "GPU load", "RAM used", "VRAM used", "FPS", "1% Low", "Current time" };
+        internal static readonly string[] Keys = { "CpuTemperature", "GpuTemperature", "CpuUsage", "GpuUsage", "RamUsage", "VramUsage", "Fps", "FpsOnePercentLow", "CurrentTime", "AverageFps", "FrameTime", "FrameTimeGraph" };
+        internal static readonly string[] Names = { "CPU temperature", "GPU temperature", "CPU load", "GPU load", "RAM used", "VRAM used", "FPS", "1% Low", "Current time", "Average FPS", "Frametime", "Frametime graph" };
 
         internal static string Group(OsdConfiguration config, string key) =>
-            config.MetricGroups != null && config.MetricGroups.TryGetValue(key, out string group) ? group : string.Empty;
+            key != "FrameTimeGraph" && config.MetricGroups != null && config.MetricGroups.TryGetValue(key, out string group) ? group : string.Empty;
 
-        internal static string Separator(OsdConfiguration config) => string.IsNullOrEmpty(config.GroupSeparator) ? " " : config.GroupSeparator;
-        internal static string Separator(OsdConfiguration config, OsdMetric preceding, OsdMetric following)
-        {
-            string separator = string.IsNullOrEmpty(config.GroupSeparator)
-                ? (IsFpsPair(preceding, following) ? "  " : " ")
-                : config.GroupSeparator;
-            return IsFpsPair(preceding, following) ? " " + separator + " " : separator;
-        }
+        internal static bool IsFrameMetric(string key) => key == "Fps" || key == "FpsOnePercentLow" || key == "AverageFps" || key == "FrameTime" || key == "FrameTimeGraph";
+        internal static bool NeedsFrames(OsdConfiguration config) => config.ShowFps || config.ShowFpsOnePercentLow || NeedsTiming(config);
+        internal static bool NeedsTiming(OsdConfiguration config) => config.ShowAverageFps || config.ShowFrameTime || config.ShowFrameTimeGraph;
+
+        // Built-in gap: one ordinary space; the FPS pair keeps its two base
+        // spaces and the existing additional space on either side.
+        internal static string Separator(OsdMetric preceding, OsdMetric following) => IsFpsPair(preceding, following) ? "    " : " ";
 
         private static bool IsFpsPair(OsdMetric preceding, OsdMetric following) =>
             preceding != null && following != null &&
             (preceding.Key == "Fps" && following.Key == "FpsOnePercentLow" ||
              preceding.Key == "FpsOnePercentLow" && following.Key == "Fps");
-        internal static string Caption(string text) => NormalizeLabel(SingleLine(text, 40, false), "");
 
         internal static string SingleLine(string text, int limit, bool trim)
         {
@@ -64,9 +62,9 @@ namespace TrayTemps
 
         internal static void Migrate(OsdConfiguration config)
         {
+            config.GroupedValuesGapPercent = Math.Max(100, Math.Min(200, config.GroupedValuesGapPercent));
             bool legacy = config.MetricGroups == null;
             var groups = new Dictionary<string, string>(StringComparer.Ordinal);
-            var captions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             var hidden = new Dictionary<string, string>(StringComparer.Ordinal);
             if (config.GroupedLabelOverrides != null)
                 foreach (var pair in config.GroupedLabelOverrides.Where(p => Keys.Contains(p.Key))) hidden[pair.Key] = NormalizeLabel(pair.Value, "");
@@ -89,13 +87,8 @@ namespace TrayTemps
                 if (config.ShowFps && config.ShowFpsOnePercentLow) { groups["Fps"] = "Performance"; groups["FpsOnePercentLow"] = "Performance"; }
             }
             else foreach (var pair in config.MetricGroups.Where(p => Keys.Contains(p.Key))) groups[pair.Key] = SingleLine(pair.Value, 40, true);
-            if (config.GroupLabels != null)
-                foreach (var pair in config.GroupLabels)
-                {
-                    string name = SingleLine(pair.Key, 40, true);
-                    if (name.Length > 0) captions[name] = Caption(pair.Value);
-                }
-            config.MetricGroups = groups; config.GroupLabels = captions; config.GroupedLabelOverrides = hidden;
+            config.MetricGroups = groups; config.GroupedLabelOverrides = hidden;
+            if (config.GroupLabels == null) config.GroupLabels = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             var styles = new Dictionary<string, OsdMetricStyle>(StringComparer.Ordinal);
             foreach (string key in Keys)
             {
@@ -106,7 +99,25 @@ namespace TrayTemps
                 styles[key] = style;
             }
             config.MetricStyles = styles;
-            config.GroupSeparator = SingleLine(config.GroupSeparator, 40, false);
+            var gaps = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            if (config.MetricLabelValueGaps != null)
+                foreach (var pair in config.MetricLabelValueGaps)
+                    if (!string.IsNullOrWhiteSpace(pair.Key)) gaps[pair.Key] = Math.Max(0, Math.Min(100, pair.Value));
+            if (config.FpsLabelValueSpacing.HasValue)
+                foreach (string key in new[] { "Fps", "FpsOnePercentLow", "AverageFps" })
+                    if (!gaps.ContainsKey(key)) gaps[key] = Math.Max(0, Math.Min(100, config.FpsLabelValueSpacing.Value));
+            config.MetricLabelValueGaps = gaps;
+        }
+
+        internal static int LabelGap(OsdConfiguration config, string key, string group)
+        {
+            if (config.MetricLabelValueGaps != null)
+            {
+                string groupKey = string.IsNullOrEmpty(group) ? null : "Group:" + group;
+                if (groupKey != null && config.MetricLabelValueGaps.TryGetValue(groupKey, out int groupGap)) return Math.Max(0, Math.Min(100, groupGap));
+                if (!string.IsNullOrEmpty(key) && config.MetricLabelValueGaps.TryGetValue(key, out int metricGap)) return Math.Max(0, Math.Min(100, metricGap));
+            }
+            return config.LabelValueSpacing;
         }
 
         internal static List<OsdMetric> Compose(OsdConfiguration config, IEnumerable<OsdMetric> metrics)
@@ -118,16 +129,18 @@ namespace TrayTemps
             foreach (var kind in order)
             {
                 string key = kind.ToString();
-                if (!available.TryGetValue(key, out var metric)) continue;
                 string group = Group(config, key);
                 if (group.Length == 0) continue;
                 if (!grouped.TryGetValue(group, out var row))
                 {
-                    config.GroupLabels.TryGetValue(group, out string caption);
-                    row = new OsdMetric(caption, "") { Key = "Group:" + group, Style = metric.Style, Members = new List<OsdMetric>() };
+                    row = new OsdMetric(group, "") { Key = "Group:" + group, Members = new List<OsdMetric>() };
                     grouped[group] = row;
                 }
-                row.Members.Add(metric);
+                if (available.TryGetValue(key, out var metric))
+                {
+                    if (row.Members.Count == 0) row.Style = metric.Style;
+                    row.Members.Add(metric);
+                }
             }
             // Group priority follows its first configured member, just like the order tree,
             // even when that member is hidden. Only groups with visible members are emitted.
@@ -141,7 +154,7 @@ namespace TrayTemps
                 }
                 else if (grouped.TryGetValue(group, out var row))
                 {
-                    result.Add(row);
+                    if (row.Members.Count > 0) result.Add(row);
                     grouped.Remove(group);
                 }
             }
@@ -161,6 +174,9 @@ namespace TrayTemps
                 case "Fps": return config.ShowFps;
                 case "FpsOnePercentLow": return config.ShowFpsOnePercentLow;
                 case "CurrentTime": return config.ShowCurrentTime;
+                case "AverageFps": return config.ShowAverageFps;
+                case "FrameTime": return config.ShowFrameTime;
+                case "FrameTimeGraph": return config.ShowFrameTimeGraph;
                 default: return false;
             }
         }
@@ -178,6 +194,9 @@ namespace TrayTemps
                 case "Fps": config.ShowFps = value; break;
                 case "FpsOnePercentLow": config.ShowFpsOnePercentLow = value; break;
                 case "CurrentTime": config.ShowCurrentTime = value; break;
+                case "AverageFps": config.ShowAverageFps = value; break;
+                case "FrameTime": config.ShowFrameTime = value; break;
+                case "FrameTimeGraph": config.ShowFrameTimeGraph = value; break;
             }
         }
 
@@ -197,6 +216,9 @@ namespace TrayTemps
                 case "Fps": return "FPS";
                 case "FpsOnePercentLow": return "1%Low";
                 case "CurrentTime": return "Time";
+                case "AverageFps": return "Avg FPS";
+                case "FrameTime": return "Frametime";
+                case "FrameTimeGraph": return "Frametime";
                 default: return string.Empty;
             }
         }

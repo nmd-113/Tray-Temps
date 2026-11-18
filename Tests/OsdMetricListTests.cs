@@ -42,6 +42,7 @@ internal static class OsdMetricListTests
     private static void Begin(OsdSettingsDialog form, string key, int column)
     {
         var list = Control<ListView>(form, "metricsList");
+        Call(form, "ShowPage", Enum.Parse(typeof(OsdSettingsDialog).GetNestedType("OsdSettingsPage", BindingFlags.NonPublic), "Metrics"));
         foreach (ListViewItem row in list.Items) row.Selected = false;
         var item = Row(form, key); item.Selected = true; item.Focused = true; list.Focus();
         Call(form, "BeginMetricCellEdit", column);
@@ -58,6 +59,7 @@ internal static class OsdMetricListTests
         {
             host.Show(); host.Opacity = 1;
             await Ui(host);
+            SettingsConsistency(host);
             Presets(host);
             Render();
             host.Close();
@@ -73,7 +75,7 @@ internal static class OsdMetricListTests
         Check(OsdMetricDefinitions.ResolveLabel(legacy, "CpuTemperature") == "CPU" && OsdMetricDefinitions.ResolveLabel(legacy, "CpuUsage") == "", "legacy grouped captions preserve the existing presentation");
         legacy.MetricGroups["CpuUsage"] = "";
         Check(OsdMetricDefinitions.ResolveLabel(legacy, "CpuUsage") == "CPU Load", "ungrouping restores retained standalone label");
-        Check(legacy.MetricStyles.Count == 9 && legacy.MetricStyles["CpuUsage"].FontSize == 24 && legacy.MetricStyles["CpuUsage"].LabelColor == legacy.CpuFontColor, "legacy fonts and colors seed all nine styles");
+        Check(legacy.MetricStyles.Count == OsdMetricDefinitions.Keys.Length && legacy.MetricStyles["CpuUsage"].FontSize == 24 && legacy.MetricStyles["CpuUsage"].LabelColor == legacy.CpuFontColor, "legacy fonts and colors seed all twelve styles");
         string json = JsonSerializer.Serialize(legacy); var copy = JsonSerializer.Deserialize<OsdConfiguration>(json); OsdMetricDefinitions.Migrate(copy);
         Check(copy.MetricGroups["CpuUsage"] == "" && copy.MetricStyles["FpsOnePercentLow"].FontSize == 24, "JSON retains explicit ungrouping and per-metric styles");
         var clone = legacy.Clone(); clone.MetricStyles["Fps"].FontSize = 48; clone.MetricGroups["Fps"] = ""; clone.GroupLabels["CPU"] = "Processor";
@@ -83,32 +85,110 @@ internal static class OsdMetricListTests
         var invalid = Config(); invalid.MetricStyles["Fps"].FontSize = float.NaN; invalid.MetricGroups["Fps"] = "  A\r\n "; invalid.GroupSeparator = " ";
         OsdMetricDefinitions.Migrate(invalid);
         Check(invalid.MetricStyles["Fps"].FontSize == 16 && invalid.MetricGroups["Fps"] == "A" && invalid.GroupSeparator == " ", "invalid sizes and multiline names normalize while explicit spaces survive");
-        Check(OsdMetricDefinitions.Separator(Config()) == " ", "empty separator defaults to one space between ordinary metrics");
+        Check(OsdMetricDefinitions.Separator(null, null) == " ", "ordinary grouped metrics use one built-in space");
         var separatorConfig = Config();
         var fpsPair = new[] { Metric(separatorConfig, "Fps", "144"), Metric(separatorConfig, "FpsOnePercentLow", "92") };
-        Check(OsdMetricDefinitions.Separator(separatorConfig, fpsPair[0], fpsPair[1]) == "    " &&
-            OsdMetricDefinitions.Separator(separatorConfig, fpsPair[1], fpsPair[0]) == "    ",
+        Check(OsdMetricDefinitions.Separator(fpsPair[0], fpsPair[1]) == "    " &&
+            OsdMetricDefinitions.Separator(fpsPair[1], fpsPair[0]) == "    ",
             "empty FPS/1% Low separator keeps two base spaces plus one padding space on both sides in either order");
         var appDefaults = OsdConfiguration.CreateAppDefault();
         var missingOsd = System.Text.Json.JsonSerializer.Deserialize<AppSettings>("{\"LightMode\":true}");
-        Check(!appDefaults.Enabled && !missingOsd.Osd.Enabled && missingOsd.Osd.Position == appDefaults.Position &&
-            missingOsd.Osd.ShowFps && missingOsd.Osd.MetricStyles["Fps"].FontSize == appDefaults.MetricStyles["Fps"].FontSize,
-            "settings without an OSD section use current app defaults with OSD disabled");
+        Check(!appDefaults.Enabled && appDefaults.LabelValueSpacing == 10 && missingOsd.Osd.LabelValueSpacing == 10 &&
+            !missingOsd.Osd.Enabled && missingOsd.Osd.ShowCpu && missingOsd.Osd.ShowGpu &&
+            OsdMetricDefinitions.Keys.Where(key => key != "CpuTemperature" && key != "GpuTemperature").All(key => !OsdMetricDefinitions.IsVisible(missingOsd.Osd, key)) &&
+            missingOsd.Osd.MetricStyles.Values.All(style => style.FontFamily == OsdFontHelper.EmbeddedJetBrainsMonoExtraBoldDisplayName &&
+                style.FontSize == 10 && style.LabelColor == Color.White.ToArgb() && style.ValueColor == Color.White.ToArgb()),
+            "fresh settings use neutral OSD defaults with only CPU/GPU temperatures enabled");
         var explicitOsd = System.Text.Json.JsonSerializer.Deserialize<AppSettings>("{\"Osd\":{\"Enabled\":true}}");
         Check(explicitOsd.Osd.Enabled, "an explicitly enabled saved OSD setting remains enabled");
-        Check(OsdMetricDefinitions.Caption(" \t ") == "", "whitespace-only group captions do not reserve an invisible label gap");
+        var emptyOsd = JsonSerializer.Deserialize<AppSettings>("{\"LightMode\":true,\"Osd\":{}}");
+        Check(emptyOsd.LightMode && JsonSerializer.Serialize(emptyOsd.Osd) == JsonSerializer.Serialize(appDefaults),
+            "an empty OSD section uses the same neutral defaults as an omitted section");
+        var savedAppearance = JsonSerializer.Deserialize<AppSettings>("{\"Osd\":{\"Enabled\":true,\"FontSize\":23,\"CpuFontColor\":-65536}}");
+        OsdMetricDefinitions.Migrate(savedAppearance.Osd);
+        var savedAppearanceCopy = JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(savedAppearance));
+        Check(savedAppearanceCopy.Osd.Enabled && savedAppearanceCopy.Osd.MetricStyles["CpuTemperature"].FontSize == 23 &&
+            savedAppearanceCopy.Osd.MetricStyles["CpuTemperature"].ValueColor == Color.Red.ToArgb(),
+            "nonempty legacy appearance migrates and round-trips without being replaced by fresh defaults");
+        Check(JsonSerializer.Deserialize<AppSettings>("{\"Osd\":null}").Osd == null,
+            "a null OSD section remains available to the existing app normalization path");
         var duplicateCaptions = Config(); duplicateCaptions.GroupLabels = new Dictionary<string, string> { ["Stats"] = "A", ["stats"] = "B" };
         Check(duplicateCaptions.Clone().GroupLabels.Count == 1, "case-variant saved caption keys clone safely");
+        var duplicateGaps = Config();
+        duplicateGaps.MetricLabelValueGaps = new Dictionary<string, int> { ["Group:Stats"] = 12, ["group:stats"] = 24 };
+        var clonedGaps = duplicateGaps.Clone(); OsdMetricDefinitions.Migrate(clonedGaps);
+        Check(clonedGaps.MetricLabelValueGaps.Count == 1 && clonedGaps.MetricLabelValueGaps["GROUP:STATS"] == 24,
+            "case-variant saved gap keys clone and migrate without exceptions");
         Check(OsdMetricDefinitions.SingleLine("\ud83d", 40, false) == "" && OsdMetricDefinitions.SingleLine("★  ", 40, false) == "★  ",
             "broken surrogate input is removed while Unicode icons and trailing spaces remain intact");
+    }
+
+    private static void SettingsConsistency(Host host)
+    {
+        var original = Config(); original.BackgroundColor = null;
+        var themeSwitch = Control<CheckBox>(host, "lightModeSwitch");
+        bool previousTheme = themeSwitch.Checked;
+        try
+        {
+            using (var form = new OsdSettingsDialog(host, original))
+            {
+                form.Show(host);
+                OsdConfiguration preview = null;
+                form.PreviewConfigurationChanged += config => preview = config;
+                foreach (bool light in new[] { false, true, false })
+                {
+                    themeSwitch.Checked = light;
+                    Call(form, "MainForm_ThemeChanged", host, EventArgs.Empty);
+                    int expected = OsdColorHelper.GetDefaultBackground(light).ToArgb();
+                    Check(Control<Button>(form, "backgroundColor").BackColor.ToArgb() == expected &&
+                        preview != null && preview.BackgroundColor == expected,
+                        "legacy automatic background color agrees between theme, dialog and preview: light=" + light);
+                    var saved = (OsdConfiguration)Call(form, "CreateConfigurationFromControls");
+                    Check(host.NormalizeOsdConfiguration(saved).BackgroundColor == expected,
+                        "Save preserves the background color that was previewed");
+                }
+                form.Close();
+            }
+            Check(original.BackgroundColor == null, "previewing theme defaults does not alter the original settings");
+        }
+        finally { themeSwitch.Checked = previousTheme; }
+        var gaps = Config();
+        gaps.MetricLabelValueGaps["CpuTemperature"] = -5;
+        gaps.MetricLabelValueGaps["Group:CPU:"] = 120;
+        var roundTrip = JsonSerializer.Deserialize<OsdConfiguration>(JsonSerializer.Serialize(gaps));
+        roundTrip = host.NormalizeOsdConfiguration(roundTrip);
+        Check(roundTrip.MetricLabelValueGaps["CpuTemperature"] == 0 && roundTrip.MetricLabelValueGaps["group:cpu:"] == 100,
+            "saved metric and case-insensitive group gaps normalize to the dialog's supported range");
     }
 
     private static void Presets(Host host)
     {
         var first = OsdPresets.LoadEmbedded(0);
         var defaults = OsdConfiguration.CreateAppDefault();
+        foreach (int presetIndex in new[] { 0, 1, 2 })
+        {
+            var preset = OsdPresets.LoadEmbedded(presetIndex);
+            Check(preset.LabelValueSpacing == 10 && preset.FpsLabelValueSpacing == 10 &&
+                preset.MetricLabelValueGaps.Values.All(gap => gap == 10),
+                "embedded preset uses ten-pixel defaults including migrated per-metric gaps: " + presetIndex);
+            var disabledKeys = OsdMetricDefinitions.Keys.Where(key => !OsdMetricDefinitions.IsVisible(preset, key));
+            Check(disabledKeys.All(key => preset.LabelOverrides[key] == defaults.LabelOverrides[key] &&
+                OsdMetricDefinitions.Group(preset, key).Length == 0 &&
+                preset.MetricStyles[key].FontFamily == defaults.MetricStyles[key].FontFamily &&
+                preset.MetricStyles[key].FontSize == defaults.MetricStyles[key].FontSize &&
+                preset.MetricStyles[key].LabelColor == defaults.MetricStyles[key].LabelColor &&
+                preset.MetricStyles[key].ValueColor == defaults.MetricStyles[key].ValueColor),
+                "embedded preset disabled metrics retain neutral app defaults: " + presetIndex);
+            Check(!preset.Enabled && !preset.HotkeyEnabled && preset.GroupLabels.Count == 0 &&
+                preset.GroupSeparator == null && preset.CustomCpuLabel == defaults.CustomCpuLabel &&
+                preset.CustomGpuLabel == defaults.CustomGpuLabel && preset.CustomFpsLabel == defaults.CustomFpsLabel &&
+                (preset.Columns != 1 || preset.ColumnsSpacing == defaults.ColumnsSpacing) &&
+                (preset.BackgroundOpacityPercent != 0 || preset.BackgroundCornerRoundness == defaults.BackgroundCornerRoundness),
+                "embedded preset unused legacy, shortcut, and layout settings use app defaults: " + presetIndex);
+        }
         first.Enabled = false;
-        Check(JsonSerializer.Serialize(first) == JsonSerializer.Serialize(defaults), "template 1 is the complete default OSD configuration with OSD disabled");
+        Check(defaults.ShowCpu && defaults.ShowGpu && !defaults.ShowFps && first.ItemOrder != defaults.ItemOrder,
+            "fresh defaults are neutral and distinct from the explicitly loaded preset");
         first.MetricStyles["Fps"].FontSize = 48;
         Check(OsdPresets.LoadEmbedded(0).MetricStyles["Fps"].FontSize != 48, "embedded preset loads return independent deep copies");
         string path = Path.Combine(Path.GetTempPath(), "TrayTemps-preset-test-" + Guid.NewGuid().ToString("N") + ".json");
@@ -147,6 +227,11 @@ internal static class OsdMetricListTests
         using (var form = new OsdSettingsDialog(host, original))
         {
             form.Show(host);
+            var navigationOrder = new[] { "presetsNavButton", "metricsNavButton", "appearanceNavButton", "layoutNavButton" };
+            Check(Control<TabControl>(form, "pageTabs").SelectedTab.Name == "presetsPage" &&
+                navigationOrder.Select(name => Control<Button>(form, name)).OrderBy(button => button.Top)
+                    .Select(button => button.Name).SequenceEqual(navigationOrder),
+                "OSD opens on Presets with the sidebar ordered Presets, Metrics, Appearance, Layout");
             Call(form, "PresetsNavButton_Click", null, EventArgs.Empty);
             Check(Control<TabControl>(form, "pageTabs").SelectedTab.Name == "presetsPage" && Control<ComboBox>(form, "presetList").Items.Count == 3,
                 "Presets navigation opens the Designer page with three embedded templates");
@@ -156,16 +241,25 @@ internal static class OsdMetricListTests
                 bitmap.Save(Path.Combine(Path.GetTempPath(), "TrayTemps-osd-presets.png"));
             }
             int previews = 0; form.PreviewConfigurationChanged += config => previews++;
+            var groupedGap = Control<ComboBox>(form, "groupedValuesGapPercent");
+            Check(groupedGap.DropDownStyle == ComboBoxStyle.DropDownList && groupedGap.Items.Count == 11 &&
+                groupedGap.GetItemText(groupedGap.SelectedItem) == "100%", "group gap selector starts at the existing minimum and displays percentages");
+            groupedGap.SelectedIndex = 5;
+            Check(previews == 1 && ((OsdConfiguration)Call(form, "CreateConfigurationFromControls")).GroupedValuesGapPercent == 150,
+                "group gap selector immediately previews its saved percentage");
+            previews = 0;
             Call(form, "ApplyPreset", OsdPresets.LoadEmbedded(1));
             var draft = (OsdConfiguration)Call(form, "CreateConfigurationFromControls");
-            Check(previews == 1 && !draft.Enabled && !draft.HotkeyEnabled && draft.Columns == 5 && draft.ItemOrder == OsdPresets.LoadEmbedded(1).ItemOrder,
+            Check(draft.GroupedValuesGapPercent == 100 && groupedGap.GetItemText(groupedGap.SelectedItem) == "100%",
+                "preset loading restores its own default grouped spacing");
+            Check(previews == 1 && !draft.Enabled && !draft.HotkeyEnabled && draft.Columns == 5 && draft.ItemOrder == host.NormalizeOsdConfiguration(OsdPresets.LoadEmbedded(1)).ItemOrder,
                 "preset load emits one complete preview and preserves OSD enable state and the current shortcut");
             Call(form, "ShowPage", Enum.Parse(typeof(OsdSettingsDialog).GetNestedType("OsdSettingsPage", BindingFlags.NonPublic), "Appearance"));
             var grid = Control<DataGridView>(form, "appearanceGrid");
             int fonts = ((DataGridViewComboBoxColumn)grid.Columns[1]).Items.Count;
             for (int i = 0; i < 3; i++) Call(form, "ApplyPreset", OsdPresets.LoadEmbedded(2));
             draft = (OsdConfiguration)Call(form, "CreateConfigurationFromControls");
-            Check(grid.Rows.Count == 9 && ((DataGridViewComboBoxColumn)grid.Columns[1]).Items.Count == fonts &&
+            Check(grid.Rows.Count == OsdMetricDefinitions.Keys.Length && ((DataGridViewComboBoxColumn)grid.Columns[1]).Items.Count == fonts &&
                 draft.TransparentBackground && !draft.ShowFpsOnePercentLow && !draft.ShowCurrentTime && draft.MetricStyles["Fps"].FontSize == 12,
                 "repeated preset loads refresh appearance, visibility and layout without duplicating rows or font choices");
             Check(JsonSerializer.Serialize(original) == before && form.SelectedConfiguration == null,
@@ -215,10 +309,10 @@ internal static class OsdMetricListTests
                 "preset loading also preserves enabled OSD and a shortcut edited in the current dialog");
             var nine = Config();
             foreach (string key in OsdMetricDefinitions.Keys) OsdMetricDefinitions.SetVisible(nine, key, true);
-            nine.Columns = 9;
+            nine.Columns = OsdMetricDefinitions.Keys.Length;
             Call(form, "ApplyPreset", nine);
-            Check(((OsdConfiguration)Call(form, "CreateConfigurationFromControls")).Columns == 9 && Control<ComboBox>(form, "columnsValue").Items.Count == 9,
-                "preset normalization and dialog loading retain nine columns for nine standalone metrics");
+            Check(((OsdConfiguration)Call(form, "CreateConfigurationFromControls")).Columns == OsdMetricDefinitions.Keys.Length && Control<ComboBox>(form, "columnsValue").Items.Count == OsdMetricDefinitions.Keys.Length,
+                "preset normalization and dialog loading retain a column for every standalone metric");
             form.Close();
             Check(form.SelectedConfiguration == null && JsonSerializer.Serialize(original) == before,
                 "closing after multiple preset previews discards the draft and leaves the original configuration intact");
@@ -258,8 +352,8 @@ internal static class OsdMetricListTests
             Check(Control<TextBox>(form, "metricLabelEditor").Font.SizeInPoints == list.Font.SizeInPoints &&
                 Control<Label>(form, "metricGroupHeader").Font.SizeInPoints == Control<Label>(form, "metricNameHeader").Font.SizeInPoints,
                 "metric editor and all column headers use matching point sizes");
-            Check(list.Columns.Count == 3 && list.Columns[2].Text == "Group" && list.Items.Count == 9, "Metrics provides all nine options and editable Group column");
-            Check(grid.Columns.Count == 5 && grid.Rows.Count == 9 && grid.Columns[1] is DataGridViewComboBoxColumn && grid.Columns[3] is DataGridViewButtonColumn, "Appearance provides the five requested columns for all metrics");
+            Check(list.Columns.Count == 3 && list.Columns[2].Text == "Group" && list.Items.Count == OsdMetricDefinitions.Keys.Length, "Metrics provides all twelve options and editable Group column");
+            Check(grid.Columns.Count == 5 && grid.Rows.Count == OsdMetricDefinitions.Keys.Length && grid.Columns[1] is DataGridViewComboBoxColumn && grid.Columns[3] is DataGridViewButtonColumn, "Appearance provides the five requested columns for all metrics");
             Check(Math.Abs(grid.DefaultCellStyle.Font.SizeInPoints - list.Font.SizeInPoints) < 0.01f &&
                 Control<TreeView>(form, "itemOrder").Font.SizeInPoints < list.Font.SizeInPoints,
                 "Metrics and Appearance share their text size while Display Order remains intentionally smaller");
@@ -278,19 +372,15 @@ internal static class OsdMetricListTests
                 "list palette icons use the smaller 9-point size");
             Check(list.Items[0].Bounds.Height >= 26 && grid.Rows[0].Height == 26 &&
                 Control<TreeView>(form, "itemOrder").ItemHeight == 26 &&
-                list.Items[list.Items.Count - 1].Bounds.Bottom <= list.ClientSize.Height,
-                "taller rows leave all nine metrics visible and also apply to the order list (native height " + list.Items[0].Bounds.Height + ")");
+                list.Items[list.Items.Count - 1].Bounds.Bottom > list.ClientSize.Height,
+                "metric rows retain their height and scroll when the twelve options exceed the viewport (native height " + list.Items[0].Bounds.Height + ")");
             Check(grid.Rows[0].Cells[3].ToolTipText.StartsWith("Label color (RGB ", StringComparison.Ordinal) &&
                 grid.Rows[0].Cells[4].ToolTipText.StartsWith("Value color (RGB ", StringComparison.Ordinal),
                 "color cells retain compact purpose and RGB tooltips");
             Check(Control<Panel>(form, "metricsListHeader").Height == 30 && grid.ColumnHeadersHeight >= 44,
                 "Metrics and Appearance headers have extra vertical room");
-            var captionField = Control<TextBox>(form, "groupCaption"); var separatorField = Control<TextBox>(form, "groupSeparator");
-            var captionLabel = (Label)Field(form, "groupCaptionLabel"); var moveDown = Control<Button>(form, "orderDown");
-            Check(captionField.Parent == captionLabel.Parent && captionField.Parent != separatorField.Parent &&
-                captionLabel.Top > moveDown.Bottom && captionField.Bottom <= captionField.Parent.ClientSize.Height &&
-                captionField.Right <= captionField.Parent.ClientSize.Width,
-                "group caption controls stay below the ordering buttons, outside the layout table, and inside their card");
+            Check(new[] { "groupCaption", "groupCaptionLabel", "groupSeparator", "groupSeparatorLabel" }
+                .All(name => form.Controls.Find(name, true).Length == 0), "obsolete group caption and separator controls are removed from the Designer");
             Row(form, "FpsOnePercentLow").Checked = false; Row(form, "FpsOnePercentLow").Checked = true;
             Check(Row(form, "FpsOnePercentLow").Checked && !Row(form, "Fps").Checked, "1% Low can be selected independently of FPS");
             Begin(form, "CpuUsage", 1); Control<TextBox>(form, "metricLabelEditor").Text = "Usage after check";
@@ -313,8 +403,6 @@ internal static class OsdMetricListTests
             var tree = Control<TreeView>(form, "itemOrder");
             var parent = tree.Nodes.Cast<TreeNode>().Single(node => ((string)node.Tag).StartsWith("Group:"));
             Check(parent.Nodes.Count == 2, "case-insensitive group membership produces one group with both members");
-            tree.SelectedNode = parent; Control<TextBox>(form, "groupCaption").Text = "Game";
-            Check(((OsdConfiguration)Call(form, "CreateConfigurationFromControls")).GroupLabels["PERFORMANCE"] == "Game", "selected group has an optional independent caption");
             tree.SelectedNode = parent.Nodes[1]; Call(form, "MoveSelectedItem", -1);
             Check((string)parent.Nodes[0].Tag == "FpsOnePercentLow", "member priority moves within its group");
             Edit(form, "FpsOnePercentLow", 1, ""); Edit(form, "FpsOnePercentLow", 2, "", false);
@@ -336,17 +424,16 @@ internal static class OsdMetricListTests
             Check(form.SelectedConfiguration == null && ((OsdConfiguration)Call(form, "CreateConfigurationFromControls")).MetricStyles["FpsOnePercentLow"].FontSize == 32,
                 "invalid appearance cells cannot close Save or overwrite the valid style draft");
             grid.Rows[7].Cells[2].Value = "32";
-            Control<TextBox>(form, "groupSeparator").Text = " ";
-            Check(((OsdConfiguration)Call(form, "CreateConfigurationFromControls")).GroupSeparator == " ", "one-space separator is distinct from empty default");
+            Begin(form, "Fps", 2);
+            var groupEditor = Control<TextBox>(form, "metricLabelEditor");
             var menu = (ContextMenuStrip)Field(form, "customLabelContextMenu");
-            Check(Control<TextBox>(form, "groupSeparator").ContextMenuStrip == menu && Control<TextBox>(form, "groupCaption").ContextMenuStrip == menu, "separator and group caption reuse Unicode insertion menu");
-            var separatorBox = Control<TextBox>(form, "groupSeparator");
-            separatorBox.Focus(); separatorBox.SelectAll(); menu.Show(separatorBox, new Point(0, separatorBox.Height));
+            groupEditor.Focus(); groupEditor.SelectAll(); menu.Show(groupEditor, new Point(0, groupEditor.Height));
             await Task.Delay(20);
             var categories = (Dictionary<string, ToolStripMenuItem>)Field(form, "_iconCategoryMenus");
             var icon = categories["general"].DropDownItems.OfType<ToolStripMenuItem>().First();
             string symbol = (string)icon.Tag; icon.PerformClick(); menu.Close();
-            Check(separatorBox.Text == symbol && Row(form, "Fps").SubItems[1].Text == "Frames", "Unicode menu edits the separator without changing a metric label");
+            Check(groupEditor.Text == symbol && Row(form, "Fps").SubItems[1].Text == "Frames", "Unicode menu edits the metric Group cell without changing its label");
+            Call(form, "EndMetricLabelEdit", false);
             Call(form, "ShowPage", Enum.Parse(typeof(OsdSettingsDialog).GetNestedType("OsdSettingsPage", BindingFlags.NonPublic), "Metrics"));
             var info = Control<Label>(form, "metricLabelsInfoIcon"); var tooltip = (ToolTip)Field(form, "settingsToolTip");
             Check(info.Visible && tooltip.GetToolTip(info).Length > 0, "label help icon and tooltip remain available");
@@ -393,9 +480,9 @@ internal static class OsdMetricListTests
             foreach (float scale in new[] { 1f, 1.5f, 4f / 3f })
             {
                 if (scale != 1) form.Scale(new SizeF(scale, scale));
-                Check(Control<TextBox>(form, "groupCaption").Bottom <= Control<TextBox>(form, "groupCaption").Parent.Height &&
-                    Control<TextBox>(form, "groupSeparator").Right <= Control<TextBox>(form, "groupSeparator").Parent.Width,
-                    "group controls remain inside their layout at " + scale);
+                Check(Control<ComboBox>(form, "positionValue").Right <= Control<ComboBox>(form, "positionValue").Parent.ClientSize.Width &&
+                    Control<ComboBox>(form, "columnsValue").Right <= Control<ComboBox>(form, "columnsValue").Parent.ClientSize.Width,
+                    "remaining layout controls fit at " + scale);
                 Call(form, "ShowPage", Enum.Parse(typeof(OsdSettingsDialog).GetNestedType("OsdSettingsPage", BindingFlags.NonPublic), "Appearance"));
                 var footer = Control<TableLayoutPanel>(form, "appearanceFooter");
                 var osdSlider = Control<TrackBar>(form, "opacityValue"); var bgSlider = Control<TrackBar>(form, "backgroundOpacityValue");
@@ -469,7 +556,7 @@ internal static class OsdMetricListTests
         {
             var area = new Rectangle(0, 0, 4000, 2000);
             var rows = OsdMetricDefinitions.Compose(config, metrics);
-            Check(rows.Count == 2 && rows.Any(row => row.Members?.Count == 2 && row.Label == "Game"), "arbitrary group composes once alongside independent metric");
+            Check(rows.Count == 2 && rows.Any(row => row.Members?.Count == 2 && row.Label == "Stats"), "group name supplies the caption regardless of an obsolete saved label");
             overlay.UpdateDisplay(config, rows, area);
             var groupLayout = Layouts(overlay)[1]; // CPU is first in default order
             var parts = Parts(groupLayout);
@@ -489,26 +576,18 @@ internal static class OsdMetricListTests
             overlay.UpdateDisplay(config, OsdMetricDefinitions.Compose(config, metrics), area);
             Check(ReferenceEquals(originalLayout, Layouts(overlay)[1]), "color-only change repaints without remeasuring");
             Check((string)Field(Parts(Layouts(overlay)[1])[2], "Text") == "144", "FPS slot retains its stable layout text while values refresh independently");
-            int twoSpaces = (int)Field(Parts(Layouts(overlay)[1])[3], "Width");
-            config.GroupSeparator = " "; overlay.UpdateDisplay(config, OsdMetricDefinitions.Compose(config, metrics), area);
-            int oneSpace = (int)Field(Parts(Layouts(overlay)[1])[3], "Width");
-            Check(twoSpaces > oneSpace && oneSpace > 0, "space-only separator measures one and two advances correctly");
-            object oneSpaceLayout = Layouts(overlay)[1];
-            config.GroupSeparator = ""; overlay.UpdateDisplay(config, OsdMetricDefinitions.Compose(config, metrics), area);
-            Check(!ReferenceEquals(oneSpaceLayout, Layouts(overlay)[1]) &&
-                (int)Field(Parts(Layouts(overlay)[1])[3], "Width") == twoSpaces,
-                "explicit-space to empty FPS separator invalidates geometry and restores the larger default");
-            object emptyLayout = Layouts(overlay)[1];
-            config.GroupSeparator = " "; overlay.UpdateDisplay(config, OsdMetricDefinitions.Compose(config, metrics), area);
-            Check(!ReferenceEquals(emptyLayout, Layouts(overlay)[1]) &&
-                (int)Field(Parts(Layouts(overlay)[1])[3], "Width") == oneSpace,
-                "empty to explicit-space FPS separator invalidates geometry in the reverse direction");
-            config.GroupSeparator = " ★ "; overlay.UpdateDisplay(config, OsdMetricDefinitions.Compose(config, metrics), area);
-            Check((int)Field(Parts(Layouts(overlay)[1])[3], "Width") > twoSpaces, "Unicode separator reserves glyph plus whitespace");
+            int builtInGap = (int)Field(Parts(Layouts(overlay)[1])[3], "Width");
+            object fixedLayout = Layouts(overlay)[1];
+            foreach (string obsolete in new[] { " ", "custom", "" })
+            {
+                config.GroupSeparator = obsolete; overlay.UpdateDisplay(config, OsdMetricDefinitions.Compose(config, metrics), area);
+                Check(ReferenceEquals(fixedLayout, Layouts(overlay)[1]) && (int)Field(Parts(Layouts(overlay)[1])[3], "Width") == builtInGap,
+                    "obsolete custom separator does not affect built-in spacing or rebuild geometry: " + obsolete);
+            }
             config.LabelOverrides["Fps"] = ""; config.LabelOverrides["FpsOnePercentLow"] = ""; config.GroupLabels["Stats"] = "";
             metrics[0] = Metric(config, "Fps", "144"); metrics[1] = Metric(config, "FpsOnePercentLow", "92");
             overlay.UpdateDisplay(config, OsdMetricDefinitions.Compose(config, metrics), area);
-            Check(Parts(Layouts(overlay)[1]).Count == 3, "blank metric and group captions reserve no label parts or gaps");
+            Check(Parts(Layouts(overlay)[1]).Count == 4, "blank metric labels still retain the caption from the group name");
             overlay.UpdateDisplay(config, OsdMetricDefinitions.Compose(config, metrics), new Rectangle(0, 0, 160, 120));
             Check((float)Field(Layouts(overlay)[1], "Scale") > 0 && overlay.Width <= 160, "narrow screen fits the entire group without dropping member values");
             config.Columns = 2; overlay.UpdateDisplay(config, OsdMetricDefinitions.Compose(config, metrics), area);
@@ -555,19 +634,21 @@ internal static class OsdMetricListTests
             int cpuIndex = rows.FindIndex(row => row.Key == "Group:CPU");
             int gpuIndex = rows.FindIndex(row => row.Key == "Group:GPU");
             int performanceIndex = rows.FindIndex(row => row.Key == "Group:Performance");
-            Check(rows.Count == 3 && rightEdges.Length == 3 && rightEdges[cpuIndex] == rightEdges[gpuIndex] &&
+            Check(rows.Count == 3 && rightEdges.Length == 3 &&
                 (int)Field(Parts(layouts[cpuIndex])[0], "X") == 0 && (int)Field(Parts(layouts[gpuIndex])[0], "X") == 0,
-                "grouped hardware member blocks align to one right edge while group captions stay left");
+                "grouped metrics and captions begin at the left and values retain natural order");
             var fpsParts = Parts(layouts[performanceIndex]);
-            Check(fpsParts.Cast<object>().Where(part => !(bool)Field(part, "IsGroupCaption")).Min(part => (int)Field(part, "X")) == 0 &&
-                (int)Field(fpsParts[1], "X") - ((int)Field(fpsParts[0], "X") + (int)Field(fpsParts[0], "Width")) == 15 &&
-                (int)Field(fpsParts[4], "X") - ((int)Field(fpsParts[3], "X") + (int)Field(fpsParts[3], "Width")) == 15,
-                "a grouped FPS pair with no caption starts at the left edge and keeps both dedicated label/value gaps");
+            Check((string)Field(fpsParts[0], "Text") == "Performance" &&
+                (int)Field(fpsParts[2], "X") - ((int)Field(fpsParts[1], "X") + (int)Field(fpsParts[1], "Width")) == 15 &&
+                (int)Field(fpsParts[5], "X") - ((int)Field(fpsParts[4], "X") + (int)Field(fpsParts[4], "Width")) == 15,
+                "a grouped FPS pair uses its group name and keeps both dedicated label/value gaps");
 
             var clock = Metric(alignmentConfig, "CurrentTime", "01:11");
             overlay.UpdateDisplay(alignmentConfig, new[] { clock }, new Rectangle(0, 0, 4000, 2000));
-            Check(!(bool)Field(Parts(Layouts(overlay)[0])[1], "RightAlign"),
-                "Current Time renders from the start of its reserved slot to keep its fixed one-space label gap");
+            var clockParts = Parts(Layouts(overlay)[0]);
+            Check((int)Field(clockParts[0], "X") == 0 &&
+                (int)Field(clockParts[1], "X") >= (int)Field(clockParts[0], "X") + (int)Field(clockParts[0], "Width"),
+                "Current Time follows the same left-to-right flow as every other individual metric");
         }
     }
 }

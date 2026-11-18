@@ -107,17 +107,32 @@ namespace TrayTemps
         private bool _disposed;
         private int _stopCleanupDeferred;
         private FrameTimeHistory _frameTimes;
+        private bool _calculateOnePercentLow;
+        internal int TargetGeneration => Volatile.Read(ref _targetGeneration);
 
         private sealed class FrameTimeHistory
         {
             internal readonly FrameTimeWindow Primary, Fallback;
             private int _displayedSource;
-            internal FrameTimeHistory(long frequency)
+            private bool _timingEnabled;
+            internal FrameTimeHistory(long frequency, bool timing)
             {
-                Primary = new FrameTimeWindow(frequency); Fallback = new FrameTimeWindow(frequency);
+                Primary = new FrameTimeWindow(frequency, timing); Fallback = new FrameTimeWindow(frequency, timing);
+                _timingEnabled = timing;
+            }
+            internal void SetTimingEnabled(bool enabled)
+            {
+                if (_timingEnabled == enabled) return;
+                Primary.SetTimingEnabled(enabled); Fallback.SetTimingEnabled(enabled);
+                _timingEnabled = enabled;
             }
             internal void Reset(int generation) { Primary.Reset(generation); Fallback.Reset(generation); }
             internal int? GetValue(int source, long now, int generation)
+            {
+                SelectSource(source, generation);
+                return source == 1 ? Primary.GetValue(now, generation) : source == 2 ? Fallback.GetValue(now, generation) : null;
+            }
+            private void SelectSource(int source, int generation)
             {
                 if (source != _displayedSource)
                 {
@@ -129,14 +144,25 @@ namespace TrayTemps
                     }
                     _displayedSource = source;
                 }
-                return source == 1 ? Primary.GetValue(now, generation) : source == 2 ? Fallback.GetValue(now, generation) : null;
+            }
+            internal FrameStatistics GetStatistics(int source, long now, int generation, int refreshMilliseconds, bool graph)
+            {
+                SelectSource(source, generation);
+                var stats = source == 1 ? Primary.GetStatistics(now, generation, refreshMilliseconds, graph) :
+                    source == 2 ? Fallback.GetStatistics(now, generation, refreshMilliseconds, graph) : default(FrameStatistics);
+                stats.Source = ((long)generation << 32) | ((long)source << 28) | (uint)stats.Version;
+                return stats;
             }
         }
 
-        internal void SetOnePercentLowEnabled(bool enabled)
+        internal void SetFrameStatisticsEnabled(bool onePercentLow, bool timing)
         {
-            if (enabled == (Volatile.Read(ref _frameTimes) != null)) return;
-            Volatile.Write(ref _frameTimes, enabled ? new FrameTimeHistory(_qpcFrequency) : null);
+            _calculateOnePercentLow = onePercentLow;
+            bool enabled = onePercentLow || timing;
+            var history = Volatile.Read(ref _frameTimes);
+            if (enabled && history != null) { history.SetTimingEnabled(timing); return; }
+            if (!enabled && history == null) return;
+            Volatile.Write(ref _frameTimes, enabled ? new FrameTimeHistory(_qpcFrequency, timing) : null);
         }
 
         internal ForegroundFpsMonitor()
@@ -272,6 +298,15 @@ namespace TrayTemps
                     processId = (int)foregroundProcessId;
             }
 
+            UpdateTargetProcess(processId);
+        }
+
+        internal void UpdateTargetProcess(int processId)
+        {
+            if (!_running) return;
+            // Owned settings/history windows should not replace the external game target.
+            if (processId == GetCurrentProcessId()) return;
+
             // Foreground activation can briefly have no window. Ignore one
             // invalid sample, but stop tracking after a consecutive miss.
             if (processId == 0)
@@ -331,7 +366,17 @@ namespace TrayTemps
                     fps = fallbackValue; source = 2;
                 }
             }
-            onePercentLow = Volatile.Read(ref _frameTimes)?.GetValue(source, now, Volatile.Read(ref _targetGeneration));
+            onePercentLow = _calculateOnePercentLow ? Volatile.Read(ref _frameTimes)?.GetValue(source, now, Volatile.Read(ref _targetGeneration)) : null;
+        }
+
+        internal FrameStatistics GetFrameStatistics(int refreshMilliseconds, bool graph)
+        {
+            QueryPerformanceCounter(out long now);
+            int source = 0;
+            long primary = Volatile.Read(ref _lastPresentTimestamp), fallback = Volatile.Read(ref _fallbackLastPresentTimestamp);
+            if (_running && primary > 0 && now >= primary && now - primary <= _staleValueTicks && Volatile.Read(ref _latestFps) >= 0) source = 1;
+            else if (_running && fallback > 0 && now >= fallback && now - fallback <= _staleValueTicks && Volatile.Read(ref _fallbackLatestFps) >= 0) source = 2;
+            return Volatile.Read(ref _frameTimes)?.GetStatistics(source, now, Volatile.Read(ref _targetGeneration), refreshMilliseconds, graph) ?? default(FrameStatistics);
         }
 
         internal void FlushIfNeeded(int intervalMilliseconds)

@@ -8,7 +8,7 @@ namespace TrayTemps
     internal static class OsdPresets
     {
         private const int MaximumFileSize = 1024 * 1024;
-        internal static readonly string[] Names = { "Classic stack (default)", "Horizontal dashboard", "Minimal transparent" };
+        internal static readonly string[] Names = { "Classic stack", "Horizontal dashboard", "Minimal transparent" };
         private static readonly Lazy<OsdConfiguration>[] Embedded =
         {
             new Lazy<OsdConfiguration>(() => ReadEmbedded(1)),

@@ -7,7 +7,8 @@ TrayTemps is a lightweight Windows utility for monitoring **CPU and GPU temperat
 - Separate or combined tray icons, custom colors, temperature-based colors and temperature alerts.
 - Current, minimum and maximum temperatures; CPU/GPU load; RAM and VRAM usage.
 - Customizable, click-through OSD with labels, metric groups, fonts, colors, layout and a global hotkey.
-- Built-in FPS counter and optional 1% Low metric using Windows ETW, with a configurable refresh interval.
+- Built-in FPS counter, 1% Low, average FPS, frametime and a small frametime graph using Windows ETW.
+- Optional performance history with CPU/GPU graphs and enabled OSD metrics, retained for up to 30 minutes.
 - Optional FPS limiter with a default cap, per-executable profiles, process exclusions and a toggle hotkey.
 - Detailed CPU, GPU, memory, motherboard, BIOS and storage information, including SMART data when available.
 - Light/dark themes, a resizable DPI-aware window, start minimized to tray, optional Windows startup and update checking.
@@ -25,23 +26,29 @@ TrayTemps is a lightweight Windows utility for monitoring **CPU and GPU temperat
 3. Enable **OSD** and open its gear button to choose the metrics and appearance.
 4. Enable **FPS limiter** to access its gear button and configure caps and profiles. The limiter is off by default.
 
-The OSD can show CPU/GPU temperatures and load, RAM/VRAM usage, FPS and the current time. It is click-through and does not take focus from other applications. Its FPS counter works independently of the limiter and needs no external FPS overlay.
+The OSD can show CPU/GPU temperatures and load, RAM/VRAM usage, FPS statistics, frametime and the current time. It is click-through and does not take focus from other applications. Its FPS counter works independently of the limiter and needs no external FPS overlay.
 
 In **OSD Settings → Metrics**, each row has a visibility checkbox, an editable **Label**, and an editable **Group**. Double-click Label or Group to edit, press Enter or leave the cell to commit, or Esc to cancel. F2 edits the label; Tab switches between the two cells. Empty labels reserve no label width or label/value gap. Right-click while editing for Unicode icons, clipboard actions, or Reset label.
 
 Metrics with matching group names share one OSD item. Group names ignore surrounding whitespace and case; an empty Group cell displays the metric separately. Disabled metrics retain their membership and appearance preferences. Each member keeps its own font, label, and colors.
 
-In **Appearance**, all nine metrics have independent font family, font size, label color, and value color settings. The OSD/background transparency sliders and background color are below the list. Transparency percentages increase as the corresponding surface becomes more transparent; existing saved opacity values retain the same visual appearance.
+In **Appearance**, all twelve metrics have independent font family, font size, label color, and value color settings. The OSD/background transparency sliders and background color are below the list. Transparency percentages increase as the corresponding surface becomes more transparent; existing saved opacity values retain the same visual appearance.
 
-In **Layout**, the order tree shows individual metrics and named groups. Up/Down moves a selected group or standalone metric; selecting a group member changes its order inside the group. Select a group to edit its optional **Group label**. A blank group label hides that caption. Group names identify membership and are not automatically displayed as captions.
+In **Layout**, the order tree shows individual metrics and named groups. Up/Down moves a selected group or standalone metric; selecting a group member changes its order inside the group. Each group's name from **Metrics → Group** is also its OSD caption. Select a standalone metric or group to edit its **Label/Value Gap**; fresh settings and embedded presets start at 10 px.
 
-The **Group separator** field accepts text, Unicode icons, or spaces and uses the same right-click icon menu. Empty uses one space, or two between FPS and 1% Low. The FPS/1% Low pair also adds one space on each side of its separator. Explicit whitespace is preserved, and separators appear only between enabled group members. The separator inherits the preceding member's font and value color. A group label inherits its first enabled member's font and label color.
+Grouped metrics use one built-in space between fixed value slots. **Grouped values gap** in Layout can increase this from 100% to 200%, preserving numeric padding and the existing extra spacing between FPS and 1% Low. A group caption uses its first enabled member's font and label color. Old presets and settings still load; separate group captions and custom separators are ignored.
 
-In **Presets**, load one of three built-in layouts or load/save custom JSON presets. **Classic stack** is the default layout; OSD remains off by default. Loading previews the layout while preserving the current OSD enable state and shortcut; click **Save** to apply it or close to discard.
+Numeric values keep fixed slots with leading padding: four digits for FPS, three for temperatures/load, and at least `xx.xxGB` for RAM/VRAM. **Row spacing: 0** removes extra font leading while retaining glyph and outline clearance; positive spacing keeps its existing behavior.
 
-**1% Low** can be selected independently of FPS, displayed separately, or assigned to any group. It uses the existing FPS monitoring session even when FPS is hidden and the limiter is off. The **FPS spacing** control applies to both FPS and 1% Low label/value pairs. Existing settings migrate their former CPU/GPU groups and enabled FPS/low pairing automatically, preserving saved labels, fonts, colors, and ordering.
+In **Presets**, load one of three built-in layouts or load/save custom JSON presets. Fresh settings start with CPU/GPU temperatures selected, white 10 pt labels and values, and OSD off. Presets are loaded explicitly. Loading previews the layout while preserving the current OSD enable state and shortcut; click **Save** to apply it or close to discard.
 
-The value uses the latest 10 seconds of accepted frame intervals from the current FPS stream. After at least 100 intervals, it averages the slowest 1% (count rounded up) and converts that average to FPS. A 20 ms average gives 50 FPS. Calculation runs at most once per second. `N/A` indicates warming up, stale data or an unavailable complete window, matching the regular FPS metric; process/stream changes and OSD OFF reset history. Different tools use different definitions of 1% low, so compare results using the same method. This option works with the FPS limiter off.
+**1% Low** can be selected independently of FPS, displayed separately, or assigned to any group. It uses the existing FPS monitoring session even when FPS is hidden and the limiter is off. Standalone FPS and 1% Low have individual gap settings in Layout. Existing settings migrate their former CPU/GPU groups and enabled FPS/low pairing automatically, preserving saved labels, fonts, colors, and ordering.
+
+The value uses the latest 10 seconds of accepted frame intervals from the current FPS stream. After at least 100 intervals, it averages the slowest 1% (count rounded up) and converts that average to FPS. A 20 ms average gives 50 FPS. Calculation runs at most once per second. `N/A` indicates warming up, stale data or an unavailable complete window, matching the regular FPS metric. Process/stream changes reset frame statistics; OSD OFF stops capture unless history recording still needs it. Different tools use different definitions of 1% low, so compare results using the same method. This option works with the FPS limiter off.
+
+**Average FPS** uses the latest 10 seconds of accepted intervals, after a one-second warm-up. Its standalone label/value gap is set in Layout. **Frametime** shows the mean accepted interval over the FPS refresh window in milliseconds. The standalone **Frametime graph** shows ten seconds in 100 ms buckets, retaining peaks alongside averages. All three are off by default and use the same capture session.
+
+Click the graph icon beside **Temperatures and usage** to open the resizable **Performance history** window. **Record history** is off by default; when checked, collection continues with the window closed and with OSD disabled. CPU/GPU temperatures and usage are always recorded; additional numeric metrics follow the OSD metric selections. The 1/5/10/30-minute selector changes only the displayed range. Recording can be paused without losing samples, and Clear empties the graphs. Up to 30 minutes stay in memory until TrayTemps exits; only the recording preference, range and window size are saved. Application/source changes and missing readings break graph lines.
 
 ## FPS limiter
 

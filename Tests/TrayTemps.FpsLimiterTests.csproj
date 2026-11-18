@@ -28,6 +28,8 @@
     <Compile Include="GameDetectionTests.cs"/>
     <Compile Include="FrameTimeTests.cs"/>
     <Compile Include="OsdMetricListTests.cs"/>
+    <Compile Include="OsdSpacingTests.cs"/>
+    <Compile Include="PerformanceHistoryTests.cs"/>
     <Compile Include="ReviewTests.cs"/>
     <Compile Include="HandoverTests.cs"/>
   </ItemGroup>

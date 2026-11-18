@@ -4,12 +4,35 @@ using System.Drawing;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
 namespace TrayTemps
 {
+    // An explicitly empty settings section has no legacy appearance to preserve.
+    // Keep ordinary nonempty objects on the existing migration path.
+    internal sealed class OsdSettingsJsonConverter : JsonConverter<OsdConfiguration>
+    {
+        public override OsdConfiguration Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            if (reader.TokenType == JsonTokenType.StartObject)
+            {
+                var lookahead = reader;
+                if (lookahead.Read() && lookahead.TokenType == JsonTokenType.EndObject)
+                {
+                    reader = lookahead;
+                    return OsdConfiguration.CreateAppDefault();
+                }
+            }
+            return JsonSerializer.Deserialize<OsdConfiguration>(ref reader, options);
+        }
+
+        public override void Write(Utf8JsonWriter writer, OsdConfiguration value, JsonSerializerOptions options) =>
+            JsonSerializer.Serialize(writer, value, options);
+    }
+
     public enum OsdPosition
     {
         TopLeft,
@@ -47,7 +70,10 @@ namespace TrayTemps
         VramUsage,
         Fps,
         CurrentTime,
-        FpsOnePercentLow
+        FpsOnePercentLow,
+        AverageFps,
+        FrameTime,
+        FrameTimeGraph
     }
 
     [Flags]
@@ -63,12 +89,22 @@ namespace TrayTemps
     {
         internal static OsdConfiguration CreateAppDefault()
         {
-            var config = OsdPresets.LoadEmbedded(0);
-            config.Enabled = false;
+            var config = new OsdConfiguration { Enabled = false, ShowCpu = true, ShowGpu = true, LabelValueSpacing = 10,
+                RowsSpacing = 5, ColumnsSpacing = 20, ScreenMargin = 10, Columns = 1,
+                ItemOrder = "CpuTemperature,GpuTemperature,CpuUsage,GpuUsage,RamUsage,VramUsage,Fps,FpsOnePercentLow,CurrentTime,AverageFps,FrameTime,FrameTimeGraph" };
+            config.LabelOverrides = new Dictionary<string, string>(StringComparer.Ordinal);
+            config.MetricGroups = new Dictionary<string, string>(StringComparer.Ordinal);
+            config.MetricStyles = new Dictionary<string, OsdMetricStyle>(StringComparer.Ordinal);
+            foreach (string key in OsdMetricDefinitions.Keys)
+            {
+                config.LabelOverrides[key] = OsdMetricDefinitions.DefaultLabel(config, key);
+                config.MetricStyles[key] = new OsdMetricStyle { FontFamily = OsdFontHelper.EmbeddedJetBrainsMonoExtraBoldDisplayName,
+                    FontSize = 10, LabelColor = Color.White.ToArgb(), ValueColor = Color.White.ToArgb() };
+            }
             return config;
         }
 
-        private int _labelValueSpacing = 15;
+        private int _labelValueSpacing = 10;
         private bool _hasExplicitLabelValueSpacing;
 
         public bool Enabled { get; set; }
@@ -95,6 +131,9 @@ namespace TrayTemps
         public bool ShowFps { get; set; }
         public bool ShowFpsOnePercentLow { get; set; }
         public bool ShowCurrentTime { get; set; }
+        public bool ShowAverageFps { get; set; }
+        public bool ShowFrameTime { get; set; }
+        public bool ShowFrameTimeGraph { get; set; }
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public decimal? FpsRefreshIntervalSeconds { get; set; }
         public bool CombineTemperatureAndUsage { get; set; }
@@ -111,10 +150,13 @@ namespace TrayTemps
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public Dictionary<string, string> LabelOverrides { get; set; }
         public Dictionary<string, string> MetricGroups { get; set; }
+        // Retained for old settings/preset JSON; captions now come from MetricGroups.
         public Dictionary<string, string> GroupLabels { get; set; }
         // Legacy grouped children hid captions while retaining standalone labels.
         public Dictionary<string, string> GroupedLabelOverrides { get; set; }
         public Dictionary<string, OsdMetricStyle> MetricStyles { get; set; }
+        public Dictionary<string, int> MetricLabelValueGaps { get; set; } = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        // Retained for old JSON; rendering always uses built-in group spacing.
         public string GroupSeparator { get; set; }
         public int LabelValueSpacing
         {
@@ -131,6 +173,7 @@ namespace TrayTemps
 
         public int RowsSpacing { get; set; } = 5;
         public int ColumnsSpacing { get; set; } = 20;
+        public int GroupedValuesGapPercent { get; set; } = 100;
 
         // Nullable legacy properties allow existing settings to migrate to the universal value.
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -169,6 +212,11 @@ namespace TrayTemps
             }
             if (GroupedLabelOverrides != null) clone.GroupedLabelOverrides = new Dictionary<string, string>(GroupedLabelOverrides, StringComparer.Ordinal);
             if (MetricStyles != null) clone.MetricStyles = MetricStyles.ToDictionary(pair => pair.Key, pair => pair.Value?.Clone(), StringComparer.Ordinal);
+            if (MetricLabelValueGaps != null)
+            {
+                clone.MetricLabelValueGaps = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                foreach (var pair in MetricLabelValueGaps) clone.MetricLabelValueGaps[pair.Key] = pair.Value;
+            }
             return clone;
         }
 
@@ -318,6 +366,7 @@ namespace TrayTemps
         internal string Key { get; set; }
         internal OsdMetricStyle Style { get; set; }
         internal List<OsdMetric> Members { get; set; }
+        internal FrameGraphPoint[] Graph { get; set; }
         internal string ValueWidthTemplate { get; set; }
         internal string AlternateValueWidthTemplate { get; set; }
         internal int? LabelValueSpacingOverride { get; set; }
@@ -467,7 +516,10 @@ namespace TrayTemps
             OsdItemKind.VramUsage,
             OsdItemKind.Fps,
             OsdItemKind.FpsOnePercentLow,
-            OsdItemKind.CurrentTime
+            OsdItemKind.CurrentTime,
+            OsdItemKind.AverageFps,
+            OsdItemKind.FrameTime,
+            OsdItemKind.FrameTimeGraph
         };
 
         internal static List<OsdItemKind> Parse(string value)
@@ -510,6 +562,9 @@ namespace TrayTemps
                 case OsdItemKind.VramUsage: return "VRAM usage";
                 case OsdItemKind.Fps: return "FPS";
                 case OsdItemKind.FpsOnePercentLow: return "1% Low";
+                case OsdItemKind.AverageFps: return "Average FPS";
+                case OsdItemKind.FrameTime: return "Frametime";
+                case OsdItemKind.FrameTimeGraph: return "Frametime graph";
                 case OsdItemKind.CurrentTime: return "Current time";
                 default: return item.ToString();
             }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
@@ -10,12 +10,12 @@ namespace TrayTemps
     public partial class OsdSettingsDialog
     {
         private OsdConfiguration _metricDraft = new OsdConfiguration();
-        private bool _loadingMetricList, _loadingLabelEditor, _endingLabelEdit, _loadingAppearance, _loadingGroupCaption;
+        private bool _loadingMetricList, _loadingLabelEditor, _endingLabelEdit, _loadingAppearance;
         private bool _handlingMetricCheck;
         private string _editingMetricKey, _originalLabelText;
         private int _editingColumn = 1;
         private Color _disabledMetricColor = Color.Gray;
-        private Font _appearanceBodyFont, _appearanceHeaderFont, _paletteFont;
+        private Font _appearanceBodyFont, _appearanceHeaderFont;
 
         private void InitializeAppearanceFonts()
         {
@@ -24,14 +24,12 @@ namespace TrayTemps
             Font designerHeaderFont = appearanceGrid.ColumnHeadersDefaultCellStyle.Font ?? appearanceGrid.Font;
             _appearanceBodyFont = EmbeddedFonts.CreateUiFont(appearanceGrid.DefaultCellStyle.Font ?? appearanceGrid.Font);
             _appearanceHeaderFont = new Font(EmbeddedFonts.ExtraBold, designerHeaderFont.SizeInPoints, FontStyle.Regular, GraphicsUnit.Point);
-            _paletteFont = new Font("Segoe UI Emoji", 9F);
         }
 
         private void DisposeAppearanceFonts()
         {
             _appearanceBodyFont?.Dispose(); _appearanceBodyFont = null;
             _appearanceHeaderFont?.Dispose(); _appearanceHeaderFont = null;
-            _paletteFont?.Dispose(); _paletteFont = null;
         }
 
         private void PopulateMetricList()
@@ -75,7 +73,10 @@ namespace TrayTemps
                 item.SubItems[1].Text = OsdMetricDefinitions.ResolveLabel(_metricDraft, key);
                 item.SubItems[2].Text = OsdMetricDefinitions.Group(_metricDraft, key);
                 item.ForeColor = metricsList.ForeColor;
-                item.ToolTipText = "Double-click Label or Group to edit. Empty group = separate metric.";
+                item.ToolTipText = key == "FrameTimeGraph" ? "Last 10 seconds; peaks preserved. Standalone row; no group. History recording is independent." :
+                    key == "AverageFps" ? "Rolling 10-second FPS average; warms up after 1 second. Set its gap in Layout's Display Order list." :
+                    key == "FrameTime" ? "Mean frame interval over the FPS refresh window, in ms. Independent of history recording." :
+                    "Edit Label or Group. Group names are OSD captions; empty = separate metric.";
             }
         }
 
@@ -124,6 +125,7 @@ namespace TrayTemps
             EndMetricLabelEdit(true);
             if (metricsList.SelectedItems.Count != 1 || column < 1 || column > 2) return;
             var item = metricsList.SelectedItems[0]; item.EnsureVisible();
+            if (column == 2 && (string)item.Tag == "FrameTimeGraph") return;
             _editingMetricKey = (string)item.Tag; _editingColumn = column;
             _originalLabelText = item.SubItems[column].Text;
             _loadingLabelEditor = true;
@@ -202,8 +204,6 @@ namespace TrayTemps
                     string key = OsdMetricDefinitions.Keys[i]; var style = _metricDraft.MetricStyles[key];
                     int row = appearanceGrid.Rows.Add(OsdMetricDefinitions.Names[i], style.FontFamily, style.FontSize.ToString(CultureInfo.InvariantCulture), "🎨", "🎨");
                     appearanceGrid.Rows[row].Cells[1].ToolTipText = style.FontFamily;
-                    appearanceGrid.Rows[row].Cells[3].Style.Font = _paletteFont;
-                    appearanceGrid.Rows[row].Cells[4].Style.Font = _paletteFont;
                     appearanceGrid.Rows[row].Tag = key; RefreshColorCells(appearanceGrid.Rows[row], style);
                 }
             }
@@ -331,31 +331,63 @@ namespace TrayTemps
         }
         private void UpdateHardwareVisibility()
         {
-            bool fps = _metricDraft.ShowFps || _metricDraft.ShowFpsOnePercentLow;
+            bool fps = OsdMetricDefinitions.NeedsFrames(_metricDraft);
             fpsRefreshIntervalLabel.Enabled = fpsRefreshIntervalValue.Enabled = fps;
-            fpsLabelValueSpacingLabel.Enabled = fpsLabelValueSpacing.Enabled = fps;
+            UpdateSelectedMetricGap();
         }
-        private void GroupSeparator_TextChanged(object sender, EventArgs e) => PreviewVisualSettings();
-        private void GroupCaption_TextChanged(object sender, EventArgs e)
+        private string SelectedGapKey() => itemOrder.SelectedNode?.Tag as string;
+        private void ItemOrder_AfterSelect(object sender, TreeViewEventArgs e) => UpdateSelectedMetricGap();
+        private void ItemOrder_NodeMouseClick(object sender, TreeNodeMouseClickEventArgs e)
         {
-            if (_loadingGroupCaption || !_configurationLoaded || itemOrder.SelectedNode == null) return;
-            string tag = (string)itemOrder.SelectedNode.Tag;
-            if (tag != null && tag.StartsWith("Group:", StringComparison.Ordinal))
-            {
-                _metricDraft.GroupLabels[tag.Substring(6)] = OsdMetricDefinitions.Caption(groupCaption.Text);
-                PreviewVisualSettings();
-            }
+            if (e.Button != MouseButtons.Left || e.X < itemOrder.ClientSize.Width - 78 || e.Node.Parent != null) return;
+            if (!ReferenceEquals(itemOrder.SelectedNode, e.Node)) itemOrder.SelectedNode = e.Node;
+            if (!fpsLabelValueSpacing.Enabled) return;
+            fpsLabelValueSpacing.Focus();
+            fpsLabelValueSpacing.DroppedDown = true;
         }
-        private void ItemOrder_AfterSelect(object sender, TreeViewEventArgs e)
+        private void ItemOrder_DrawNode(object sender, DrawTreeNodeEventArgs e)
         {
-            _loadingGroupCaption = true;
-            try
-            {
-                string tag = e.Node?.Tag as string;
-                groupCaption.Enabled = groupCaptionLabel.Enabled = tag != null && tag.StartsWith("Group:", StringComparison.Ordinal);
-                groupCaption.Text = groupCaption.Enabled && _metricDraft.GroupLabels.TryGetValue(tag.Substring(6), out string text) ? text : "";
-            }
-            finally { _loadingGroupCaption = false; }
+            // Leave the native expand/collapse buttons and hierarchy lines visible.
+            var bounds = Rectangle.FromLTRB(e.Bounds.Left, e.Bounds.Top, itemOrder.ClientSize.Width, e.Bounds.Bottom);
+            bool selected = (e.State & TreeNodeStates.Selected) != 0;
+            Color back = selected ? SystemColors.Highlight : itemOrder.BackColor;
+            Color fore = selected ? SystemColors.HighlightText : e.Node.ForeColor;
+            using (var brush = new SolidBrush(back)) e.Graphics.FillRectangle(brush, bounds);
+            int gapColumnLeft = itemOrder.ClientSize.Width - 78;
+            var labelBounds = Rectangle.FromLTRB(e.Bounds.Left, e.Bounds.Top, Math.Max(e.Bounds.Left, gapColumnLeft - 6), e.Bounds.Bottom);
+            TextRenderer.DrawText(e.Graphics, e.Node.Text, itemOrder.Font, labelBounds, fore,
+                TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
+            string value = GetOrderGapText(e.Node);
+            TextRenderer.DrawText(e.Graphics, value, itemOrder.Font,
+                Rectangle.FromLTRB(gapColumnLeft, e.Bounds.Top, itemOrder.ClientSize.Width - 4, e.Bounds.Bottom), fore,
+                TextFormatFlags.Right | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix);
+        }
+        private string GetOrderGapText(TreeNode node)
+        {
+            if (node.Parent != null) return "—";
+            string key = node.Tag as string;
+            if (string.IsNullOrEmpty(key)) return "—";
+            int gap = _metricDraft.MetricLabelValueGaps != null && _metricDraft.MetricLabelValueGaps.TryGetValue(key, out int saved)
+                ? saved : _metricDraft.LabelValueSpacing;
+            return gap + " px";
+        }
+        private void UpdateSelectedMetricGap()
+        {
+            string key = itemOrder.SelectedNode?.Parent == null ? SelectedGapKey() : null;
+            bool enabled = key != null;
+            fpsLabelValueSpacingLabel.Enabled = fpsLabelValueSpacing.Enabled = enabled;
+            itemOrder.Invalidate();
+            if (!enabled) return;
+            int gap = _metricDraft.MetricLabelValueGaps.TryGetValue(key, out int saved) ? saved : _metricDraft.LabelValueSpacing;
+            _loadingLabelEditor = true; try { SelectNumericOption(fpsLabelValueSpacing, gap); } finally { _loadingLabelEditor = false; }
+        }
+        private void MetricLabelGapChanged(object sender, EventArgs e)
+        {
+            if (_loadingLabelEditor || !_configurationLoaded) return;
+            string key = SelectedGapKey(); if (key == null) return;
+            _metricDraft.MetricLabelValueGaps[key] = (int)GetNumericOptionValue(fpsLabelValueSpacing, 10);
+            itemOrder.Invalidate();
+            PreviewVisualSettings();
         }
         private void RebuildItemOrder()
         {

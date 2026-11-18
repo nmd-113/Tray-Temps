@@ -40,7 +40,9 @@
     public int NormalTempColor { get; set; }
     public int WarmTempColor { get; set; }
     public int HotTempColor { get; set; }
+    [System.Text.Json.Serialization.JsonConverter(typeof(TrayTemps.OsdSettingsJsonConverter))]
     public TrayTemps.OsdConfiguration Osd { get; set; } = TrayTemps.OsdConfiguration.CreateAppDefault();
     public TrayTemps.FpsLimiterConfiguration FpsLimiter { get; set; } = new TrayTemps.FpsLimiterConfiguration();
+    public TrayTemps.HistorySettings History { get; set; } = new TrayTemps.HistorySettings();
 
 }

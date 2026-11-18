@@ -45,7 +45,8 @@ internal static class ReleaseSafetyTests
             Groups();
             await Polling();
             Settings(root);
-            Check(OsdPresets.LoadEmbedded(2).GroupLabels["GPU"] == "GPU:", "Minimal transparent identifies its GPU group correctly");
+            Check(OsdMetricDefinitions.Group(OsdPresets.LoadEmbedded(2), "GpuTemperature") == "GPU:",
+                "Minimal transparent identifies its GPU group correctly through the active group name");
         }
         finally { Directory.Delete(root, true); }
         Console.WriteLine("ALL RELEASE SAFETY CHECKS PASSED: " + _checks);
