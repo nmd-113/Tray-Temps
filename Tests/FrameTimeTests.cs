@@ -186,7 +186,13 @@ internal static class FrameTimeTests
 
     private sealed class Host : MainForm { protected override void OnLoad(EventArgs e) { } }
     private static object HostField(MainForm host, string name) => typeof(MainForm).GetField(name, Fields).GetValue(host);
-    private static void UpdateOsd(MainForm host) => typeof(MainForm).GetMethod("UpdateOsd", Fields).Invoke(host, new object[] { (float?)50, (float?)60 });
+    private static void UpdateOsd(MainForm host, OsdConfiguration configuration)
+    {
+        // Apply a fresh snapshot, as Save/preview do in the application. In-place
+        // test edits otherwise bypass configuration-based frame cache invalidation.
+        typeof(MainForm).GetField("_osdConfiguration", Fields).SetValue(host, configuration.Clone());
+        typeof(MainForm).GetMethod("UpdateOsd", Fields).Invoke(host, new object[] { (float?)50, (float?)60 });
+    }
 
     private static OsdMetric LastMetric(MainForm host, string key) =>
         ((System.Collections.Generic.List<OsdMetric>)HostField(host, "_lastOsdMetrics"))
@@ -203,19 +209,20 @@ internal static class FrameTimeTests
             game.OutputDataReceived += (s, e) => { if (e.Data != null) lock (lines) lines.Add(e.Data); };
             host.Show();
             var config = new OsdConfiguration { ShowCpu = false, ShowGpu = false, ShowFps = true, FontSize = 32f, FpsRefreshIntervalSeconds = 0.25m };
+            config = host.NormalizeOsdConfiguration(config);
             typeof(MainForm).GetField("_osdConfiguration", Fields).SetValue(host, config);
             var enabled = (CheckBox)HostField(host, "osdEnable");
             try
             {
                 game.Start(); game.BeginOutputReadLine();
                 await Task.Delay(600); await Suite.SelectForeground(game);
-                enabled.Checked = true; UpdateOsd(host);
+                enabled.Checked = true; UpdateOsd(host, config);
                 await Task.Delay(2000);
                 var monitor = (ForegroundFpsMonitor)HostField(host, "_fpsMonitor");
                 Check(monitor != null && monitor.GetLatestFps().HasValue && (int)Field(monitor, "_targetProcessId") == game.Id,
                     "existing ETW session supplies FPS for the real foreground fixture");
                 Check(Field(monitor, "_frameTimes") == null, "live baseline has no optional history");
-                config.ShowFpsOnePercentLow = true; UpdateOsd(host);
+                config.ShowFpsOnePercentLow = true; UpdateOsd(host, config);
                 await Task.Delay(2200);
                 monitor.GetLatestValues(out int? fps, out int? low);
                 var metric = (OsdMetric)LastMetric(host, "FpsOnePercentLow");
@@ -224,27 +231,27 @@ internal static class FrameTimeTests
                 Console.WriteLine("LIVE_FPS=" + fps + " ONE_PERCENT_LOW=" + low + " TEXT=" + metric.Value + " " + metric.Label + " " + metric.Value);
                 Check(HostField(host, "_fpsLimiterService") == null && ReferenceEquals(monitor, HostField(host, "_fpsMonitor")),
                     "enabling the low metric reuses the FPS session and creates no limiter");
-                config.ShowFps = false; UpdateOsd(host);
+                config.ShowFps = false; UpdateOsd(host, config);
                 await Task.Delay(1100);
                 Check(LastMetric(host, "Fps") == null && LastMetric(host, "FpsOnePercentLow").Value != "N/A" &&
                     ReferenceEquals(monitor, HostField(host, "_fpsMonitor")), "standalone 1% Low refreshes with FPS hidden using the same ETW session");
                 config.ShowFps = true;
                 config.MetricGroups["Fps"] = "CPU"; config.MetricGroups["FpsOnePercentLow"] = "GPU";
                 config.ShowCpu = true; config.ShowGpu = true; config.MetricGroups["CpuTemperature"] = "CPU"; config.MetricGroups["GpuTemperature"] = "GPU";
-                UpdateOsd(host); await Task.Delay(600);
+                UpdateOsd(host, config); await Task.Delay(600);
                 Check(LastMetric(host, "CpuTemperature").Value == "50°C" && LastMetric(host, "GpuTemperature").Value == "60°C" &&
                     LastMetric(host, "FpsOnePercentLow").Value != "N/A", "FPS refresh preserves hardware values in two separate arbitrary groups");
                 config.ShowCpu = false; config.ShowGpu = false; config.MetricGroups.Clear();
                 config.LabelOverrides = new System.Collections.Generic.Dictionary<string, string> { ["Fps"] = "", ["FpsOnePercentLow"] = "Slow" };
-                UpdateOsd(host);
+                UpdateOsd(host, config);
                 metric = (OsdMetric)LastMetric(host, "FpsOnePercentLow");
                 Check(LastMetric(host, "Fps").Label == "" && metric.Label == "Slow" && metric.Value != null,
                     "live custom low label and blank FPS label retain both measurements");
-                config.LabelOverrides["FpsOnePercentLow"] = ""; UpdateOsd(host);
+                config.LabelOverrides["FpsOnePercentLow"] = ""; UpdateOsd(host, config);
                 metric = (OsdMetric)LastMetric(host, "FpsOnePercentLow");
                 Check(LastMetric(host, "Fps").Label == "" && metric.Label == "" && metric.Value != null,
                     "live blank labels retain both FPS values without an additional caption");
-                config.LabelOverrides.Clear(); UpdateOsd(host);
+                config.LabelOverrides.Clear(); UpdateOsd(host, config);
                 var overlay = (OsdOverlay)HostField(host, "_osdOverlay");
                 Size stableSize = overlay.Size;
                 using (var bitmap = new Bitmap(overlay.Width, overlay.Height))
@@ -258,13 +265,13 @@ internal static class FrameTimeTests
                 Check(HostField(host, "_fpsMonitor") == null && HostField(host, "_osdOverlay") == null && Field(monitor, "_frameTimes") == null,
                     "live OSD OFF stops capture and drops low history");
                 await Task.Delay(250);
-                enabled.Checked = true; UpdateOsd(host);
+                enabled.Checked = true; UpdateOsd(host, config);
                 var replacement = (ForegroundFpsMonitor)HostField(host, "_fpsMonitor");
                 Check(replacement != null && !ReferenceEquals(replacement, monitor), "OSD ON creates a fresh monitoring session");
                 await Task.Delay(2200);
                 replacement.GetLatestValues(out fps, out low);
                 Check(fps.HasValue && low.HasValue, "OSD OFF/ON warms up a fresh low metric without stale values");
-                config.ShowFpsOnePercentLow = false; UpdateOsd(host);
+                config.ShowFpsOnePercentLow = false; UpdateOsd(host, config);
                 Check(Field(replacement, "_frameTimes") == null && LastMetric(host, "FpsOnePercentLow") == null,
                     "live option OFF removes extra text and releases history while FPS continues");
                 Check(replacement.GetLatestFps().HasValue, "ordinary FPS remains available after low collection is disabled");
@@ -289,8 +296,7 @@ internal static class FrameTimeTests
             var configuration = new OsdConfiguration { FontFamily = family, FontSize = size };
             var metric = new OsdMetric("FPS", "144", Color.White)
             {
-                ValueWidthTemplate = "####",
-                LabelValueSpacingOverride = 15
+                ValueWidthTemplate = "####"
             };
             overlay.UpdateDisplay(configuration, new[] { metric }, new Rectangle(0, 0, 4000, 2000));
             bitmap.SetResolution(overlay.DeviceDpi, overlay.DeviceDpi);

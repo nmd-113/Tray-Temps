@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
@@ -10,8 +11,12 @@ namespace TrayTemps
         private const int CsDropShadow = 0x00020000;
         private const int WmNcLButtonDown = 0x00A1;
         private const int WmNcHitTest = 0x0084;
+        private const int DataRefreshIntervalMilliseconds = 500;
         private readonly MainForm _host;
+        private readonly HistoryGraphControl[] _graphs;
         private bool _loading;
+        private long _lastDataVersion = -1, _lastDataRefresh;
+        private int _lastGraphOptions = -1;
         [DllImport("user32.dll")] private static extern bool ReleaseCapture();
         [DllImport("user32.dll")] private static extern IntPtr SendMessage(IntPtr window, int message, IntPtr wParam, IntPtr lParam);
         protected override CreateParams CreateParams
@@ -48,7 +53,11 @@ namespace TrayTemps
             else if (top) m.Result = (IntPtr)12;
             else if (bottom) m.Result = (IntPtr)15;
         }
-        public PerformanceHistoryDialog() { InitializeComponent(); }
+        public PerformanceHistoryDialog()
+        {
+            InitializeComponent();
+            _graphs = new[] { temperatureGraph, usageGraph, fpsGraph, memoryGraph, frameGraph };
+        }
         internal PerformanceHistoryDialog(MainForm host) : this()
         {
             _host = host;
@@ -60,7 +69,7 @@ namespace TrayTemps
             Icon = host.Icon;
             _loading = false;
             host.ThemeChanged += ThemeChanged;
-            ApplyTheme(); RefreshGraphs();
+            ApplyTheme();
         }
         private void ThemeChanged(object sender, EventArgs e) => ApplyTheme();
         private void UnsubscribeTheme() { if (_host != null) _host.ThemeChanged -= ThemeChanged; }
@@ -80,7 +89,7 @@ namespace TrayTemps
             clear.FlatAppearance.MouseOverBackColor = theme.ButtonHover; clear.FlatAppearance.MouseDownBackColor = theme.ButtonDown;
             exitBtn.BackColor = theme.BarBack; exitBtn.ForeColor = theme.TitleText;
             exitBtn.FlatAppearance.BorderColor = theme.BarBack;
-            foreach (var graph in new[] { temperatureGraph, usageGraph, fpsGraph, memoryGraph, frameGraph })
+            foreach (var graph in _graphs)
             { graph.BackColor = theme.SurfaceBack; graph.ForeColor = theme.Text; }
             RefreshGraphs();
         }
@@ -144,10 +153,11 @@ namespace TrayTemps
             _host.SetHistoryRange(new[] { 1, 5, 10, 30 }[range.SelectedIndex]); RefreshGraphs();
         }
         private void Clear_Click(object sender, EventArgs e) { _host?.ClearHistory(); RefreshGraphs(); }
-        private void ViewTimer_Tick(object sender, EventArgs e) => RefreshGraphs();
-        private void RefreshGraphs()
+        private void ViewTimer_Tick(object sender, EventArgs e) => RefreshGraphView(forceData: false);
+        private void RefreshGraphs() => RefreshGraphView(forceData: true);
+        private void RefreshGraphView(bool forceData)
         {
-            if (_host == null || IsDisposed || WindowState == FormWindowState.Minimized) return;
+            if (_host == null || IsDisposed || WindowState == FormWindowState.Minimized || (!forceData && !Visible)) return;
             _loading = true;
             try
             {
@@ -155,7 +165,31 @@ namespace TrayTemps
                 range.SelectedIndex = Array.IndexOf(new[] { 1, 5, 10, 30 }, _host.HistoryPreferences.Minutes);
             }
             finally { _loading = false; }
-            _host.FillHistoryGraphs(temperatureGraph, usageGraph, fpsGraph, memoryGraph, frameGraph);
+            long now = Stopwatch.GetTimestamp();
+            // About one pixel of scrolling per view tick, bounded to 2–10 Hz.
+            // Long ranges do not need the expense of fast full-plot redraws.
+            int interval = Math.Max(100, Math.Min(500,
+                (int)Math.Round(_host.HistoryPreferences.Minutes * 60000d / temperatureGraph.PlotWidth)));
+            if (viewTimer.Interval != interval) viewTimer.Interval = interval;
+            long version = _host.HistoryVersion;
+            int options = _host.HistoryGraphOptions;
+            double end = _host.HistoryGraphEndTime, start = end - _host.HistoryPreferences.Minutes * 60;
+            bool expiredSamples = false;
+            foreach (var graph in _graphs) expiredSamples |= graph.OldestSampleTime < start;
+            if (forceData || options != _lastGraphOptions || _lastDataRefresh == 0 ||
+                ((version != _lastDataVersion || expiredSamples) &&
+                    (now - _lastDataRefresh) * 1000d / Stopwatch.Frequency >= DataRefreshIntervalMilliseconds))
+            {
+                _host.FillHistoryGraphs(temperatureGraph, usageGraph, fpsGraph, memoryGraph, frameGraph);
+                _lastDataVersion = version; _lastGraphOptions = options; _lastDataRefresh = now;
+            }
+            else
+            {
+                // Advance the time axis without copying/scanning every stored
+                // series again. Paused views keep identical bounds and do no paint.
+                foreach (var graph in _graphs)
+                    graph.SetTimeRange(start, end);
+            }
         }
     }
 }

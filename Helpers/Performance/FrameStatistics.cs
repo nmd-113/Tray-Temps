@@ -10,6 +10,7 @@ namespace TrayTemps
     {
         internal double? AverageFps, FrameTimeMs, PeakFrameTimeMs;
         internal FrameGraphPoint[] Graph;
+        internal long GraphTimestamp;
         internal long Source;
         internal int Version;
     }

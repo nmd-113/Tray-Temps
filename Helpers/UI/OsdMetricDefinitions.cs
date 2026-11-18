@@ -18,14 +18,7 @@ namespace TrayTemps
         internal static bool NeedsFrames(OsdConfiguration config) => config.ShowFps || config.ShowFpsOnePercentLow || NeedsTiming(config);
         internal static bool NeedsTiming(OsdConfiguration config) => config.ShowAverageFps || config.ShowFrameTime || config.ShowFrameTimeGraph;
 
-        // Built-in gap: one ordinary space; the FPS pair keeps its two base
-        // spaces and the existing additional space on either side.
-        internal static string Separator(OsdMetric preceding, OsdMetric following) => IsFpsPair(preceding, following) ? "    " : " ";
-
-        private static bool IsFpsPair(OsdMetric preceding, OsdMetric following) =>
-            preceding != null && following != null &&
-            (preceding.Key == "Fps" && following.Key == "FpsOnePercentLow" ||
-             preceding.Key == "FpsOnePercentLow" && following.Key == "Fps");
+        internal const string GroupValueSeparator = " ";
 
         internal static string SingleLine(string text, int limit, bool trim)
         {

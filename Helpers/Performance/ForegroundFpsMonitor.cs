@@ -348,6 +348,7 @@ namespace TrayTemps
                 return;
 
             long lastPresent = Volatile.Read(ref _lastPresentTimestamp);
+            long fallbackLastPresent = Volatile.Read(ref _fallbackLastPresentTimestamp);
             QueryPerformanceCounter(out long now);
             int value = Volatile.Read(ref _latestFps);
             int source = 0;
@@ -358,7 +359,6 @@ namespace TrayTemps
             }
             else
             {
-                long fallbackLastPresent = Volatile.Read(ref _fallbackLastPresentTimestamp);
                 int fallbackValue = Volatile.Read(ref _fallbackLatestFps);
                 if (fallbackLastPresent > 0 && now >= fallbackLastPresent &&
                     now - fallbackLastPresent <= _staleValueTicks && fallbackValue >= 0)
@@ -371,9 +371,11 @@ namespace TrayTemps
 
         internal FrameStatistics GetFrameStatistics(int refreshMilliseconds, bool graph)
         {
+            // Read timestamps before the clock: a concurrent Present arriving
+            // after a clock sample must not look future-dated and reset history.
+            long primary = Volatile.Read(ref _lastPresentTimestamp), fallback = Volatile.Read(ref _fallbackLastPresentTimestamp);
             QueryPerformanceCounter(out long now);
             int source = 0;
-            long primary = Volatile.Read(ref _lastPresentTimestamp), fallback = Volatile.Read(ref _fallbackLastPresentTimestamp);
             if (_running && primary > 0 && now >= primary && now - primary <= _staleValueTicks && Volatile.Read(ref _latestFps) >= 0) source = 1;
             else if (_running && fallback > 0 && now >= fallback && now - fallback <= _staleValueTicks && Volatile.Read(ref _fallbackLatestFps) >= 0) source = 2;
             return Volatile.Read(ref _frameTimes)?.GetStatistics(source, now, Volatile.Read(ref _targetGeneration), refreshMilliseconds, graph) ?? default(FrameStatistics);

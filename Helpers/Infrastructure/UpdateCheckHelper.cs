@@ -33,7 +33,9 @@ namespace TrayTemps
 
                 foreach (JsonElement tagElement in document.RootElement.EnumerateArray())
                 {
-                    if (!tagElement.TryGetProperty("name", out JsonElement nameElement) ||
+                    if (tagElement.ValueKind != JsonValueKind.Object ||
+                        !tagElement.TryGetProperty("name", out JsonElement nameElement) ||
+                        nameElement.ValueKind != JsonValueKind.String ||
                         !TryParseVersion(nameElement.GetString(), out Version tagVersion))
                     {
                         continue;

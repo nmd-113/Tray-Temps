@@ -68,7 +68,7 @@ namespace TrayTemps
             this.saveBtn.Size = new System.Drawing.Size(282, 34);
             this.saveBtn.TabIndex = 4;
             this.saveBtn.Tag = "TrayTemps.Font.ExtraBold";
-            this.saveBtn.Text = "💾 SAVE";
+            this.saveBtn.Text = "Save";
             this.saveBtn.UseVisualStyleBackColor = false;
             this.saveBtn.Click += new System.EventHandler(this.SaveBtn_Click);
             // 

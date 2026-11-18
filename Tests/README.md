@@ -2,25 +2,34 @@
 
 Build `Tray-Temps.sln` in Visual Studio. The managed test harness and native lifecycle test are built automatically; interactive tests are not run by the build.
 
-See [VALIDATION.md](VALIDATION.md) for the current build and compatibility summary. Raw logs, screenshots and recovery files are local diagnostics, not repository content.
+Raw logs, screenshots and recovery files are local diagnostics, not repository content. The [changelog](../CHANGELOG.md) records release changes; the sections below describe test coverage and compatibility limits.
 
 ## Focused checks
 
 From a Developer PowerShell after a Release/x64 build:
 
 ```powershell
+.\Tests\bin\Release\TrayTemps.FpsLimiterTests.exe --app-audit
 .\Tests\bin\Release\TrayTemps.FpsLimiterTests.exe --audit-fixes
 .\Tests\bin\Release\TrayTemps.FpsLimiterTests.exe --release-safety
 .\Tests\bin\Release\TrayTemps.FpsLimiterTests.exe --game-detection
 .\Tests\bin\Release\TrayTemps.FpsLimiterTests.exe --osd-spacing
 .\Tests\bin\Release\TrayTemps.FpsLimiterTests.exe --performance-history
+.\Tests\bin\Release\TrayTemps.FpsLimiterTests.exe --frametime-graph
+.\Tests\bin\Release\TrayTemps.FpsLimiterTests.exe --history-graph
 .\Tests\bin\Release\TrayTemps.FpsLimiterTests.exe --history-ui-audit
 .\Tests\VulkanLayerLifecycleTest\x64\Release\VulkanLayerLifecycleTest.exe
 ```
 
+The app-audit checks cover malformed update-response entries, native profile-list scrollbars and caption alignment with empty/populated lists through repeated resizing in both themes, hardware subtitle bounds, live-text selection and error recovery, unchanged CRLF samples, hidden/minimized polling, shutdown guards and completion after a dialog closes. They use controlled text factories and draft profiles; no real sensor queries, preferences or game attachments are involved.
+
+The frametime-graph checks reproduce slow frames and hitches spanning empty buckets, verify continuous clipped rendering and reset/stale boundaries, and compare cached frames pixel-for-pixel with uncached rendering at 96/144/192 DPI and transparent/translucent/opaque backgrounds. They also stress concurrent primary/fallback capture reads, check selection of the fast graph timer, independent numeric/history cadence, graph-disable cleanup and surface disposal, and report local graph-redraw timings. The live performance-history check additionally verifies graph scrolling between numeric refreshes using actual ETW capture.
+
+The history-graph checks cover visible zero/isolated/edge samples, continuous irregular readings, preserved missing/source/pause gaps, peak-preserving pixel bins, both themes and simulated 96/144/192 DPI. They also check adaptive presentation, bounded data refresh, snapshot reuse/expiry, immediate Clear, paused/hidden/minimized behavior and timer disposal, and report a local thirty-minute rendering benchmark.
+
 The audit checks exercise exclusions, cache cleanup, transactional candidate rejection (refusal, timeout, hook failure and exit), retry suppression, next-target recovery, full-path module identity and deferred loader-buffer cleanup. They use a mock injector, temporary payloads and child processes; they do not inject hooks, change user preferences or register Vulkan layers.
 
-The release-safety checks cover verified installation cleanup, preservation of unknown files and custom presets, locked-executable retries, safe write probes and atomic settings recovery, stable group ordering with hidden metrics, OSD-only RAM polling, and embedded preset captions. All filesystem fixtures are temporary; installers, user preferences and real games are not changed.
+The release-safety checks cover verified installation cleanup, preservation of unknown files and custom presets, locked-executable retries, safe write probes and atomic settings recovery, stable group ordering with hidden metrics, OSD-only RAM polling, and embedded preset captions. Uninstall regressions include a real running executable producing access denied, cleanup after exit, generated runtime configuration and numeric-PID temporary files, preserved unknown runtime files, rejected runtime links, and retained failure logs. All filesystem fixtures are temporary; installers, user preferences and real games are not changed.
 
 The game-detection checks cover custom-folder Steam/Epic SDK games, supported rendering runtimes, ordinary graphics applications, existing engine/store recognition, exclusions, delayed renderer loading, process identity and foreground changes, and shutdown while inspection is pending.
 
@@ -32,15 +41,17 @@ The native test runs the production layer against a controlled next layer: insta
 
 ## Integration and graphics
 
-The `--performance-history` mode checks rolling average FPS, refresh-window frametime, peak-preserving buckets, delayed ETW delivery, stale/source resets, allocation-free numeric reads, bounded history, settings migration, optional capture lifetime, closed-window recording, OSD refresh preservation, themes, DPI margins and standalone graph layout. Screenshots stay in the temporary folder. Recording preferences and real hardware are not changed.
+The `--performance-history` mode checks rolling average FPS, refresh-window frametime, peak-preserving buckets, delayed ETW delivery, stale/source resets, allocation-free numeric reads, bounded history, settings migration, optional capture lifetime, closed-window recording, OSD refresh preservation, themes, DPI margins and standalone graph layout. Graph-size coverage includes legacy and width-only defaults, independent width/height previews, Save/Cancel, preset files and loading, invalid imports, exact saved dimensions, rendered height bounds, geometry reuse, large captions, DPI scaling and narrow screens with multiple columns and zero/positive row gaps. Screenshots stay in the temporary folder. Recording preferences and real hardware are not changed.
 
 The `--history-ui-audit` mode checks history header alignment, graph widths, minimum/large window sizes, vertical scrolling, stable metric colors, light/dark legend contrast and hover colors, window sizing, OSD field alignment and per-row gap editing. It captures all four OSD pages at minimum and larger sizes in both themes; evidence stays in the temporary folder. Graph tests also cover larger fonts at simulated 96/120/144/192 DPI.
 
 The optional `--performance-history-live <absolute-D3D11-fixture-path>` mode checks actual ETW timing metrics with the limiter and OSD off, opening/closing the history window, continued recording, OSD graph rendering and shared-session cleanup. Keep keyboard/mouse idle while it selects the controlled fixture; no user settings or game files are changed.
 
+Use a fixture that remains active throughout the live check. A short-lived fixture can expire during ETW/desktop warm-up; allow at least 30 seconds when preparing one for this mode.
+
 The --metric-list mode checks three-column metric editing, group-name captions, group/member ordering, the five-column appearance grid, migration/JSON/deep-copy isolation, independent low selection, native group double-click behavior, Unicode group editing, themes, scaling, mixed-font baselines, built-in gaps, stable numeric slots and color-only repaint behavior. It saves local UI/OSD screenshots without changing user preferences.
 
-The --osd-spacing mode checks two-digit RAM/VRAM slots and capacities above 100 GB, natural left-to-right grouped rows, editable per-row and group gaps, compact zero-spacing row glyph/outline bounds, positive spacing compatibility, N/A transitions, numeric layout reuse, Unicode fallback and narrow/multiple-column layouts. It simulates renderer DeviceDpi plus matching bitmap resolution at 96/144/192 DPI, with Segoe UI, JetBrains Mono and Consolas. Physical monitor handover remains a separate manual check. Legacy group-caption and separator fields remain JSON-loadable and are ignored for rendering.
+The --osd-spacing mode checks two-digit RAM/VRAM slots and capacities above 100 GB, natural left-to-right grouped rows, editable per-row and group gaps, compact zero-spacing row glyph/outline bounds, positive spacing compatibility, compact N/A slots, numeric layout reuse, Unicode fallback and narrow/multiple-column layouts. Missing-data checks cover labeled and unlabeled frame groups, all/partial availability, repeated N/A updates, restored numeric slots and full glyph bounds. Numeric updates retain stable positions; availability transitions can resize the OSD. It simulates renderer DeviceDpi plus matching bitmap resolution at 96/144/192 DPI, with Segoe UI, JetBrains Mono and Consolas. Physical monitor handover remains a separate manual check. Legacy group-caption and separator fields remain JSON-loadable and are ignored for rendering.
 
 The metric-list suite also checks the Presets page, neutral fresh defaults with OSD disabled, embedded preset isolation, custom JSON round trips and overwrite, extraction from full settings files, rejection of unrelated JSON, repeated appearance refresh, preserved OSD enable state and shortcut, the existing preview/Save behavior, legacy label editing, migration ordering, active-edit preview suppression, failed overwrite cleanup, oversized input/output rejection, and minimum-size Presets layout.
 
@@ -82,4 +93,4 @@ Paths and prerequisites are defined in `ReviewTests.cs` and `HandoverTests.cs`; 
 
 Release solution builds refresh `dist` automatically. Packaging can be checked by copying only the shipping EXE and test EXE to a clean folder and running the focused checks there; no sidecar DLLs should be needed.
 
-Controlled presentation intervals establish functional behavior, not input latency or broad real-game/driver compatibility. Consult [VALIDATION.md](VALIDATION.md) for the tested scope and remaining limitations.
+Controlled presentation intervals establish functional behavior, not input latency or broad real-game/driver compatibility. Physical monitor handover, exclusive fullscreen, MPO/VRR combinations and protected games require separate manual acceptance checks.

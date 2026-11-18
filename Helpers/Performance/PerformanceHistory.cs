@@ -33,6 +33,7 @@ namespace TrayTemps
         private sealed class Series { internal readonly HistoryPoint[] Points = new HistoryPoint[Capacity]; internal int Start, Count; }
         private readonly Dictionary<string, Series> _series = new Dictionary<string, Series>(StringComparer.Ordinal);
         internal double LastTime { get; private set; }
+        internal long Version { get; private set; }
         internal void Add(string key, double time, double? value, long source = 0, double? peak = null)
         {
             if (key == "CurrentTime" || key == "FrameTimeGraph") return;
@@ -51,6 +52,7 @@ namespace TrayTemps
             if (series.Count == Capacity) series.Start = (series.Start + 1) % Capacity;
             else series.Count++;
             LastTime = Math.Max(LastTime, time);
+            Version++;
         }
         internal void Pause(string key, double time)
         {
@@ -66,6 +68,6 @@ namespace TrayTemps
             for (int i = 0; i < result.Length; i++) result[i] = series.Points[(series.Start + first + i) % Capacity];
             return result;
         }
-        internal void Clear() { _series.Clear(); LastTime = 0; }
+        internal void Clear() { _series.Clear(); LastTime = 0; Version++; }
     }
 }

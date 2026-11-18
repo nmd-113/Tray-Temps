@@ -9,6 +9,9 @@ namespace TrayTemps
 {
     public partial class OsdSettingsDialog
     {
+        // Dialog presentation only; Layout continues to follow the saved ItemOrder.
+        private static readonly int[] MetricDisplayOrder = Enumerable.Range(0, OsdMetricDefinitions.Keys.Length)
+            .OrderBy(index => OsdMetricDefinitions.Keys[index] == "CurrentTime" ? 1 : 0).ToArray();
         private OsdConfiguration _metricDraft = new OsdConfiguration();
         private bool _loadingMetricList, _loadingLabelEditor, _endingLabelEdit, _loadingAppearance;
         private bool _handlingMetricCheck;
@@ -38,7 +41,7 @@ namespace TrayTemps
             try
             {
                 metricsList.Items.Clear();
-                for (int index = 0; index < OsdMetricDefinitions.Keys.Length; index++)
+                foreach (int index in MetricDisplayOrder)
                 {
                     string key = OsdMetricDefinitions.Keys[index];
                     var item = new ListViewItem(OsdMetricDefinitions.Names[index]) { Tag = key, Checked = OsdMetricDefinitions.IsVisible(_metricDraft, key) };
@@ -199,7 +202,7 @@ namespace TrayTemps
                     string size = style.FontSize.ToString(CultureInfo.InvariantCulture);
                     if (!appearanceSizeColumn.Items.Contains(size)) appearanceSizeColumn.Items.Add(size);
                 }
-                for (int i = 0; i < OsdMetricDefinitions.Keys.Length; i++)
+                foreach (int i in MetricDisplayOrder)
                 {
                     string key = OsdMetricDefinitions.Keys[i]; var style = _metricDraft.MetricStyles[key];
                     int row = appearanceGrid.Rows.Add(OsdMetricDefinitions.Names[i], style.FontFamily, style.FontSize.ToString(CultureInfo.InvariantCulture), "🎨", "🎨");

@@ -48,7 +48,13 @@ internal static class ReleaseSafetyTests
             Check(OsdMetricDefinitions.Group(OsdPresets.LoadEmbedded(2), "GpuTemperature") == "GPU:",
                 "Minimal transparent identifies its GPU group correctly through the active group name");
         }
-        finally { Directory.Delete(root, true); }
+        finally
+        {
+            string fullRoot = Path.GetFullPath(root);
+            string temporaryPrefix = Path.GetFullPath(Path.GetTempPath()).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar + "TrayTemps-release-safety-";
+            if (!fullRoot.StartsWith(temporaryPrefix, StringComparison.OrdinalIgnoreCase)) throw new IOException("Refusing cleanup outside the temporary test directory.");
+            Directory.Delete(fullRoot, true);
+        }
         Console.WriteLine("ALL RELEASE SAFETY CHECKS PASSED: " + _checks);
     }
 
@@ -80,15 +86,30 @@ internal static class ReleaseSafetyTests
         string settings = Path.Combine(root, "settings"); Directory.CreateDirectory(settings);
         foreach (string name in new[] { "settings.json", "settings.json.tmp", "settings.json.bak", "My preset.json" })
             File.WriteAllText(Path.Combine(settings, name), "test");
+        string runtime = Path.Combine(settings, "runtime"); Directory.CreateDirectory(runtime);
+        foreach (string name in new[] { "TrayTemps.exe.config", "TrayTemps.exe.config.123.tmp", "TrayTemps.exe.config.custom.tmp", "TrayTemps.exe.config.0.tmp", "TrayTemps.exe.config.2147483648.tmp", "notes.txt" })
+            File.WriteAllText(Path.Combine(runtime, name), "fixture");
         InstallationFileHelper.RemoveSettingsFiles(settings);
         Check(Directory.GetFiles(settings).Select(Path.GetFileName).SequenceEqual(new[] { "My preset.json" }),
             "settings cleanup preserves custom presets and removes only known settings files");
+        Check(!File.Exists(Path.Combine(runtime, "TrayTemps.exe.config")) && !File.Exists(Path.Combine(runtime, "TrayTemps.exe.config.123.tmp")) &&
+            File.Exists(Path.Combine(runtime, "TrayTemps.exe.config.custom.tmp")) && File.Exists(Path.Combine(runtime, "TrayTemps.exe.config.0.tmp")) &&
+            File.Exists(Path.Combine(runtime, "TrayTemps.exe.config.2147483648.tmp")) && File.Exists(Path.Combine(runtime, "notes.txt")),
+            "direct settings cleanup removes generated runtime files and preserves unknown runtime content");
+        string ownedSettings = Path.Combine(root, "owned-settings"); Directory.CreateDirectory(Path.Combine(ownedSettings, "runtime"));
+        File.WriteAllText(Path.Combine(ownedSettings, "settings.json"), "fixture");
+        File.WriteAllText(Path.Combine(ownedSettings, "runtime", "TrayTemps.exe.config"), "fixture");
+        File.WriteAllText(Path.Combine(ownedSettings, "runtime", "TrayTemps.exe.config.123.tmp"), "fixture");
+        InstallationFileHelper.RemoveSettingsFiles(ownedSettings);
+        Check(!Directory.Exists(ownedSettings), "direct uninstall removes the whole settings folder when only generated files remain");
 
         // Exercise the actual deferred script, including literal quote/percent/ampersand paths.
         string deferred = Installation(root, "deferred ' & % !");
         File.WriteAllText(Path.Combine(deferred, "document.txt"), "keep");
         string shortcut = Path.Combine(root, "test.lnk"); File.WriteAllText(shortcut, "fixture");
         File.WriteAllText(Path.Combine(settings, "settings.json"), "fixture");
+        File.WriteAllText(Path.Combine(runtime, "TrayTemps.exe.config"), "fixture");
+        File.WriteAllText(Path.Combine(runtime, "TrayTemps.exe.config.456.tmp"), "fixture");
         string script = Path.Combine(root, "cleanup.ps1");
         File.WriteAllText(script, InstallationFileHelper.BuildDeferredUninstallScript(deferred, settings, shortcut), new UTF8Encoding(true));
         using (var process = StartScript(script))
@@ -100,6 +121,10 @@ internal static class ReleaseSafetyTests
         Check(!File.Exists(Path.Combine(deferred, "TrayTemps.exe")) && File.Exists(Path.Combine(deferred, "document.txt")) &&
             File.Exists(Path.Combine(settings, "My preset.json")) && !File.Exists(Path.Combine(settings, "settings.json")) &&
             !File.Exists(shortcut) && !File.Exists(script), "deferred uninstall preserves unknown data and removes its own script");
+        Check(!File.Exists(Path.Combine(runtime, "TrayTemps.exe.config")) && !File.Exists(Path.Combine(runtime, "TrayTemps.exe.config.456.tmp")) &&
+            File.Exists(Path.Combine(runtime, "TrayTemps.exe.config.custom.tmp")) && File.Exists(Path.Combine(runtime, "TrayTemps.exe.config.0.tmp")) &&
+            File.Exists(Path.Combine(runtime, "TrayTemps.exe.config.2147483648.tmp")) && File.Exists(Path.Combine(runtime, "notes.txt")),
+            "deferred settings cleanup removes generated runtime files while preserving unknown files");
 
         string lockedDirectory = Installation(root, "locked");
         string marker = Path.Combine(root, "retry-observed.txt");
@@ -119,6 +144,53 @@ internal static class ReleaseSafetyTests
             Check(exited && process.ExitCode == 0 && !Directory.Exists(lockedDirectory), "deferred uninstall completes after the executable lock is released");
         }
 
+        string runningDirectory = Path.Combine(root, "running", "TrayTemps"); Directory.CreateDirectory(runningDirectory);
+        string runningExe = Path.Combine(runningDirectory, "TrayTemps.exe");
+        using (var compiler = System.CodeDom.Compiler.CodeDomProvider.CreateProvider("CSharp"))
+        {
+            var parameters = new System.CodeDom.Compiler.CompilerParameters { GenerateExecutable = true, OutputAssembly = runningExe };
+            var result = compiler.CompileAssemblyFromSource(parameters,
+                "using System; using System.Reflection; [assembly: AssemblyCompany(\"NaeTech\")] [assembly: AssemblyProduct(\"Tray Temps\")] " +
+                "class Fixture { static void Main() { Console.WriteLine(\"READY\"); Console.ReadLine(); } }");
+            if (result.Errors.HasErrors) throw new Exception(string.Join(Environment.NewLine, result.Errors.Cast<System.CodeDom.Compiler.CompilerError>()));
+        }
+        string runningSettings = Path.Combine(root, "running-settings"); Directory.CreateDirectory(Path.Combine(runningSettings, "runtime"));
+        File.WriteAllText(Path.Combine(runningSettings, "settings.json"), "fixture");
+        File.WriteAllText(Path.Combine(runningSettings, "runtime", "TrayTemps.exe.config"), "fixture");
+        string runningShortcut = Path.Combine(root, "running.lnk"); File.WriteAllText(runningShortcut, "fixture");
+        marker = Path.Combine(root, "running-retry.txt"); script = Path.Combine(root, "running-cleanup.ps1");
+        File.WriteAllText(script, InstallationFileHelper.BuildDeferredUninstallScript(runningDirectory, runningSettings, runningShortcut)
+            .Replace("Start-Sleep -Milliseconds 1000", "[IO.File]::WriteAllText('" + marker.Replace("'", "''") + "', 'waiting'); Start-Sleep -Milliseconds 1000"), new UTF8Encoding(true));
+        using (var running = Process.Start(new ProcessStartInfo(runningExe) { UseShellExecute = false, CreateNoWindow = true,
+            WindowStyle = ProcessWindowStyle.Hidden, RedirectStandardInput = true, RedirectStandardOutput = true }))
+        {
+            try
+            {
+                var ready = running.StandardOutput.ReadLineAsync();
+                Check(await Task.WhenAny(ready, Task.Delay(5000)) == ready && await ready == "READY", "controlled installed executable starts without hardware or saved preferences");
+                bool denied = false;
+                try { File.Delete(runningExe); } catch (UnauthorizedAccessException) { denied = true; }
+                Check(denied, "a genuinely running executable reproduces access-denied deletion instead of a file-sharing IOException");
+                using (var cleanup = StartScript(script))
+                {
+                    try
+                    {
+                        var timeout = Stopwatch.StartNew();
+                        while (!File.Exists(marker) && !cleanup.HasExited && timeout.ElapsedMilliseconds < 10000) await Task.Delay(20);
+                        Check(File.Exists(marker) && !cleanup.HasExited && File.Exists(Path.Combine(runningSettings, "settings.json")),
+                            "deferred uninstall retries the running executable and waits before removing settings");
+                        running.StandardInput.WriteLine();
+                        Check(await Task.Run(() => running.WaitForExit(5000)), "controlled executable exits normally");
+                        bool exited = await Task.Run(() => cleanup.WaitForExit(20000));
+                        Check(exited && cleanup.ExitCode == 0 && !Directory.Exists(runningDirectory) && !Directory.Exists(runningSettings) &&
+                            !File.Exists(runningShortcut) && !File.Exists(script), "deferred uninstall removes the executable, settings, runtime configuration and shortcut after process exit");
+                    }
+                    finally { if (!cleanup.HasExited) { cleanup.Kill(); cleanup.WaitForExit(); } }
+                }
+            }
+            finally { if (!running.HasExited) { running.Kill(); running.WaitForExit(); } }
+        }
+
         string changed = Installation(root, "changed");
         script = Path.Combine(root, "changed-cleanup.ps1");
         File.WriteAllText(script, InstallationFileHelper.BuildDeferredUninstallScript(changed, settings, shortcut), new UTF8Encoding(true));
@@ -129,7 +201,50 @@ internal static class ReleaseSafetyTests
             if (!exited) process.Kill();
             Check(exited && process.ExitCode != 0 && File.Exists(Path.Combine(changed, "TrayTemps.exe")) &&
                 File.Exists(Path.Combine(settings, "My preset.json")), "deferred uninstall refuses an executable whose identity changed before cleanup");
+            Check(File.Exists(script + ".log") && !string.IsNullOrWhiteSpace(File.ReadAllText(script + ".log")) && !File.Exists(script),
+                "failed deferred cleanup retains an error log after removing its temporary script");
         }
+
+        string linkedSettings = Path.Combine(root, "linked-settings"); Directory.CreateDirectory(linkedSettings);
+        string runtimeTarget = Path.Combine(root, "runtime-target"); Directory.CreateDirectory(runtimeTarget);
+        string runtimeLink = Path.Combine(linkedSettings, "runtime");
+        File.WriteAllText(Path.Combine(linkedSettings, "settings.json"), "fixture");
+        File.WriteAllText(Path.Combine(runtimeTarget, "TrayTemps.exe.config"), "keep linked data");
+        string linkScript = Path.Combine(root, "create-runtime-link.ps1");
+        File.WriteAllText(linkScript, "$ErrorActionPreference = 'Stop'; New-Item -ItemType Junction -Path '" + runtimeLink.Replace("'", "''") +
+            "' -Target '" + runtimeTarget.Replace("'", "''") + "' | Out-Null", new UTF8Encoding(true));
+        try
+        {
+            using (var process = StartScript(linkScript))
+            {
+                bool exited = await Task.Run(() => process.WaitForExit(5000));
+                if (!exited) { process.Kill(); process.WaitForExit(); }
+                Check(exited && process.ExitCode == 0, "runtime-link safety fixture is created inside the temporary test directory");
+            }
+            bool refused = false;
+            try { InstallationFileHelper.RemoveSettingsFiles(linkedSettings); } catch (IOException) { refused = true; }
+            Check(refused && File.Exists(Path.Combine(linkedSettings, "settings.json")) && File.ReadAllText(Path.Combine(runtimeTarget, "TrayTemps.exe.config")) == "keep linked data",
+                "direct settings cleanup refuses linked runtime directories before touching settings or target files");
+            string directLinkInstall = Installation(root, "direct-linked-runtime");
+            using (var host = new Host())
+            {
+                object[] arguments = { directLinkInstall, shortcut, linkedSettings, null };
+                bool removed = (bool)typeof(MainForm).GetMethod("TryDirectUninstallInstalledCopy", Flags).Invoke(host, arguments);
+                Check(!removed && File.Exists(Path.Combine(directLinkInstall, "TrayTemps.exe")) && !string.IsNullOrWhiteSpace((string)arguments[3]),
+                    "direct uninstall validates settings before deleting the installed executable");
+            }
+            string linkInstall = Installation(root, "linked-runtime"); script = Path.Combine(root, "linked-runtime-cleanup.ps1");
+            File.WriteAllText(script, InstallationFileHelper.BuildDeferredUninstallScript(linkInstall, linkedSettings, shortcut), new UTF8Encoding(true));
+            using (var process = StartScript(script))
+            {
+                bool exited = await Task.Run(() => process.WaitForExit(20000));
+                if (!exited) { process.Kill(); process.WaitForExit(); }
+                Check(exited && process.ExitCode != 0 && File.Exists(Path.Combine(linkInstall, "TrayTemps.exe")) && File.Exists(Path.Combine(linkedSettings, "settings.json")) &&
+                    File.ReadAllText(Path.Combine(runtimeTarget, "TrayTemps.exe.config")) == "keep linked data",
+                    "deferred cleanup preflight preserves the executable, settings and linked target data");
+            }
+        }
+        finally { if (Directory.Exists(runtimeLink)) Directory.Delete(runtimeLink, false); }
     }
 
     private static Process StartScript(string script) => Process.Start(new ProcessStartInfo

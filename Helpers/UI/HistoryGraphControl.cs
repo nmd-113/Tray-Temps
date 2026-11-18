@@ -18,23 +18,37 @@ namespace TrayTemps
         private HistoryTrace[] _traces = Array.Empty<HistoryTrace>();
         private double _start, _end, _minimum, _maximum;
         private string _unit = "";
+        private bool _hasSamples;
+        internal double OldestSampleTime { get; private set; } = double.PositiveInfinity;
         private int ScalePixels(int pixels) => (int)Math.Round(pixels * DeviceDpi / 96f);
+        internal int PlotWidth => Math.Max(1, Width - ScalePixels(72));
         private int GetTextHeight(Graphics graphics) => TextRenderer.MeasureText(graphics, "Ag", Font, Size.Empty, TextFormatFlags.SingleLine | TextFormatFlags.NoPadding).Height;
         private Rectangle GetPlotBounds(int textHeight)
         {
             int top = ScalePixels(5) + 2 * (textHeight + ScalePixels(2));
-            return new Rectangle(ScalePixels(54), top, Math.Max(1, Width - ScalePixels(72)), Math.Max(1, Height - top - textHeight - ScalePixels(10)));
+            return new Rectangle(ScalePixels(54), top, PlotWidth, Math.Max(1, Height - top - textHeight - ScalePixels(10)));
         }
         public HistoryGraphControl() { DoubleBuffered = true; ResizeRedraw = true; Height = 125; MinimumSize = new Size(0, 110); }
         internal void SetData(string title, string unit, double start, double end, HistoryTrace[] traces, bool percent = false)
         {
             Text = title; _unit = unit; _start = start; _end = end; _traces = traces;
+            _hasSamples = false;
             double min = double.PositiveInfinity, max = double.NegativeInfinity;
+            OldestSampleTime = double.PositiveInfinity;
             foreach (var trace in traces)
-            foreach (var point in trace.Points)
-                if (!double.IsNaN(point.Value)) { min = Math.Min(min, point.Value); max = Math.Max(max, Math.Max(point.Value, point.Peak)); }
+            {
+                if (trace.Points.Length > 0) OldestSampleTime = Math.Min(OldestSampleTime, trace.Points[0].Time);
+                foreach (var point in trace.Points)
+                    if (!double.IsNaN(point.Value)) { _hasSamples = true; min = Math.Min(min, point.Value); max = Math.Max(max, Math.Max(point.Value, point.Peak)); }
+            }
             _minimum = percent ? 0 : double.IsInfinity(min) ? 0 : Math.Min(0, min);
             _maximum = percent ? 100 : double.IsInfinity(max) ? 1 : Math.Max(_minimum + 1, max * 1.08);
+            Invalidate();
+        }
+        internal void SetTimeRange(double start, double end)
+        {
+            if (_start == start && _end == end) return;
+            _start = start; _end = end;
             Invalidate();
         }
         protected override void OnPaint(PaintEventArgs e)
@@ -62,36 +76,45 @@ namespace TrayTemps
                 TextRenderer.DrawText(g, trace.Name, Font, new Point(legend, ScalePixels(5) + textHeight + ScalePixels(2)), trace.Color);
                 legend += legendWidth + ScalePixels(16);
                 using (var pen = new Pen(trace.Color, Math.Max(1.5f, DeviceDpi / 64f)))
+                using (var marker = new SolidBrush(trace.Color))
                 {
-                    var state = g.Save(); g.SetClip(plot);
+                    var state = g.Save(); g.SetClip(plot, CombineMode.Intersect);
                     int previousX = -1, binX = -1; float previousY = 0, binFirst = 0, binLast = 0, binMin = 0, binMax = 0;
                     long source = 0; double previousTime = 0;
                     Action flush = () =>
                     {
                         if (binX < 0) return;
                         if (previousX >= 0) g.DrawLine(pen, previousX, previousY, binX, binFirst);
-                        g.DrawLine(pen, binX, binMin, binX, binMax);
+                        if (binMin != binMax) g.DrawLine(pen, binX, binMin, binX, binMax);
+                        else if (previousX < 0)
+                            g.FillEllipse(marker, binX - pen.Width / 2, binLast - pen.Width / 2, pen.Width, pen.Width);
                         previousX = binX; previousY = binLast; binX = -1;
                     };
-                    foreach (var point in trace.Points)
+                    try
                     {
-                        if (double.IsNaN(point.Value) || (previousTime > 0 && (point.Source != source || point.Time - previousTime > 15)))
-                        { flush(); previousX = -1; }
-                        source = point.Source; previousTime = point.Time;
-                        if (double.IsNaN(point.Value)) continue;
-                        int x = plot.Left + (int)((point.Time - _start) / Math.Max(1, _end - _start) * plot.Width);
-                        float y = plot.Bottom - (float)((point.Value - _minimum) / (_maximum - _minimum) * plot.Height);
-                        float peak = plot.Bottom - (float)((point.Peak - _minimum) / (_maximum - _minimum) * plot.Height);
-                        if (x != binX) { flush(); binX = x; binFirst = binLast = binMin = binMax = y; }
-                        binLast = y; binMin = Math.Min(binMin, Math.Min(y, peak)); binMax = Math.Max(binMax, y);
+                        foreach (var point in trace.Points)
+                        {
+                            if (double.IsNaN(point.Value) || (previousTime > 0 && (point.Source != source || point.Time - previousTime > 15)))
+                            { flush(); previousX = -1; }
+                            source = point.Source; previousTime = point.Time;
+                            if (double.IsNaN(point.Value)) continue;
+                            // Right/bottom clip edges are exclusive: retain zero
+                            // values and the newest sample inside the visible plot.
+                            int x = plot.Left + (int)((point.Time - _start) / Math.Max(1, _end - _start) * Math.Max(0, plot.Width - 1));
+                            float y = plot.Bottom - 1 - (float)((point.Value - _minimum) / (_maximum - _minimum) * Math.Max(0, plot.Height - 1));
+                            float peak = plot.Bottom - 1 - (float)((point.Peak - _minimum) / (_maximum - _minimum) * Math.Max(0, plot.Height - 1));
+                            if (x != binX) { flush(); binX = x; binFirst = binLast = binMin = binMax = y; }
+                            binLast = y; binMin = Math.Min(binMin, Math.Min(y, peak)); binMax = Math.Max(binMax, y);
+                        }
+                        flush();
                     }
-                    flush(); g.Restore(state);
+                    finally { g.Restore(state); }
                 }
             }
             TextRenderer.DrawText(g, "−" + ((_end - _start) / 60).ToString("0") + " min", Font, new Point(plot.Left, plot.Bottom + ScalePixels(4)), secondary);
             int latestWidth = TextRenderer.MeasureText(g, "latest", Font).Width;
             TextRenderer.DrawText(g, "latest", Font, new Rectangle(plot.Right - latestWidth, plot.Bottom + ScalePixels(4), latestWidth, textHeight), secondary, TextFormatFlags.Right | TextFormatFlags.SingleLine);
-            if (!_traces.Any(trace => trace.Points.Any(point => !double.IsNaN(point.Value))))
+            if (!_hasSamples)
                 TextRenderer.DrawText(g, "No recorded samples", Font, plot, secondary, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
         }
     }

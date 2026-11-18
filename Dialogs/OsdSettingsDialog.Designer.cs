@@ -123,6 +123,11 @@ namespace TrayTemps
             this.spacingCard = new System.Windows.Forms.Panel();
             this.spacingTitle = new System.Windows.Forms.Label();
             this.spacingLayout = new System.Windows.Forms.TableLayoutPanel();
+            this.frameTimeGraphSizeLabel = new System.Windows.Forms.Label();
+            this.frameTimeGraphSizeLayout = new System.Windows.Forms.TableLayoutPanel();
+            this.frameTimeGraphWidthValue = new System.Windows.Forms.ComboBox();
+            this.frameTimeGraphSizeSeparator = new System.Windows.Forms.Label();
+            this.frameTimeGraphHeightValue = new System.Windows.Forms.ComboBox();
             this.groupedValuesGapLabel = new System.Windows.Forms.Label();
             this.groupedValuesGapPercent = new System.Windows.Forms.ComboBox();
             this.screenMarginLabel = new System.Windows.Forms.Label();
@@ -173,6 +178,7 @@ namespace TrayTemps
             this.groupFieldsLayout.SuspendLayout();
             this.spacingCard.SuspendLayout();
             this.spacingLayout.SuspendLayout();
+            this.frameTimeGraphSizeLayout.SuspendLayout();
             this.bottomBar.SuspendLayout();
             this.titleBar.SuspendLayout();
             this.navigationPanel.SuspendLayout();
@@ -1400,6 +1406,8 @@ namespace TrayTemps
             this.spacingLayout.Controls.Add(this.cornerRoundnessValue, 3, 1);
             this.spacingLayout.Controls.Add(this.groupedValuesGapLabel, 0, 3);
             this.spacingLayout.Controls.Add(this.groupedValuesGapPercent, 1, 3);
+            this.spacingLayout.Controls.Add(this.frameTimeGraphSizeLabel, 2, 3);
+            this.spacingLayout.Controls.Add(this.frameTimeGraphSizeLayout, 3, 3);
             this.spacingLayout.Location = new System.Drawing.Point(16, 35);
             this.spacingLayout.Margin = new System.Windows.Forms.Padding(0);
             this.spacingLayout.Name = "spacingLayout";
@@ -1410,6 +1418,84 @@ namespace TrayTemps
             this.spacingLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 24.99813F));
             this.spacingLayout.Size = new System.Drawing.Size(606, 118);
             this.spacingLayout.TabIndex = 1;
+            //
+            // frameTimeGraphSizeLabel
+            //
+            this.frameTimeGraphSizeLabel.AutoSize = true;
+            this.frameTimeGraphSizeLabel.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.frameTimeGraphSizeLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.frameTimeGraphSizeLabel.Location = new System.Drawing.Point(305, 89);
+            this.frameTimeGraphSizeLabel.Margin = new System.Windows.Forms.Padding(2);
+            this.frameTimeGraphSizeLabel.Name = "frameTimeGraphSizeLabel";
+            this.frameTimeGraphSizeLabel.Size = new System.Drawing.Size(126, 27);
+            this.frameTimeGraphSizeLabel.TabIndex = 15;
+            this.frameTimeGraphSizeLabel.Text = "Graph size:";
+            this.frameTimeGraphSizeLabel.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.settingsToolTip.SetToolTip(this.frameTimeGraphSizeLabel, "Frametime graph width x height in pixels at 100% display scaling (default 160 x 42). Scales with DPI and fits the available screen space.");
+            //
+            // frameTimeGraphSizeLayout
+            //
+            this.frameTimeGraphSizeLayout.ColumnCount = 3;
+            this.frameTimeGraphSizeLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
+            this.frameTimeGraphSizeLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 14F));
+            this.frameTimeGraphSizeLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
+            this.frameTimeGraphSizeLayout.Controls.Add(this.frameTimeGraphWidthValue, 0, 0);
+            this.frameTimeGraphSizeLayout.Controls.Add(this.frameTimeGraphSizeSeparator, 1, 0);
+            this.frameTimeGraphSizeLayout.Controls.Add(this.frameTimeGraphHeightValue, 2, 0);
+            this.frameTimeGraphSizeLayout.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.frameTimeGraphSizeLayout.Location = new System.Drawing.Point(433, 87);
+            this.frameTimeGraphSizeLayout.Margin = new System.Windows.Forms.Padding(0);
+            this.frameTimeGraphSizeLayout.Name = "frameTimeGraphSizeLayout";
+            this.frameTimeGraphSizeLayout.RowCount = 1;
+            this.frameTimeGraphSizeLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.frameTimeGraphSizeLayout.Size = new System.Drawing.Size(173, 31);
+            this.frameTimeGraphSizeLayout.TabIndex = 11;
+            //
+            // frameTimeGraphWidthValue
+            //
+            this.frameTimeGraphWidthValue.AccessibleName = "Frametime graph width (pixels)";
+            this.frameTimeGraphWidthValue.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.frameTimeGraphWidthValue.DropDownHeight = 200;
+            this.frameTimeGraphWidthValue.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.frameTimeGraphWidthValue.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.frameTimeGraphWidthValue.FormattingEnabled = true;
+            this.frameTimeGraphWidthValue.IntegralHeight = false;
+            this.frameTimeGraphWidthValue.Location = new System.Drawing.Point(2, 2);
+            this.frameTimeGraphWidthValue.Margin = new System.Windows.Forms.Padding(2, 2, 0, 2);
+            this.frameTimeGraphWidthValue.Name = "frameTimeGraphWidthValue";
+            this.frameTimeGraphWidthValue.Size = new System.Drawing.Size(77, 21);
+            this.frameTimeGraphWidthValue.TabIndex = 0;
+            this.settingsToolTip.SetToolTip(this.frameTimeGraphWidthValue, "Frametime graph width in pixels at 100% display scaling (80-800; default 160). Scales with DPI and fits the available screen space.");
+            this.frameTimeGraphWidthValue.SelectedIndexChanged += new System.EventHandler(this.VisualSettingChanged);
+            //
+            // frameTimeGraphSizeSeparator
+            //
+            this.frameTimeGraphSizeSeparator.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.frameTimeGraphSizeSeparator.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.frameTimeGraphSizeSeparator.Location = new System.Drawing.Point(79, 0);
+            this.frameTimeGraphSizeSeparator.Margin = new System.Windows.Forms.Padding(0);
+            this.frameTimeGraphSizeSeparator.Name = "frameTimeGraphSizeSeparator";
+            this.frameTimeGraphSizeSeparator.Size = new System.Drawing.Size(14, 31);
+            this.frameTimeGraphSizeSeparator.TabIndex = 1;
+            this.frameTimeGraphSizeSeparator.Text = "\u00D7";
+            this.frameTimeGraphSizeSeparator.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            //
+            // frameTimeGraphHeightValue
+            //
+            this.frameTimeGraphHeightValue.AccessibleName = "Frametime graph height (pixels)";
+            this.frameTimeGraphHeightValue.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.frameTimeGraphHeightValue.DropDownHeight = 200;
+            this.frameTimeGraphHeightValue.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.frameTimeGraphHeightValue.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.5F);
+            this.frameTimeGraphHeightValue.FormattingEnabled = true;
+            this.frameTimeGraphHeightValue.IntegralHeight = false;
+            this.frameTimeGraphHeightValue.Location = new System.Drawing.Point(93, 2);
+            this.frameTimeGraphHeightValue.Margin = new System.Windows.Forms.Padding(0, 2, 2, 2);
+            this.frameTimeGraphHeightValue.Name = "frameTimeGraphHeightValue";
+            this.frameTimeGraphHeightValue.Size = new System.Drawing.Size(78, 21);
+            this.frameTimeGraphHeightValue.TabIndex = 2;
+            this.settingsToolTip.SetToolTip(this.frameTimeGraphHeightValue, "Frametime graph height in pixels at 100% display scaling (20-400; default 42). Scales with DPI and fits the available screen space.");
+            this.frameTimeGraphHeightValue.SelectedIndexChanged += new System.EventHandler(this.VisualSettingChanged);
             //
             // groupedValuesGapLabel
             //
@@ -1423,7 +1509,7 @@ namespace TrayTemps
             this.groupedValuesGapLabel.TabIndex = 14;
             this.groupedValuesGapLabel.Text = "Grouped values gap:";
             this.groupedValuesGapLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.settingsToolTip.SetToolTip(this.groupedValuesGapLabel, "100% = one-space minimum. Increases gaps between grouped value slots. FPS/1% Low keeps its existing spacing.");
+            this.settingsToolTip.SetToolTip(this.groupedValuesGapLabel, "100% = one-space minimum. Increases gaps between all grouped value slots, including FPS and 1% Low.");
             //
             // groupedValuesGapPercent
             //
@@ -1438,7 +1524,7 @@ namespace TrayTemps
             this.groupedValuesGapPercent.Name = "groupedValuesGapPercent";
             this.groupedValuesGapPercent.Size = new System.Drawing.Size(169, 21);
             this.groupedValuesGapPercent.TabIndex = 10;
-            this.settingsToolTip.SetToolTip(this.groupedValuesGapPercent, "100% = one-space minimum. Increases gaps between grouped value slots. FPS/1% Low keeps its existing spacing.");
+            this.settingsToolTip.SetToolTip(this.groupedValuesGapPercent, "100% = one-space minimum. Increases gaps between all grouped value slots, including FPS and 1% Low.");
             this.groupedValuesGapPercent.SelectedIndexChanged += new System.EventHandler(this.VisualSettingChanged);
             this.groupedValuesGapPercent.Format += new System.Windows.Forms.ListControlConvertEventHandler(this.GroupedValuesGapPercent_Format);
             //
@@ -1792,6 +1878,7 @@ namespace TrayTemps
             this.spacingCard.PerformLayout();
             this.spacingLayout.ResumeLayout(false);
             this.spacingLayout.PerformLayout();
+            this.frameTimeGraphSizeLayout.ResumeLayout(false);
             this.bottomBar.ResumeLayout(false);
             this.titleBar.ResumeLayout(false);
             this.navigationPanel.ResumeLayout(false);
@@ -1835,6 +1922,11 @@ namespace TrayTemps
         private System.Windows.Forms.Panel spacingCard;
         private System.Windows.Forms.Label spacingTitle;
         private System.Windows.Forms.TableLayoutPanel spacingLayout;
+        private System.Windows.Forms.Label frameTimeGraphSizeLabel;
+        private System.Windows.Forms.TableLayoutPanel frameTimeGraphSizeLayout;
+        private System.Windows.Forms.ComboBox frameTimeGraphWidthValue;
+        private System.Windows.Forms.Label frameTimeGraphSizeSeparator;
+        private System.Windows.Forms.ComboBox frameTimeGraphHeightValue;
         private System.Windows.Forms.Label groupedValuesGapLabel;
         private System.Windows.Forms.ComboBox groupedValuesGapPercent;
         private System.Windows.Forms.Panel hotkeyCard;

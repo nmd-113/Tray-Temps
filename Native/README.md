@@ -16,12 +16,9 @@ The pinned C headers in `ThirdParty/Vulkan-Headers` replace the external Vulkan 
 
 The application is x64. Building the x86 payload does not establish cross-architecture game attachment support.
 
-## Validation and history
+## Testing and release history
 
 - [Test instructions](../Tests/README.md).
-- [Build, runtime and AMD validation](../Tests/VALIDATION.md).
 - [Changelog](../CHANGELOG.md).
-
-The short integration and handover notes summarize the feature history. Obsolete implementation plans, patch exports and raw diagnostics are not build inputs and are kept out of the source repository.
 
 MinHook and Vulkan-Headers are retained under `ThirdParty` with their upstream licenses. The bundled [FPS limiter notices](../Resources/FpsLimiter/NOTICE.txt) include the third-party attributions.

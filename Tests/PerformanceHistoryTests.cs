@@ -36,7 +36,7 @@ internal static class PerformanceHistoryTests
     internal static async Task Run()
     {
         _checks = 0; Statistics(); OptionalTiming(); Store(); Models(); GraphDpi();
-        using (var host = new Host()) { host.Show(); await Ui(host); RefreshCadence(host); host.Close(); }
+        using (var host = new Host()) { host.Show(); GraphSizeSettings(host); await Ui(host); RefreshCadence(host); host.Close(); }
         Console.WriteLine("ALL PERFORMANCE HISTORY CHECKS PASSED: " + _checks);
     }
 
@@ -90,6 +90,23 @@ internal static class PerformanceHistoryTests
                 Check(rows.Any(metric => metric.Key == "FrameTimeGraph" && metric.Graph?.Length == 100),
                     "live OSD sparkline uses one hundred current buckets from the existing session");
                 Check(ReferenceEquals(monitor, Get(host, "_fpsMonitor")), "OSD and background history retain a single capture monitor");
+                config.FpsRefreshIntervalSeconds = 2m;
+                Set(host, "_osdConfiguration", config.Clone()); Call(host, "UpdateOsd", null, null);
+                long numericRefresh = (long)Get(host, "_lastFpsOsdRefresh");
+                int graphFrames = 0;
+                float phase = rows.Single(metric => metric.Key == "FrameTimeGraph").GraphOffset;
+                for (int i = 0; i < 12; i++)
+                {
+                    await Task.Delay(35);
+                    var current = ((List<OsdMetric>)Get(host, "_lastOsdMetrics")).Single(metric => metric.Key == "FrameTimeGraph");
+                    if (current.GraphOffset != phase) graphFrames++;
+                    phase = current.GraphOffset;
+                }
+                Console.WriteLine("LIVE_GRAPH frames=" + graphFrames + " fixture_exited=" + game.HasExited +
+                    " target=" + Get(monitor, "_targetProcessId") + " fps=" + monitor.GetLatestFps());
+                if (game.HasExited) throw new InvalidOperationException("The controlled fixture exited before graph verification completed. Use a longer-lived D3D11 fixture.");
+                Check(graphFrames >= 6 && (long)Get(host, "_lastFpsOsdRefresh") == numericRefresh,
+                    "live graph scrolls smoothly between numeric refreshes: observed " + graphFrames + " frames");
                 Control<CheckBox>(host, "osdEnable").Checked = false;
                 Check(ReferenceEquals(monitor, Get(host, "_fpsMonitor")), "OSD OFF keeps the live history session running");
                 host.SetHistoryRecording(false);
@@ -153,7 +170,8 @@ internal static class PerformanceHistoryTests
                         Check(!content.HorizontalScroll.Visible,
                             "history scrolls vertically without horizontal overflow at " + size + ", light=" + light);
                         Check(range.Bounds.IntersectsWith(clear.Bounds) == false && Math.Abs(range.Top + range.Height / 2 - clear.Top - clear.Height / 2) <= 1,
-                            "history header controls share a vertical center without overlap at " + size);
+                            "history header controls share a vertical center without overlap at " + size +
+                            ": range=" + range.Bounds + ", clear=" + clear.Bounds + ", header=" + range.Parent.ClientSize);
                         Check(Control<Label>(history, "rangeLabel").PreferredSize.Width <= Control<Label>(history, "rangeLabel").Width,
                             "history range label fits on one line at " + size);
                         foreach (string name in new[] { "temperatureGraph", "usageGraph", "fpsGraph", "memoryGraph", "frameGraph" })
@@ -213,9 +231,15 @@ internal static class PerformanceHistoryTests
                                 var layoutPage = Control<TabPage>(osd, "layoutPage");
                                 layoutPage.AutoScrollPosition = new Point(0, int.MaxValue);
                                 await Task.Delay(20);
-                                var lastField = Control<ComboBox>(osd, "groupedValuesGapPercent");
+                                var lastField = Control<ComboBox>(osd, "frameTimeGraphHeightValue");
                                 Check(layoutPage.RectangleToScreen(layoutPage.ClientRectangle).Contains(lastField.RectangleToScreen(lastField.ClientRectangle)),
                                     "last Layout field is reachable by scrolling at " + size);
+                                var graphLabel = Control<Label>(osd, "frameTimeGraphSizeLabel");
+                                var graphSize = Control<TableLayoutPanel>(osd, "frameTimeGraphSizeLayout");
+                                Check(lastField.BackColor == theme.InputBack && lastField.ForeColor == theme.Text &&
+                                    graphLabel.ForeColor == theme.Text && graphSize.Right - lastField.Margin.Right == Control<ComboBox>(osd, "fpsRefreshIntervalValue").Right &&
+                                    lastField.Parent.ClientRectangle.Contains(lastField.Bounds),
+                                    "graph size follows the theme and spacing-table alignment at " + size);
                                 layoutPage.AutoScrollPosition = Point.Empty;
                             }
                         }
@@ -395,6 +419,120 @@ internal static class PerformanceHistoryTests
     }
 
     private static ForegroundFpsMonitor FakeMonitor() { var monitor = new ForegroundFpsMonitor(); Set(monitor, "_running", true); return monitor; }
+    private static void GraphSizeSettings(Host host)
+    {
+        var config = JsonSerializer.Deserialize<OsdConfiguration>("{\"ShowCpu\":true}");
+        Check(config.FrameTimeGraphWidth == 160 && config.FrameTimeGraphHeight == 42 &&
+            OsdPresets.LoadEmbedded(0).FrameTimeGraphWidth == 160 && OsdPresets.LoadEmbedded(0).FrameTimeGraphHeight == 42 &&
+            JsonSerializer.Deserialize<OsdConfiguration>("{\"FrameTimeGraphWidth\":320}").FrameTimeGraphHeight == 42,
+            "legacy settings and width-only presets preserve the existing 160 x 42 graph defaults");
+        config.FrameTimeGraphWidth = 237; config.FrameTimeGraphHeight = 57;
+        Check(config.Clone().FrameTimeGraphWidth == 237 &&
+            OsdPresets.Parse(JsonSerializer.Serialize(config)).FrameTimeGraphWidth == 237 &&
+            JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(new AppSettings { Osd = config })).Osd.FrameTimeGraphWidth == 237,
+            "custom graph width survives cloning, presets and settings serialization");
+        Check(config.Clone().FrameTimeGraphHeight == 57 && OsdPresets.Parse(JsonSerializer.Serialize(config)).FrameTimeGraphHeight == 57 &&
+            JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(new AppSettings { Osd = config })).Osd.FrameTimeGraphHeight == 57,
+            "exact custom graph height survives cloning, presets and settings serialization");
+        foreach (int invalid in new[] { int.MinValue, int.MaxValue })
+        {
+            var invalidConfig = config.Clone(); invalidConfig.FrameTimeGraphWidth = invalid; invalidConfig.FrameTimeGraphHeight = invalid;
+            var normalized = host.NormalizeOsdConfiguration(invalidConfig);
+            Check(normalized.FrameTimeGraphWidth == (invalid < 80 ? 80 : 800) && normalized.FrameTimeGraphHeight == (invalid < 20 ? 20 : 400),
+                "out-of-range graph dimensions are bounded during normalization");
+        }
+        using (var dialog = new OsdSettingsDialog(host, config))
+        {
+            var width = Control<ComboBox>(dialog, "frameTimeGraphWidthValue");
+            var height = Control<ComboBox>(dialog, "frameTimeGraphHeightValue");
+            var graphSize = Control<TableLayoutPanel>(dialog, "frameTimeGraphSizeLayout");
+            var spacing = Control<TableLayoutPanel>(dialog, "spacingLayout");
+            Check(width.SelectedItem.ToString() == "237" && height.SelectedItem.ToString() == "57" &&
+                spacing.GetColumn(graphSize) == 3 && spacing.GetRow(graphSize) == 3 && graphSize.GetColumn(width) == 0 && graphSize.GetColumn(height) == 2,
+                "graph size loads exact imported dimensions side by side in the spacing-table cell");
+            OsdConfiguration preview = null; int previewCount = 0;
+            dialog.PreviewConfigurationChanged += value => { preview = value; previewCount++; };
+            width.SelectedItem = width.Items.Cast<object>().Single(value => value.ToString() == "320");
+            Check(preview?.FrameTimeGraphWidth == 320 && preview.FrameTimeGraphHeight == 57 && config.FrameTimeGraphWidth == 237,
+                "graph width previews independently without changing the original configuration");
+            height.SelectedItem = height.Items.Cast<object>().Single(value => value.ToString() == "100");
+            Check(preview?.FrameTimeGraphHeight == 100 && preview.FrameTimeGraphWidth == 320 && config.FrameTimeGraphHeight == 57,
+                "graph height previews independently without changing the original configuration");
+            dialog.Show(host);
+            Call(dialog, "ShowPage", Enum.Parse(typeof(OsdSettingsDialog).GetNestedType("OsdSettingsPage", BindingFlags.NonPublic), "Layout"));
+            bool originalTheme = host.IsLightModeEnabled;
+            try
+            {
+                foreach (bool light in new[] { false, true })
+                foreach (Size size in new[] { dialog.MinimumSize, new Size(1000, 760) })
+                {
+                    Control<CheckBox>(host, "lightModeSwitch").Checked = light;
+                    Call(dialog, "ApplyTheme"); dialog.Size = size; dialog.PerformLayout();
+                    var theme = ThemePalette.Create(light);
+                    var page = Control<TabPage>(dialog, "layoutPage");
+                    page.ScrollControlIntoView(graphSize);
+                    var label = Control<Label>(dialog, "frameTimeGraphSizeLabel");
+                    Check(width.BackColor == theme.InputBack && width.ForeColor == theme.Text && height.BackColor == theme.InputBack &&
+                        height.ForeColor == theme.Text && label.ForeColor == theme.Text &&
+                        graphSize.Right - height.Margin.Right == Control<ComboBox>(dialog, "fpsRefreshIntervalValue").Right &&
+                        width.Right < height.Left && width.Top == height.Top &&
+                        label.PreferredSize.Width <= label.Width &&
+                        page.RectangleToScreen(page.ClientRectangle).Contains(graphSize.RectangleToScreen(graphSize.ClientRectangle)),
+                        "graph-size label and inputs fit and follow the theme at " + size + ", light=" + light +
+                        ": width=" + width.Bounds + ", height=" + height.Bounds + ", size=" + graphSize.Bounds +
+                        ", refresh=" + Control<ComboBox>(dialog, "fpsRefreshIntervalValue").Bounds +
+                        ", page=" + page.RectangleToScreen(page.ClientRectangle) + ", graph=" + graphSize.RectangleToScreen(graphSize.ClientRectangle));
+                    Check(new[] { width, height }.All(input => input.Width >= TextRenderer.MeasureText(input.Text, input.Font).Width + SystemInformation.VerticalScrollBarWidth + 4),
+                        "both graph-size selectors show three-digit values and their dropdown arrows at " + size);
+                    using (var image = new Bitmap(dialog.Width, dialog.Height))
+                    {
+                        dialog.DrawToBitmap(image, dialog.ClientRectangle);
+                        image.Save(Path.Combine(Path.GetTempPath(), "TrayTemps-graph-size-" + size.Width + "-" + light + ".png"));
+                    }
+                }
+            }
+            finally { Control<CheckBox>(host, "lightModeSwitch").Checked = originalTheme; }
+            int beforePreset = previewCount;
+            Call(dialog, "ApplyPreset", OsdPresets.LoadEmbedded(0));
+            Check(width.SelectedItem.ToString() == "160" && height.SelectedItem.ToString() == "42" &&
+                preview?.FrameTimeGraphWidth == 160 && preview.FrameTimeGraphHeight == 42 && previewCount == beforePreset + 1,
+                "loading a legacy built-in preset resets graph size and emits one complete preview");
+            string presetPath = Path.Combine(Path.GetTempPath(), "TrayTemps-graph-width-" + Guid.NewGuid().ToString("N") + ".json");
+            try
+            {
+                OsdPresets.SaveFile(presetPath, config);
+                Call(dialog, "ApplyPreset", OsdPresets.LoadFile(presetPath));
+                Check(width.SelectedItem.ToString() == "237" && height.SelectedItem.ToString() == "57" &&
+                    preview?.FrameTimeGraphWidth == 237 && preview.FrameTimeGraphHeight == 57,
+                    "a saved custom preset restores its exact graph dimensions through the dialog");
+            }
+            finally { if (File.Exists(presetPath)) File.Delete(presetPath); }
+            foreach (int invalid in new[] { int.MinValue, int.MaxValue })
+            {
+                var invalidPreset = config.Clone(); invalidPreset.FrameTimeGraphWidth = invalid; invalidPreset.FrameTimeGraphHeight = invalid;
+                Call(dialog, "ApplyPreset", invalidPreset);
+                Check(preview?.FrameTimeGraphWidth == (invalid < 80 ? 80 : 800) &&
+                    width.SelectedItem.ToString() == preview.FrameTimeGraphWidth.ToString() &&
+                    preview.FrameTimeGraphHeight == (invalid < 20 ? 20 : 400) && height.SelectedItem.ToString() == preview.FrameTimeGraphHeight.ToString(),
+                    "imported out-of-range graph dimensions preview the same bounded values as the selectors");
+            }
+            dialog.Close();
+            Check(dialog.SelectedConfiguration == null && config.FrameTimeGraphWidth == 237 && config.FrameTimeGraphHeight == 57,
+                "closing without Save discards graph-size edits");
+        }
+        using (var dialog = new OsdSettingsDialog(host, config))
+        {
+            var width = Control<ComboBox>(dialog, "frameTimeGraphWidthValue");
+            var height = Control<ComboBox>(dialog, "frameTimeGraphHeightValue");
+            width.SelectedItem = width.Items.Cast<object>().Single(value => value.ToString() == "320");
+            height.SelectedItem = height.Items.Cast<object>().Single(value => value.ToString() == "100");
+            Call(dialog, "SaveBtn_Click", null, EventArgs.Empty);
+            Check(dialog.SelectedConfiguration?.FrameTimeGraphWidth == 320 && dialog.SelectedConfiguration.FrameTimeGraphHeight == 100 &&
+                config.FrameTimeGraphWidth == 237 && config.FrameTimeGraphHeight == 57,
+                "Save commits graph size through the existing configuration path");
+        }
+    }
+
     private static void GraphDpi()
     {
         var helper = typeof(Control).Assembly.GetType("System.Windows.Forms.DpiHelper");
@@ -404,6 +542,78 @@ internal static class PerformanceHistoryTests
         IntPtr awareness = SetThreadDpiAwarenessContext(new IntPtr(-4));
         try
         {
+            foreach (int dpi in new[] { 96, 120, 144, 192 })
+            using (var overlay = new OsdOverlay())
+            {
+                IntPtr handle = overlay.Handle; Set(overlay, "deviceDpi", dpi);
+                var config = OsdConfiguration.CreateAppDefault();
+                var metric = new OsdMetric("", "") { Key = "FrameTimeGraph", Style = config.MetricStyles["FrameTimeGraph"], ValueWidthTemplate = "graph" };
+                object previous = null;
+                foreach (int width in new[] { 160, 320, 80, 800, int.MinValue, int.MaxValue })
+                {
+                    config.FrameTimeGraphWidth = width;
+                    overlay.UpdateDisplay(config, new[] { metric }, new Rectangle(0, 0, 3840, 2160));
+                    var layout = ((IList)Get(overlay, "_metricLayouts"))[0];
+                    var parts = (IList)Get(layout, "Parts");
+                    int expected = Math.Max(80, Math.Min(800, width)) * dpi / 96;
+                    Check((int)Get(parts[parts.Count - 1], "Width") == expected && !ReferenceEquals(previous, layout),
+                        "graph-width edits rebuild bounded, DPI-scaled geometry at " + dpi + " DPI, width " + width);
+                    overlay.UpdateDisplay(config, new[] { metric }, new Rectangle(0, 0, 3840, 2160));
+                    Check(ReferenceEquals(layout, ((IList)Get(overlay, "_metricLayouts"))[0]),
+                        "unchanged graph width reuses geometry");
+                    previous = layout;
+                }
+                config.FrameTimeGraphWidth = 160;
+                metric.Style = metric.Style.Clone(); metric.Style.ValueColor = Color.Magenta.ToArgb();
+                metric.Graph = Enumerable.Range(0, 100).Select(i => new FrameGraphPoint(10, i == 50 ? 60 : 12)).ToArray();
+                foreach (int height in new[] { 42, 84, 20, 400, 57, int.MinValue, int.MaxValue })
+                {
+                    config.FrameTimeGraphHeight = height;
+                    overlay.UpdateDisplay(config, new[] { metric }, new Rectangle(0, 0, 3840, 2160));
+                    var layout = ((IList)Get(overlay, "_metricLayouts"))[0];
+                    var parts = (IList)Get(layout, "Parts");
+                    int expected = (int)Math.Round(Math.Max(20, Math.Min(400, height)) * dpi / 96f);
+                    Check((int)Get(layout, "Height") == expected && (int)Get(parts[parts.Count - 1], "Width") == 160 * dpi / 96 &&
+                        !ReferenceEquals(previous, layout),
+                        "height edits rebuild independently with bounded DPI-scaled geometry at " + dpi + " DPI, height " + height);
+                    int firstLine = int.MaxValue, lastLine = -1;
+                    using (var bitmap = new Bitmap(overlay.Width, overlay.Height))
+                    {
+                        overlay.DrawToBitmap(bitmap, overlay.ClientRectangle);
+                        bitmap.Save(Path.Combine(Path.GetTempPath(), "TrayTemps-graph-height-" + dpi + "-" + height + ".png"));
+                        for (int y = 0; y < bitmap.Height; y++)
+                        for (int x = 0; x < bitmap.Width; x++)
+                        {
+                            Color pixel = bitmap.GetPixel(x, y);
+                            if (pixel.R <= pixel.G + 40 || pixel.B <= pixel.G + 40) continue;
+                            firstLine = Math.Min(firstLine, y); lastLine = Math.Max(lastLine, y); break;
+                        }
+                    }
+                    int top = (int)Get(layout, "Y");
+                    Check(firstLine >= top && lastLine < top + expected && lastLine - firstLine >= expected * .6,
+                        "rendered frametime line uses the selected height without spilling out of its row at " + dpi + " DPI, height " + height +
+                        ": colored bounds=" + firstLine + ".." + lastLine + ", row=" + top + ".." + (top + expected));
+                    overlay.UpdateDisplay(config, new[] { metric }, new Rectangle(0, 0, 3840, 2160));
+                    Check(ReferenceEquals(layout, ((IList)Get(overlay, "_metricLayouts"))[0]), "unchanged graph height reuses geometry");
+                    previous = layout;
+                }
+                metric = new OsdMetric("Frametime", "") { Key = "FrameTimeGraph", Style = metric.Style, ValueWidthTemplate = "graph",
+                    Graph = Enumerable.Range(0, 100).Select(i => new FrameGraphPoint(10, i == 50 ? 60 : 12)).ToArray() };
+                var numeric = new OsdMetric("CPU", "60") { Key = "CpuTemperature", Style = config.MetricStyles["CpuTemperature"], ValueWidthTemplate = "###" };
+                foreach (int width in new[] { 80, 800 })
+                foreach (int height in new[] { 20, 400 })
+                foreach (int columns in new[] { 1, 2 })
+                foreach (int rowGap in new[] { 0, 5 })
+                {
+                    config.FrameTimeGraphWidth = width; config.FrameTimeGraphHeight = height; config.Columns = columns; config.RowsSpacing = rowGap;
+                    var area = new Rectangle(200, 100, 240, 180);
+                    overlay.UpdateDisplay(config, new[] { metric, numeric }, area);
+                    Check(overlay.Width <= area.Width && overlay.Height <= area.Height,
+                        "graph and caption fit a narrow working area at " + dpi + " DPI, size " + width + " x " + height + ", columns=" + columns + ", gap=" + rowGap);
+                    using (var bitmap = new Bitmap(overlay.Width, overlay.Height))
+                        overlay.DrawToBitmap(bitmap, overlay.ClientRectangle);
+                }
+            }
             foreach (int dpi in new[] { 96, 120, 144, 192 })
             foreach (float fontSize in new[] { 8.25f, 12f })
             using (var graph = new HistoryGraphControl())
@@ -467,10 +677,28 @@ internal static class PerformanceHistoryTests
             "history Unicode icon fits the button beside the temperature heading: " + iconSize + " in " + button.ClientSize);
         var config = host.NormalizeOsdConfiguration(new OsdConfiguration { ShowCpu = false, ShowGpu = false, ShowFps = true, ShowAverageFps = true, ShowFrameTime = true, ShowFrameTimeGraph = true });
         Set(host, "_osdConfiguration", config);
-        var legacyGaps = config.Clone(); legacyGaps.FpsLabelValueSpacing = 27;
-        Check(((OsdMetric)Call(host, "CreateFpsMetric", legacyGaps, false)).LabelValueSpacingOverride == 27 &&
-            ((OsdMetric)Call(host, "CreateFrameMetric", legacyGaps, "AverageFps")).LabelValueSpacingOverride == 27,
-            "production FPS and average FPS metrics retain saved internal group spacing");
+        var legacyGaps = host.NormalizeOsdConfiguration(new OsdConfiguration { FpsLabelValueSpacing = 27 });
+        Check(new[] { "Fps", "FpsOnePercentLow", "AverageFps" }.All(key => legacyGaps.MetricLabelValueGaps[key] == 27),
+            "legacy FPS spacing migrates into the same per-metric gaps as other metrics");
+        legacyGaps.LabelOverrides = OsdMetricDefinitions.CreateOverrides(legacyGaps);
+        legacyGaps.MetricGroups["Fps"] = legacyGaps.MetricGroups["FpsOnePercentLow"] = legacyGaps.MetricGroups["AverageFps"] = "Frames";
+        legacyGaps.LabelOverrides["Fps"] = "FPS"; legacyGaps.LabelOverrides["FpsOnePercentLow"] = "Low"; legacyGaps.LabelOverrides["AverageFps"] = "Avg";
+        legacyGaps.MetricLabelValueGaps["Fps"] = 7; legacyGaps.MetricLabelValueGaps["FpsOnePercentLow"] = 13; legacyGaps.MetricLabelValueGaps["AverageFps"] = 21;
+        using (var overlay = new OsdOverlay())
+        {
+            var frameMetrics = new[] { (OsdMetric)Call(host, "CreateFpsMetric", legacyGaps, false),
+                (OsdMetric)Call(host, "CreateFpsMetric", legacyGaps, true), (OsdMetric)Call(host, "CreateFrameMetric", legacyGaps, "AverageFps") };
+            overlay.UpdateDisplay(legacyGaps, OsdMetricDefinitions.Compose(legacyGaps, frameMetrics), new Rectangle(0, 0, 1920, 1080));
+            var parts = ((IList)Get(((IList)Get(overlay, "_metricLayouts"))[0], "Parts")).Cast<object>().ToArray();
+            for (int i = 0; i < frameMetrics.Length; i++)
+            {
+                var value = parts.Single(part => (int)Get(part, "Member") == i);
+                var label = parts.Single(part => (int)Get(part, "Owner") == i && (bool)Get(part, "Label") && !(bool)Get(part, "IsGroupCaption"));
+                Check((int)Get(value, "X") - (int)Get(label, "X") - (int)Get(label, "Width") ==
+                    (int)Math.Round(legacyGaps.MetricLabelValueGaps[frameMetrics[i].Key] * overlay.DeviceDpi / 96f),
+                    "production " + frameMetrics[i].Key + " uses its common per-metric gap instead of the legacy FPS override");
+            }
+        }
         var monitor = FakeMonitor(); Set(host, "_fpsMonitor", monitor);
         host.SetHistoryRecording(true);
         Check(ReferenceEquals(monitor, Get(host, "_fpsMonitor")) && !Control<CheckBox>(host, "osdEnable").Checked,
@@ -543,8 +771,8 @@ internal static class PerformanceHistoryTests
         Set(host, "_lastFpsOsdRefresh", Stopwatch.GetTimestamp());
         long refresh = (long)Get(host, "_lastFpsOsdRefresh");
         Call(host, "FpsTimer_Tick", null, EventArgs.Empty);
-        Check((long)Get(host, "_lastFpsOsdRefresh") == refresh && ((Timer)Get(host, "_fpsTimer")).Interval == 250,
-            "history collection preserves the selected OSD refresh rate");
+        Check((long)Get(host, "_lastFpsOsdRefresh") == refresh && ((Timer)Get(host, "_fpsTimer")).Interval == MainForm.FrameGraphRefreshIntervalMilliseconds,
+            "smooth graph presentation preserves the selected numeric OSD refresh rate");
         var displayed = ((List<OsdMetric>)Get(host, "_lastOsdMetrics")).Single(metric => metric.Key == "FrameTimeGraph");
         Call(host, "UpdateOsd", (float?)62, (float?)72);
         Check(ReferenceEquals(displayed, ((List<OsdMetric>)Get(host, "_lastOsdMetrics")).Single(metric => metric.Key == "FrameTimeGraph")) &&
@@ -600,7 +828,9 @@ internal static class PerformanceHistoryTests
                 "frametime font size preserves the graph width while reserving space for its caption");
             graph.Style.LabelColor = Color.Lime.ToArgb(); graph.Style.ValueColor = Color.Magenta.ToArgb();
             foreach (float fontSize in new[] { 10f, 32f, 48f })
+            foreach (int graphHeight in new[] { 20, 42, 400 })
             {
+                config.FrameTimeGraphHeight = graphHeight;
                 var captionStyle = graph.Style.Clone(); captionStyle.FontSize = fontSize;
                 var captionGraph = new OsdMetric("Frametime gj", "N/A") { Key = "FrameTimeGraph", Style = captionStyle,
                     ValueWidthTemplate = "graph", Graph = null };
@@ -609,11 +839,12 @@ internal static class PerformanceHistoryTests
                 {
                     overlay.DrawToBitmap(image, overlay.ClientRectangle);
                     Check(Enumerable.Range(0, image.Width).Any(x => Enumerable.Range(0, image.Height).Any(y => image.GetPixel(x, y).ToArgb() == Color.Lime.ToArgb())),
-                        "nonempty graph caption stays visible without samples at font size " + fontSize);
+                        "nonempty graph caption stays visible without samples at font size " + fontSize + ", graph height " + graphHeight);
                     Check(!Enumerable.Range(0, image.Width).Any(x => Enumerable.Range(0, image.Height).Any(y => image.GetPixel(x, y).ToArgb() == Color.Magenta.ToArgb())),
                         "null graph samples never draw N/A or a value-colored line");
                 }
             }
+            config.FrameTimeGraphHeight = OsdConfiguration.DefaultFrameTimeGraphHeight;
             graph = new OsdMetric("", "N/A") { Key = "FrameTimeGraph", Style = graph.Style, ValueWidthTemplate = "graph",
                 Graph = Enumerable.Repeat(new FrameGraphPoint(double.NaN, double.NaN), 100).ToArray() };
             overlay.UpdateDisplay(config, new[] { graph }, new Rectangle(0, 0, 1920, 1080));

@@ -44,7 +44,7 @@ internal static class OsdSpacingTests
         Check(savedGap.GroupedValuesGapPercent == 137 && savedGap.Clone().GroupedValuesGapPercent == 137,
             "custom grouped gap survives JSON and configuration cloning");
         Check(Enumerable.Range(0, 3).All(i => OsdPresets.LoadEmbedded(i).GroupedValuesGapPercent == 100),
-            "all embedded presets retain the existing one-space group minimum");
+            "the original embedded presets retain the existing one-space group minimum");
         // Simulate the renderer's DeviceDpi and matching bitmap DPI, without pretending
         // control scaling alone tests real monitor handover. Restore WinForms quirks after use.
         var helper = typeof(Control).Assembly.GetType("System.Windows.Forms.DpiHelper");
@@ -96,6 +96,25 @@ internal static class OsdSpacingTests
             var parts = ((IList)Field(Layouts(overlay)[0], "Parts")).Cast<object>().ToArray();
             Check((int)Field(parts[1], "X") - ((int)Field(parts[0], "X") + (int)Field(parts[0], "Width")) == 13,
                 "group row gap controls caption-to-values spacing");
+        }
+        foreach (string key in OsdMetricDefinitions.Keys.Where(value => value != "FrameTimeGraph"))
+        using (var overlay = new OsdOverlay())
+        {
+            config = Config(); config.MetricLabelValueGaps[key] = 17;
+            metric = Metric(key, "Metric", "1234", style, "####");
+            overlay.UpdateDisplay(config, new[] { metric }, Area);
+            var standalone = ((IList)Field(Layouts(overlay)[0], "Parts")).Cast<object>().ToArray();
+            int standaloneGap = (int)Field(standalone[1], "X") - (int)Field(standalone[0], "Width");
+            config.MetricGroups[key] = "Common";
+            overlay.UpdateDisplay(config, OsdMetricDefinitions.Compose(config, new[] { metric }), Area);
+            var grouped = ((IList)Field(Layouts(overlay)[0], "Parts")).Cast<object>().ToArray();
+            int groupedGap = (int)Field(grouped[2], "X") - (int)Field(grouped[1], "X") - (int)Field(grouped[1], "Width");
+            Check(standaloneGap == 17 && groupedGap == standaloneGap, key + " follows the same editable label/value gap rule in standalone and grouped rows");
+            config.MetricLabelValueGaps[key] = 0;
+            overlay.UpdateDisplay(config, OsdMetricDefinitions.Compose(config, new[] { metric }), Area);
+            grouped = ((IList)Field(Layouts(overlay)[0], "Parts")).Cast<object>().ToArray();
+            Check((int)Field(grouped[2], "X") == (int)Field(grouped[1], "X") + (int)Field(grouped[1], "Width"),
+                key + " honors a zero label/value gap without a metric-specific exception");
         }
     }
 
@@ -153,34 +172,52 @@ internal static class OsdSpacingTests
     private static OsdMetricStyle Style(string family, float size) => new OsdMetricStyle { FontFamily = family, FontSize = size, LabelColor = Color.White.ToArgb(), ValueColor = Color.White.ToArgb() };
     private static void MissingGroupedValues(string family, int dpi)
     {
-        // Reproduce the saved 1%Low: group with hidden member labels and 100% gap.
+        // Reproduce the saved 1%Low: group, with and without its frametime caption.
         var config = Config(); config.RowsSpacing = 1;
         config.ItemOrder = "FpsOnePercentLow,FrameTime";
         config.MetricGroups["FpsOnePercentLow"] = config.MetricGroups["FrameTime"] = "1%Low:";
         var lowStyle = Style(family, 10); lowStyle.ValueColor = Color.Red.ToArgb();
         var frameStyle = Style(family, 10); frameStyle.ValueColor = Color.Lime.ToArgb();
+        foreach (bool showFrameLabel in new[] { false, true })
         using (var overlay = new OsdOverlay())
         {
-            object initialLayout = null; Size initialSize = Size.Empty;
-            foreach (var values in new[] { new[] { "N/A", "N/A" }, new[] { "9", "16.67 ms" }, new[] { "9999", "9999.99 ms" },
-                new[] { "N/A", "16.67 ms" }, new[] { "92", "N/A" }, new[] { "N/A", "N/A" } })
+            object previousLayout = null; Size missingSize = Size.Empty, numericSize = Size.Empty;
+            string[] previousValues = null;
+            foreach (var values in new[] { new[] { "N/A", "N/A" }, new[] { "N/A", "N/A" },
+                new[] { "9", "16.67 ms" }, new[] { "9999", "9999.99 ms" },
+                new[] { "N/A", "16.67 ms" }, new[] { "N/A", "9999.99 ms" },
+                new[] { "92", "N/A" }, new[] { "9999", "N/A" }, new[] { "N/A", "N/A" } })
             {
                 var metrics = new[] { Metric("FpsOnePercentLow", "", values[0], lowStyle, "####"),
-                    Metric("FrameTime", "", values[1], frameStyle, "####.## ms") };
+                    Metric("FrameTime", showFrameLabel ? "frametime:" : "", values[1], frameStyle, "####.## ms") };
                 var rows = OsdMetricDefinitions.Compose(config, metrics);
-                if (initialLayout == null) LayoutAtDpi(overlay, config, rows, dpi);
+                if (previousLayout == null) LayoutAtDpi(overlay, config, rows, dpi);
                 else overlay.UpdateDisplay(config, rows, Area);
                 var layout = Layouts(overlay)[0];
-                if (initialLayout == null) { initialLayout = layout; initialSize = overlay.Size; }
-                Check(ReferenceEquals(initialLayout, layout) && overlay.Size == initialSize,
-                    "missing/short/long grouped frame values preserve cached slots and window size: " + family + " / " + dpi);
+                if (previousValues != null)
+                {
+                    bool sameAvailability = Enumerable.Range(0, values.Length).All(i => (values[i] == "N/A") == (previousValues[i] == "N/A"));
+                    Check(ReferenceEquals(previousLayout, layout) == sameAvailability,
+                        "only availability changes rebuild grouped frame slots: " + family + " / " + dpi + ", caption=" + showFrameLabel);
+                }
+                if (values.All(value => value == "N/A"))
+                {
+                    if (missingSize == Size.Empty) missingSize = overlay.Size;
+                    Check(overlay.Size == missingSize, "repeated and returning N/A values restore the same compact group size");
+                }
+                else if (values.All(value => value != "N/A"))
+                {
+                    if (numericSize == Size.Empty) numericSize = overlay.Size;
+                    Check(overlay.Size == numericSize && overlay.Width > missingSize.Width,
+                        "numeric frame values restore stable slots larger than compact placeholders");
+                }
                 var parts = ((IList)Field(layout, "Parts")).Cast<object>().Where(p => (int)Field(p, "Member") >= 0).ToArray();
                 using (var bitmap = new Bitmap(overlay.Width, overlay.Height))
                 {
                     bitmap.SetResolution(dpi, dpi);
                     using (var graphics = Graphics.FromImage(bitmap)) { graphics.Clear(Color.Transparent); Call(overlay, "DrawOverlay", graphics); }
                     if (family == "JetBrains Mono ExtraBold" && dpi == 96 && values.All(v => v == "N/A"))
-                        bitmap.Save(Path.Combine(Path.GetTempPath(), "TrayTemps-missing-frame-values.png"));
+                        bitmap.Save(Path.Combine(Path.GetTempPath(), "TrayTemps-missing-frame-values-" + showFrameLabel + ".png"));
                     for (int i = values.Length - 1; i >= 0; i--)
                     {
                         int first = bitmap.Width, last = -1;
@@ -195,10 +232,13 @@ internal static class OsdSpacingTests
                         int slotLeft = (int)Field(layout, "X") + (int)Field(parts[i], "X");
                         int slotRight = slotLeft + (int)Field(parts[i], "Width");
                         int tolerance = (int)Math.Ceiling(2d * dpi / 96);
-                        Check(last >= first && (values[i] == "N/A" ? Math.Abs(first - slotLeft) <= tolerance : Math.Abs(last - slotRight) <= tolerance),
-                            values[i] == "N/A" ? "N/A begins at its reserved slot, without numeric or unit padding: " + first + " vs " + slotLeft : "numeric frame values retain fixed leading padding and their unit");
+                        Check(last >= first && (values[i] == "N/A"
+                            ? Math.Abs(first - slotLeft) <= tolerance && Math.Abs(last - slotRight) <= tolerance
+                            : Math.Abs(last - slotRight) <= tolerance),
+                            values[i] == "N/A" ? "N/A fits its own slot without unused digit or unit space" : "numeric frame values retain fixed leading padding and their unit");
                     }
                 }
+                previousLayout = layout; previousValues = values;
             }
         }
     }
@@ -220,6 +260,9 @@ internal static class OsdSpacingTests
             var separator = parts.Single(p => (string)Field(p, "Text") == " ");
             int width = (int)Field(separator, "Width");
             var baselineFps = Layouts(overlay)[1];
+            var fpsParts = ((IList)Field(baselineFps, "Parts")).Cast<object>().ToArray();
+            Check((int)Field(fpsParts.Single(p => (string)Field(p, "Text") == " "), "Width") == width,
+                "FPS/1% Low uses the same one-space group gap as CPU metrics");
             config.GroupedValuesGapPercent = 150;
             overlay.UpdateDisplay(config, rows, Area);
             var increased = Layouts(overlay)[0];
@@ -231,14 +274,18 @@ internal static class OsdSpacingTests
                 Enumerable.Range(0, parts.Length).Where(i => (string)Field(parts[i], "Text") != " ")
                     .All(i => (int)Field(parts[i], "Width") == (int)Field(increasedParts[i], "Width")),
                 "group gap increase preserves caption gap and every fixed numeric slot");
-            Check((int)Field(baselineFps, "Width") == (int)Field(Layouts(overlay)[1], "Width"),
-                "FPS and 1% Low dedicated spacing is unaffected");
+            Check((int)Field(Layouts(overlay)[1], "Width") - (int)Field(baselineFps, "Width") == gap - width,
+                "the common percentage increases FPS/1% Low spacing by the same amount");
             overlay.UpdateDisplay(config, rows, Area);
             Check(ReferenceEquals(increased, Layouts(overlay)[0]), "unchanged percentage reuses cached OSD layout");
             config.GroupedValuesGapPercent = 100;
             overlay.UpdateDisplay(config, rows, Area);
             Check((int)Field(Layouts(overlay)[0], "Width") == (int)Field(baseline, "Width"),
                 "returning to 100% exactly restores original group geometry");
+            config.ItemOrder = "CpuTemperature,CpuUsage,FpsOnePercentLow,Fps";
+            overlay.UpdateDisplay(config, OsdMetricDefinitions.Compose(config, metrics), Area);
+            Check((int)Field(Layouts(overlay)[1], "Width") == (int)Field(baselineFps, "Width"),
+                "reversing FPS/1% Low keeps the common spacing rule");
         }
     }
     private static void GroupedValueGaps(string family, int dpi)
@@ -263,8 +310,10 @@ internal static class OsdSpacingTests
                     cachedLayout = Layouts(overlay)[0]; outerSize = overlay.Size;
                 }
                 else overlay.UpdateDisplay(config, rows, Area);
-                Check(ReferenceEquals(cachedLayout, Layouts(overlay)[0]) && overlay.Size == outerSize,
-                    "group numeric updates preserve cached slots and outer geometry: " + family + " / " + dpi);
+                Check(values[0] == "N/A"
+                    ? !ReferenceEquals(cachedLayout, Layouts(overlay)[0]) && overlay.Width < outerSize.Width
+                    : ReferenceEquals(cachedLayout, Layouts(overlay)[0]) && overlay.Size == outerSize,
+                    "group numeric updates stay stable while unavailable values use compact slots: " + family + " / " + dpi);
                 using (var image = new Bitmap(overlay.Width, overlay.Height))
                 {
                     image.SetResolution(dpi, dpi);
@@ -280,7 +329,7 @@ internal static class OsdSpacingTests
                                 channels[i] > 80 && channels[i] - channels[(i + 1) % 3] > 30 && channels[i] - channels[(i + 2) % 3] > 30)
                             { left[i] = Math.Min(left[i], x); right[i] = Math.Max(right[i], x); }
                     }
-                    Check(right.All(value => value >= 0), "all fixed numeric slots render their full values");
+                    Check(right.All(value => value >= 0), "all grouped slots render their full values");
                     if (initialRight == null)
                     {
                         initialRight = right; initialLeft = left;
@@ -353,7 +402,8 @@ internal static class OsdSpacingTests
             }
             rows[0] = Metric("CpuTemperature", "CPU", "N/A", style, "##.##G");
             overlay.UpdateDisplay(config, rows, Area);
-            Check(WithinRows(overlay, rows, dpi), "missing-data glyphs get their own compact bounds without clipping");
+            Check(WithinRows(overlay, rows, dpi) && (int)Field(Layouts(overlay)[0], "Width") < (int)Field(original, "Width"),
+                "standalone missing-data glyphs get compact width and height without clipping");
             rows[0] = Metric("CpuTemperature", "CPU", "88.88G", style, "##.##G");
             overlay.UpdateDisplay(config, rows, Area);
             Check(overlay.Height == compactHeight, "returning from N/A restores compact numeric height");
@@ -463,12 +513,10 @@ internal static class OsdSpacingTests
         var rows = OsdMetricDefinitions.Compose(config, metrics);
         Check(rows.Select(row => row.Label).SequenceEqual(new[] { "My CPU", "GPU", "Game" }) && rows[0].Members.Count == 1 && rows[2].Members.Count == 2,
             "trimmed group names supply captions, preserve case-insensitive membership and match hidden-member priority");
-        Check(OsdMetricDefinitions.Separator(metrics[2], metrics[3]) == "    " && OsdMetricDefinitions.Separator(metrics[0], metrics[1]) == " ",
-            "obsolete separator text cannot change built-in ordinary or FPS-pair gaps");
         string json = System.Text.Json.JsonSerializer.Serialize(config);
         var saved = System.Text.Json.JsonSerializer.Deserialize<OsdConfiguration>(json); OsdMetricDefinitions.Migrate(saved);
         Check(OsdMetricDefinitions.Compose(saved, metrics).Select(row => row.Label).SequenceEqual(rows.Select(row => row.Label)), "legacy caption/separator fields remain JSON-loadable without changing rendered captions");
-        foreach (int preset in new[] { 0, 1, 2 })
+        foreach (int preset in Enumerable.Range(0, OsdPresets.Names.Length))
         {
             var embedded = OsdPresets.LoadEmbedded(preset);
             var embeddedRows = OsdMetricDefinitions.Compose(embedded, OsdMetricDefinitions.Keys.Where(key => OsdMetricDefinitions.IsVisible(embedded, key)).Select(key => Metric(key, "", "10", embedded.MetricStyles[key])));

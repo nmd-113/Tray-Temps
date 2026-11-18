@@ -13,6 +13,7 @@ public partial class HardwareDetailsDialog : Form
     private bool _hasSensors;
     private bool _showingSensors;
     private bool _liveUpdateBusy;
+    private string _lastLiveText;
 
     private Color _menuBg = Color.FromArgb(30, 30, 30);
     private Color _selected = Color.FromArgb(50, 50, 50);
@@ -337,6 +338,7 @@ public partial class HardwareDetailsDialog : Form
 
         _liveTextFactory = liveTextFactory;
         _hasSensors = true;
+        _lastLiveText = null;
         _liveBox.Text = "Loading sensors...";
         _sensorsMenuBtn.Enabled = true;
         _sensorsMenuBtn.ForeColor = _menuText;
@@ -351,7 +353,9 @@ public partial class HardwareDetailsDialog : Form
     private async Task UpdateLiveSensorsAsync()
     {
         // Guard against re-entrancy, missing sensors, or disposed dialog.
-        if (_liveUpdateBusy || !_hasSensors || IsDisposed) return;
+        if (_liveUpdateBusy || !_hasSensors || IsDisposed || !Visible ||
+            WindowState == FormWindowState.Minimized ||
+            (_shouldStopLiveUpdates != null && _shouldStopLiveUpdates())) return;
         _liveUpdateBusy = true;
 
         bool redrawDisabled = false;
@@ -362,24 +366,33 @@ public partial class HardwareDetailsDialog : Form
 
             // If the dialog has been disposed or the control handle is not created,
             // skip updating to avoid cross-thread or invalid handle issues.
-            if (IsDisposed || !_liveBox.IsHandleCreated) return;
+            if (IsDisposed || !_liveBox.IsHandleCreated ||
+                (_shouldStopLiveUpdates != null && _shouldStopLiveUpdates())) return;
+
+            string displayText = string.IsNullOrWhiteSpace(text) ? "No sensors detected." : text;
+            // RichTextBox normalizes CRLF to LF; compare the source text instead
+            // of fetching and comparing a different native representation.
+            if (_lastLiveText == displayText) return;
 
             // Anti-Flicker: Disable redraw before updating the text.
             SendMessage(_liveBox.Handle, WM_SETREDRAW, IntPtr.Zero, IntPtr.Zero);
             redrawDisabled = true;
 
             int oldSelectionStart = _liveBox.SelectionStart;
+            int oldSelectionLength = _liveBox.SelectionLength;
             Point oldScrollPosition = Point.Empty;
             SendMessage(_liveBox.Handle, EM_GETSCROLLPOS, IntPtr.Zero, ref oldScrollPosition);
 
-            _liveBox.Text = string.IsNullOrWhiteSpace(text) ? "No sensors detected." : text;
+            _liveBox.Text = displayText;
+            _lastLiveText = displayText;
 
             _liveBox.SelectionStart = Math.Min(oldSelectionStart, _liveBox.TextLength);
-            _liveBox.SelectionLength = 0;
+            _liveBox.SelectionLength = Math.Min(oldSelectionLength, _liveBox.TextLength - _liveBox.SelectionStart);
             SendMessage(_liveBox.Handle, EM_SETSCROLLPOS, IntPtr.Zero, ref oldScrollPosition);
         }
         catch
         {
+            _lastLiveText = null;
             // Preserve original error handling behavior.
             if (!IsDisposed && _liveBox.IsHandleCreated)
                 _liveBox.Text = "Error reading sensors.";

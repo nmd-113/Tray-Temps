@@ -87,6 +87,13 @@ namespace TrayTemps
 
     public sealed class OsdConfiguration
     {
+        internal const int DefaultFrameTimeGraphWidth = 160;
+        internal const int MinFrameTimeGraphWidth = 80;
+        internal const int MaxFrameTimeGraphWidth = 800;
+        internal const int DefaultFrameTimeGraphHeight = 42;
+        internal const int MinFrameTimeGraphHeight = 20;
+        internal const int MaxFrameTimeGraphHeight = 400;
+
         internal static OsdConfiguration CreateAppDefault()
         {
             var config = new OsdConfiguration { Enabled = false, ShowCpu = true, ShowGpu = true, LabelValueSpacing = 10,
@@ -134,6 +141,8 @@ namespace TrayTemps
         public bool ShowAverageFps { get; set; }
         public bool ShowFrameTime { get; set; }
         public bool ShowFrameTimeGraph { get; set; }
+        public int FrameTimeGraphWidth { get; set; } = DefaultFrameTimeGraphWidth;
+        public int FrameTimeGraphHeight { get; set; } = DefaultFrameTimeGraphHeight;
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public decimal? FpsRefreshIntervalSeconds { get; set; }
         public bool CombineTemperatureAndUsage { get; set; }
@@ -169,6 +178,7 @@ namespace TrayTemps
         }
 
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        // Legacy JSON only; migrated into the common per-metric gap settings.
         public int? FpsLabelValueSpacing { get; set; }
 
         public int RowsSpacing { get; set; } = 5;
@@ -367,9 +377,9 @@ namespace TrayTemps
         internal OsdMetricStyle Style { get; set; }
         internal List<OsdMetric> Members { get; set; }
         internal FrameGraphPoint[] Graph { get; set; }
+        internal float GraphOffset { get; set; }
         internal string ValueWidthTemplate { get; set; }
         internal string AlternateValueWidthTemplate { get; set; }
-        internal int? LabelValueSpacingOverride { get; set; }
         internal Color? TextColor { get; }
     }
 

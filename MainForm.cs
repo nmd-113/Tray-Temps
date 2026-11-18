@@ -4138,6 +4138,10 @@ namespace TrayTemps
             result.Columns = ValueHelper.ClampInt(result.Columns, 1, OsdMetricDefinitions.Keys.Length);
             result.RowsSpacing = ValueHelper.ClampInt(result.RowsSpacing, 0, 100);
             result.ColumnsSpacing = ValueHelper.ClampInt(result.ColumnsSpacing, 0, 100);
+            result.FrameTimeGraphWidth = ValueHelper.ClampInt(result.FrameTimeGraphWidth,
+                OsdConfiguration.MinFrameTimeGraphWidth, OsdConfiguration.MaxFrameTimeGraphWidth);
+            result.FrameTimeGraphHeight = ValueHelper.ClampInt(result.FrameTimeGraphHeight,
+                OsdConfiguration.MinFrameTimeGraphHeight, OsdConfiguration.MaxFrameTimeGraphHeight);
             if (result.FpsRefreshIntervalSeconds.HasValue)
                 result.FpsRefreshIntervalSeconds = GetEffectiveFpsRefreshIntervalSeconds(result);
             if (result.LabelOverrides != null) result.LabelOverrides = OsdMetricDefinitions.CreateOverrides(result);
@@ -4309,8 +4313,7 @@ namespace TrayTemps
             {
                 Key = key,
                 Style = configuration.MetricStyles != null ? configuration.MetricStyles[key] : OsdMetricDefinitions.LegacyStyle(configuration, key),
-                ValueWidthTemplate = "####",
-                LabelValueSpacingOverride = configuration.FpsLabelValueSpacing ?? configuration.LabelValueSpacing
+                ValueWidthTemplate = "####"
             };
         }
         private static string GetOsdLabel(
@@ -4504,7 +4507,7 @@ namespace TrayTemps
                 return;
             }
 
-            int safeInterval = ValueHelper.ClampInt(intervalMilliseconds, 250, 10000);
+            int safeInterval = ValueHelper.ClampInt(intervalMilliseconds, FrameGraphRefreshIntervalMilliseconds, 10000);
             if (_fpsTimer.Interval != safeInterval)
                 _fpsTimer.Interval = safeInterval;
             if (!_fpsTimer.Enabled)
@@ -4535,7 +4538,8 @@ namespace TrayTemps
                 _fpsMonitoringStartFailures = 0;
                 _nextFpsMonitoringStartAttemptUtc = DateTime.MinValue;
                 _fpsMonitor.UpdateForegroundProcess();
-                _fpsMonitor.FlushIfNeeded(safeInterval);
+                _lastFpsForegroundRefresh = Stopwatch.GetTimestamp();
+                _fpsMonitor.FlushIfNeeded(Math.Max(FrameGraphCaptureIntervalMilliseconds, safeInterval));
             }
             else _fpsMonitor.SetFrameStatisticsEnabled(collectOnePercentLow, collectTiming);
         }
@@ -4553,32 +4557,50 @@ namespace TrayTemps
             int intervalMilliseconds = _fpsTimer.Interval;
             if (_fpsMonitor == null) return;
 
-            _fpsMonitor.UpdateForegroundProcess();
-            _fpsMonitor.FlushIfNeeded(intervalMilliseconds);
             long now = Stopwatch.GetTimestamp();
+            bool graphVisible = osdEnable.Checked && displayConfiguration.ShowFrameTimeGraph;
+            // Smooth graph presentation does not need faster foreground polling,
+            // history sampling, numeric updates or ETW flushes on every paint.
+            if (!graphVisible || _lastFpsForegroundRefresh == 0 ||
+                (now - _lastFpsForegroundRefresh) * 1000d / Stopwatch.Frequency >= 250)
+            {
+                _fpsMonitor.UpdateForegroundProcess();
+                _lastFpsForegroundRefresh = now;
+            }
+            _fpsMonitor.FlushIfNeeded(graphVisible ? FrameGraphCaptureIntervalMilliseconds : intervalMilliseconds);
             bool refreshOsd = osdEnable.Checked && FrameOsdRefreshDue(displayConfiguration, now);
-            ReadFrameStatistics(displayConfiguration, refreshOsd);
+            bool recordHistory = HistoryRecording && (_lastFrameHistoryRefresh == 0 ||
+                (now - _lastFrameHistoryRefresh) * 1000d / Stopwatch.Frequency >= 250);
+            if (!graphVisible || refreshOsd || recordHistory || _lastFrameStatisticsRefresh == 0 ||
+                (now - _lastFrameStatisticsRefresh) * 1000d / Stopwatch.Frequency >= FrameGraphCaptureIntervalMilliseconds)
+                ReadFrameStatistics(displayConfiguration, graphVisible);
             // A stream reset must clear old displayed values without waiting for
             // their normal refresh interval. Capture and history keep their own rate.
-            if (!refreshOsd && osdEnable.Checked && FrameOsdRefreshDue(displayConfiguration, now))
+            refreshOsd |= osdEnable.Checked && FrameOsdRefreshDue(displayConfiguration, now);
+            if (recordHistory)
             {
-                refreshOsd = true;
-                if (displayConfiguration.ShowFrameTimeGraph) ReadFrameStatistics(displayConfiguration);
+                RecordFrameHistory(displayConfiguration);
+                _lastFrameHistoryRefresh = now;
             }
-            RecordFrameHistory(displayConfiguration);
             if (refreshOsd)
             {
                 BeginFrameOsdRefresh(displayConfiguration, now);
                 RefreshFpsOsdMetric(displayConfiguration);
             }
+            else if (graphVisible)
+            {
+                _displayedFrameMetrics["FrameTimeGraph"] = CreateFrameMetric(displayConfiguration, "FrameTimeGraph");
+                RefreshFpsOsdMetric(displayConfiguration, graphOnly: true);
+            }
         }
 
-        private void RefreshFpsOsdMetric(OsdConfiguration configuration)
+        private void RefreshFpsOsdMetric(OsdConfiguration configuration, bool graphOnly = false)
         {
             if (_osdOverlay == null || _osdOverlay.IsDisposed || _lastOsdMetrics == null) return;
             for (int row = 0; row < _lastOsdMetrics.Count; row++)
             {
                 OsdMetric current = _lastOsdMetrics[row];
+                if (graphOnly && current.Key != "FrameTimeGraph") continue;
                 if (current.Members == null)
                 {
                     if (OsdMetricDefinitions.IsFrameMetric(current.Key))
@@ -4613,6 +4635,7 @@ namespace TrayTemps
         private void StopFpsMonitoring()
         {
             _latestFrameStatistics = default(FrameStatistics);
+            _lastFrameStatisticsRefresh = _lastFpsForegroundRefresh = _lastFrameHistoryRefresh = 0;
             try
             {
                 _fpsTimer.Stop();
@@ -6587,6 +6610,13 @@ namespace TrayTemps
                 $"{AppName}.lnk");
             string settingsFolder = Path.GetDirectoryName(SettingsFilePath);
 
+            try { InstallationFileHelper.ValidateSettingsDirectory(settingsFolder); }
+            catch (Exception error) when (error is IOException || error is UnauthorizedAccessException)
+            {
+                MessageBox.Show(this, error.Message, "Uninstall Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
             // The limiter is stopped before uninstall reaches this method. Remove
             // all engine versions in both uninstall paths, without touching other app data.
             try
@@ -6640,7 +6670,7 @@ namespace TrayTemps
             string scriptPath = Path.Combine(Path.GetTempPath(), $"DeleteTrayTemps_{Guid.NewGuid():N}.ps1");
             try
             {
-                string script = InstallationFileHelper.BuildDeferredUninstallScript(installDirectory, settingsFolder, shortcutPath);
+                string script = InstallationFileHelper.BuildDeferredUninstallScript(installDirectory, settingsFolder, shortcutPath, showErrors: true);
                 File.WriteAllText(scriptPath, script, new System.Text.UTF8Encoding(true));
                 using (Process process = Process.Start(new ProcessStartInfo
                 {
@@ -6681,6 +6711,7 @@ namespace TrayTemps
 
             try
             {
+                InstallationFileHelper.ValidateSettingsDirectory(settingsFolder);
                 InstallationFileHelper.RemoveInstalledFiles(installDirectory);
 
                 if (File.Exists(shortcutPath))

@@ -34,7 +34,12 @@ namespace TrayTemps
         private void UpdateGamesColumnWidths()
         {
             int pathWidth = Math.Max(100, games.ClientSize.Width - executableColumn.Width - capColumn.Width);
-            pathColumn.Width = pathWidth;
+            // Batch the native resize so ListView recalculates its scrollbars
+            // after the columns fit, rather than retaining a stale horizontal bar.
+            games.BeginUpdate();
+            try { pathColumn.Width = pathWidth; }
+            finally { games.EndUpdate(); }
+            gamesHeader.ColumnStyles[0].Width = executableColumn.Width;
             gamesHeader.ColumnStyles[1].SizeType = SizeType.Absolute;
             gamesHeader.ColumnStyles[1].Width = pathWidth;
             gamesHeader.ColumnStyles[2].SizeType = SizeType.Absolute;

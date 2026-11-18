@@ -1,0 +1,174 @@
+{
+    "Enabled":  false,
+    "Position":  0,
+    "ShowCpu":  true,
+    "ShowGpu":  true,
+    "FontFamily":  "JetBrains Mono ExtraBold",
+    "FontSize":  16,
+    "CpuFontColor":  -16711681,
+    "GpuFontColor":  -10496,
+    "RamFontColor":  -7278960,
+    "VramFontColor":  -1146130,
+    "FpsFontColor":  -657931,
+    "BackgroundColor":  -16777216,
+    "BackgroundOpacityPercent":  50,
+    "BackgroundCornerRoundness":  15,
+    "TransparentBackground":  false,
+    "OpacityPercent":  90,
+    "ShowCpuUsage":  true,
+    "ShowGpuUsage":  true,
+    "ShowRamUsage":  true,
+    "ShowVramUsage":  true,
+    "ShowFps":  true,
+    "ShowFpsOnePercentLow":  true,
+    "ShowCurrentTime":  true,
+    "ShowAverageFps":  true,
+    "ShowFrameTime":  true,
+    "ShowFrameTimeGraph":  true,
+    "FrameTimeGraphWidth":  250,
+    "FrameTimeGraphHeight":  30,
+    "FpsRefreshIntervalSeconds":  0.25,
+    "CombineTemperatureAndUsage":  false,
+    "MetricGroupingMode":  0,
+    "LabelMode":  0,
+    "CustomCpuLabel":  "CPU Temp",
+    "CustomGpuLabel":  "GPU Temp",
+    "CustomCpuUsageLabel":  "CPU Load",
+    "CustomGpuUsageLabel":  "GPU Load",
+    "CustomRamLabel":  "RAM Use",
+    "CustomVramLabel":  "VRAM Use",
+    "CustomFpsLabel":  "FPS",
+    "CustomTimeLabel":  "Time",
+    "LabelOverrides":  {
+                           "CpuTemperature":  "",
+                           "GpuTemperature":  "",
+                           "CpuUsage":  "",
+                           "GpuUsage":  "",
+                           "RamUsage":  "RAM:",
+                           "VramUsage":  "VRAM:",
+                           "Fps":  "",
+                           "FpsOnePercentLow":  "1%:",
+                           "CurrentTime":  "🕒",
+                           "AverageFps":  "AVG:",
+                           "FrameTime":  "Frametime:",
+                           "FrameTimeGraph":  ""
+                       },
+    "MetricGroups":  {
+                         "CpuTemperature":  "CPU:",
+                         "CpuUsage":  "CPU:",
+                         "RamUsage":  "",
+                         "GpuTemperature":  "GPU:",
+                         "GpuUsage":  "GPU:",
+                         "VramUsage":  "",
+                         "Fps":  "FPS:",
+                         "FpsOnePercentLow":  "FPS:",
+                         "CurrentTime":  "",
+                         "AverageFps":  "FPS:",
+                         "FrameTime":  ""
+                     },
+    "GroupLabels":  {
+
+                    },
+    "GroupedLabelOverrides":  {
+
+                              },
+    "MetricStyles":  {
+                         "CpuTemperature":  {
+                                                "FontFamily":  "JetBrains Mono ExtraBold",
+                                                "FontSize":  12,
+                                                "LabelColor":  -16711681,
+                                                "ValueColor":  -1
+                                            },
+                         "GpuTemperature":  {
+                                                "FontFamily":  "JetBrains Mono ExtraBold",
+                                                "FontSize":  12,
+                                                "LabelColor":  -32640,
+                                                "ValueColor":  -1
+                                            },
+                         "CpuUsage":  {
+                                          "FontFamily":  "JetBrains Mono ExtraBold",
+                                          "FontSize":  12,
+                                          "LabelColor":  -16711681,
+                                          "ValueColor":  -1
+                                      },
+                         "GpuUsage":  {
+                                          "FontFamily":  "JetBrains Mono ExtraBold",
+                                          "FontSize":  12,
+                                          "LabelColor":  -32640,
+                                          "ValueColor":  -1
+                                      },
+                         "RamUsage":  {
+                                          "FontFamily":  "JetBrains Mono ExtraBold",
+                                          "FontSize":  12,
+                                          "LabelColor":  -16711872,
+                                          "ValueColor":  -1
+                                      },
+                         "VramUsage":  {
+                                           "FontFamily":  "JetBrains Mono ExtraBold",
+                                           "FontSize":  12,
+                                           "LabelColor":  -24768,
+                                           "ValueColor":  -1
+                                       },
+                         "Fps":  {
+                                     "FontFamily":  "JetBrains Mono ExtraBold",
+                                     "FontSize":  12,
+                                     "LabelColor":  -8323200,
+                                     "ValueColor":  -1
+                                 },
+                         "FpsOnePercentLow":  {
+                                                  "FontFamily":  "JetBrains Mono ExtraBold",
+                                                  "FontSize":  9,
+                                                  "LabelColor":  -8323200,
+                                                  "ValueColor":  -1
+                                              },
+                         "CurrentTime":  {
+                                             "FontFamily":  "JetBrains Mono ExtraBold",
+                                             "FontSize":  9,
+                                             "LabelColor":  -1,
+                                             "ValueColor":  -1
+                                         },
+                         "AverageFps":  {
+                                            "FontFamily":  "JetBrains Mono ExtraBold",
+                                            "FontSize":  9,
+                                            "LabelColor":  -8323200,
+                                            "ValueColor":  -1
+                                        },
+                         "FrameTime":  {
+                                           "FontFamily":  "JetBrains Mono ExtraBold",
+                                           "FontSize":  7.5,
+                                           "LabelColor":  -1,
+                                           "ValueColor":  -1
+                                       },
+                         "FrameTimeGraph":  {
+                                                "FontFamily":  "JetBrains Mono",
+                                                "FontSize":  10,
+                                                "LabelColor":  -1,
+                                                "ValueColor":  -1
+                                            }
+                     },
+    "MetricLabelValueGaps":  {
+                                 "Fps":  10,
+                                 "FpsOnePercentLow":  10,
+                                 "AverageFps":  10,
+                                 "Group:CPU:":  20,
+                                 "CurrentTime":  5,
+                                 "Group:GPU:":  20,
+                                 "RamUsage":  20,
+                                 "VramUsage":  10,
+                                 "Group:FPS:":  15,
+                                 "FrameTime":  8
+                             },
+    "GroupSeparator":  null,
+    "LabelValueSpacing":  10,
+    "FpsLabelValueSpacing":  10,
+    "RowsSpacing":  5,
+    "ColumnsSpacing":  20,
+    "GroupedValuesGapPercent":  150,
+    "ScreenMargin":  10,
+    "ExternalSpacing":  5,
+    "Columns":  1,
+    "ItemOrder":  "CurrentTime,CpuTemperature,CpuUsage,GpuTemperature,GpuUsage,RamUsage,VramUsage,Fps,AverageFps,FpsOnePercentLow,FrameTime,FrameTimeGraph",
+    "HotkeyEnabled":  false,
+    "HotkeyModifiers":  6,
+    "HotkeyKey":  79
+}

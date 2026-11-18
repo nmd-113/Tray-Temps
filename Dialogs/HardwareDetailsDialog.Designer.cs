@@ -270,7 +270,7 @@ partial class HardwareDetailsDialog
             this._subtitleLabel.Location = new System.Drawing.Point(0, 32);
             this._subtitleLabel.Name = "_subtitleLabel";
             this._subtitleLabel.Padding = new System.Windows.Forms.Padding(15, 2, 0, 0);
-            this._subtitleLabel.Size = new System.Drawing.Size(538, 24);
+            this._subtitleLabel.Size = new System.Drawing.Size(538, 23);
             this._subtitleLabel.TabIndex = 1;
             this._subtitleLabel.Text = "Static data";
             // 
@@ -398,7 +398,7 @@ partial class HardwareDetailsDialog
             // iconLabel
             // 
             this.iconLabel.Dock = System.Windows.Forms.DockStyle.Top;
-            this.iconLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 21.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.iconLabel.Font = new System.Drawing.Font("Segoe UI Emoji", 21.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.iconLabel.ForeColor = System.Drawing.Color.WhiteSmoke;
             this.iconLabel.Location = new System.Drawing.Point(3, 0);
             this.iconLabel.Name = "iconLabel";

@@ -188,6 +188,10 @@ namespace TrayTemps
             PopulateNumericOptions(rowsSpacing, 0m, 100m, 1m);
             PopulateNumericOptions(columnsSpacing, 0m, 100m, 1m);
             PopulateNumericOptions(groupedValuesGapPercent, 100m, 200m, 10m);
+            PopulateNumericOptions(frameTimeGraphWidthValue, OsdConfiguration.MinFrameTimeGraphWidth,
+                OsdConfiguration.MaxFrameTimeGraphWidth, 10m);
+            PopulateNumericOptions(frameTimeGraphHeightValue, OsdConfiguration.MinFrameTimeGraphHeight,
+                OsdConfiguration.MaxFrameTimeGraphHeight, 2m);
             PopulateNumericOptions(columnsValue, 1m, 1m, 1m);
             PopulateNumericOptions(fpsRefreshIntervalValue, 0.25m, 10m, 0.25m);
             PopulateNumericOptions(fpsLabelValueSpacing, 0m, 100m, 1m);
@@ -204,6 +208,10 @@ namespace TrayTemps
             SelectNumericOption(screenMarginValue, ValueHelper.ClampInt(source.ScreenMargin, 0, 100));
             SelectNumericOption(externalSpacingValue, ValueHelper.ClampInt(source.ExternalSpacing, 0, 100));
             SelectNumericOption(groupedValuesGapPercent, ValueHelper.ClampInt(source.GroupedValuesGapPercent, 100, 200));
+            SelectNumericOption(frameTimeGraphWidthValue, ValueHelper.ClampInt(source.FrameTimeGraphWidth,
+                OsdConfiguration.MinFrameTimeGraphWidth, OsdConfiguration.MaxFrameTimeGraphWidth));
+            SelectNumericOption(frameTimeGraphHeightValue, ValueHelper.ClampInt(source.FrameTimeGraphHeight,
+                OsdConfiguration.MinFrameTimeGraphHeight, OsdConfiguration.MaxFrameTimeGraphHeight));
             SelectNumericOption(cornerRoundnessValue, ValueHelper.ClampInt(source.BackgroundCornerRoundness, 0, 50));
             SelectNumericOption(columnsValue, ValueHelper.ClampInt(source.Columns, 1, OsdMetricDefinitions.Keys.Length));
             SelectNumericOption(
@@ -304,6 +312,8 @@ namespace TrayTemps
             result.RowsSpacing = (int)GetNumericOptionValue(rowsSpacing, 5);
             result.ColumnsSpacing = (int)GetNumericOptionValue(columnsSpacing, 20);
             result.GroupedValuesGapPercent = (int)GetNumericOptionValue(groupedValuesGapPercent, 100);
+            result.FrameTimeGraphWidth = (int)GetNumericOptionValue(frameTimeGraphWidthValue, OsdConfiguration.DefaultFrameTimeGraphWidth);
+            result.FrameTimeGraphHeight = (int)GetNumericOptionValue(frameTimeGraphHeightValue, OsdConfiguration.DefaultFrameTimeGraphHeight);
             result.ScreenMargin = (int)GetNumericOptionValue(screenMarginValue, 10);
             result.ExternalSpacing = (int)GetNumericOptionValue(externalSpacingValue, 0);
             result.Columns = (int)GetNumericOptionValue(columnsValue, 1);
@@ -845,11 +855,14 @@ namespace TrayTemps
             metricListHint.ForeColor = theme.MutedText;
             _disabledMetricColor = theme.MutedText;
             spacingLayout.BackColor = theme.SurfaceBack;
+            frameTimeGraphSizeLayout.BackColor = theme.SurfaceBack;
             foreach (Label label in new[]
             {
                 rowsGapHeader,
                 columnsGapHeader,
                 groupedValuesGapLabel,
+                frameTimeGraphSizeLabel,
+                frameTimeGraphSizeSeparator,
                 fpsRefreshIntervalLabel,
                 fpsLabelValueSpacingLabel,
                 externalSpacingLabel,
@@ -865,6 +878,7 @@ namespace TrayTemps
                 positionValue, itemOrder, presetList,
                 metricsList, metricLabelEditor, rowsSpacing, columnsSpacing, groupedValuesGapPercent,
                 columnsValue, screenMarginValue, fpsRefreshIntervalValue,
+                frameTimeGraphWidthValue, frameTimeGraphHeightValue,
 
                 fpsLabelValueSpacing, externalSpacingValue, cornerRoundnessValue, hotkeyValue
             })

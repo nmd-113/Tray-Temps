@@ -15,6 +15,9 @@ namespace TrayTemps
         private PerformanceHistoryDialog _historyDialog;
         private FrameStatistics _latestFrameStatistics;
         private long _lastFpsOsdRefresh;
+        internal const int FrameGraphRefreshIntervalMilliseconds = 33;
+        private const int FrameGraphCaptureIntervalMilliseconds = 100;
+        private long _lastFrameStatisticsRefresh, _lastFpsForegroundRefresh, _lastFrameHistoryRefresh;
         private readonly Dictionary<string, OsdMetric> _displayedFrameMetrics = new Dictionary<string, OsdMetric>(StringComparer.Ordinal);
         private OsdConfiguration _frameOsdConfiguration;
         private int _frameOsdGeneration;
@@ -22,6 +25,19 @@ namespace TrayTemps
         private long _historyEpoch, _cpuHistorySource, _gpuHistorySource;
         private string _historyCpuId, _historyGpuId;
         internal HistorySettings HistoryPreferences => _historySettings;
+        internal long HistoryVersion => _history.Version;
+        internal double HistoryGraphEndTime => HistoryRecording ? HistoryNow : _history.LastTime;
+        internal int HistoryGraphOptions
+        {
+            get
+            {
+                var config = EffectiveOsd;
+                return (config.ShowFps ? 1 : 0) | (config.ShowAverageFps ? 2 : 0) | (config.ShowFpsOnePercentLow ? 4 : 0) |
+                    (config.ShowRamUsage ? 8 : 0) | (config.ShowVramUsage ? 16 : 0) |
+                    (config.ShowFrameTime || config.ShowFrameTimeGraph ? 32 : 0) | (tempsFahrenheit.Checked ? 64 : 0) |
+                    (IsLightModeEnabled ? 128 : 0) | (HistoryRecording ? 256 : 0) | (_historySettings.Minutes << 10);
+            }
+        }
         private bool HistoryRecording => _historySettings.RecordingEnabled && !_isShutdownInitiated && !_resourcesDisposed;
         private OsdConfiguration EffectiveOsd => _osdPreviewConfiguration ?? _osdConfiguration;
         private bool HistoryNeedsFrames => HistoryRecording && OsdMetricDefinitions.NeedsFrames(EffectiveOsd);
@@ -43,6 +59,7 @@ namespace TrayTemps
         {
             if (_historySettings.RecordingEnabled == enabled) return;
             _historySettings.RecordingEnabled = enabled;
+            _lastFrameHistoryRefresh = 0;
             _historyEpoch++;
             SynchronizeFrameCapture();
             if (enabled) RecordHardwareHistory(GetCurrentKnownTemperature(_cpuTempSensor), GetCurrentKnownTemperature(_gpuTempSensor));
@@ -67,13 +84,15 @@ namespace TrayTemps
             var config = EffectiveOsd;
             if (HistoryRecording) MarkDisabledHistoryMetrics(config);
             bool needed = (osdEnable.Checked || HistoryRecording) && OsdMetricDefinitions.NeedsFrames(config);
-            int interval = HistoryNeedsFrames ? 250 : GetEffectiveFpsRefreshIntervalMilliseconds(config);
+            int interval = osdEnable.Checked && config.ShowFrameTimeGraph ? FrameGraphRefreshIntervalMilliseconds :
+                HistoryNeedsFrames ? 250 : GetEffectiveFpsRefreshIntervalMilliseconds(config);
             UpdateFpsMonitoring(needed, interval, config.ShowFpsOnePercentLow, OsdMetricDefinitions.NeedsTiming(config));
         }
 
         private void ReadFrameStatistics(OsdConfiguration config, bool displayGraph = true)
         {
             _latestFrameStatistics = _fpsMonitor?.GetFrameStatistics(GetEffectiveFpsRefreshIntervalMilliseconds(config), displayGraph && osdEnable.Checked && config.ShowFrameTimeGraph) ?? default(FrameStatistics);
+            _lastFrameStatisticsRefresh = Stopwatch.GetTimestamp();
         }
 
         private bool FrameOsdRefreshDue(OsdConfiguration config, long now) =>
@@ -107,8 +126,9 @@ namespace TrayTemps
             {
                 Key = key, Style = config.MetricStyles[key],
                 ValueWidthTemplate = key == "AverageFps" ? "####" : key == "FrameTimeGraph" ? "graph" : "####.## ms",
-                LabelValueSpacingOverride = key == "AverageFps" ? config.FpsLabelValueSpacing ?? config.LabelValueSpacing : (int?)null,
-                Graph = key == "FrameTimeGraph" ? _latestFrameStatistics.Graph ?? EmptyFrameGraph : null
+                Graph = key == "FrameTimeGraph" ? _latestFrameStatistics.Graph ?? EmptyFrameGraph : null,
+                GraphOffset = key == "FrameTimeGraph" && _latestFrameStatistics.GraphTimestamp > 0
+                    ? (float)Math.Max(0, (Stopwatch.GetTimestamp() - _latestFrameStatistics.GraphTimestamp) / (Stopwatch.Frequency / 10d)) : 0
             };
         }
 
@@ -155,7 +175,7 @@ namespace TrayTemps
         internal void FillHistoryGraphs(HistoryGraphControl temperatures, HistoryGraphControl usage, HistoryGraphControl fps, HistoryGraphControl memory, HistoryGraphControl frames)
         {
             int minutes = _historySettings.Minutes;
-            double end = HistoryRecording || _history.LastTime == 0 ? HistoryNow : _history.LastTime;
+            double end = HistoryGraphEndTime;
             var config = EffectiveOsd;
             bool light = IsLightModeEnabled;
             Color cpu = light ? Color.Teal : Color.Cyan, gpu = light ? Color.FromArgb(161, 85, 0) : Color.Gold;

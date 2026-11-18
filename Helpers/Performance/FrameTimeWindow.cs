@@ -168,6 +168,7 @@ namespace TrayTemps
                 {
                     result.Graph = new FrameGraphPoint[100];
                     long lastBucket = now / Math.Max(1, _frequency / 10);
+                    result.GraphTimestamp = lastBucket * Math.Max(1, _frequency / 10);
                     for (int i = 0; i < result.Graph.Length; i++)
                     {
                         long id = lastBucket - 99 + i;

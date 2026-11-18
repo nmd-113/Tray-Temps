@@ -8,12 +8,13 @@ namespace TrayTemps
     internal static class OsdPresets
     {
         private const int MaximumFileSize = 1024 * 1024;
-        internal static readonly string[] Names = { "Classic stack", "Horizontal dashboard", "Minimal transparent" };
+        internal static readonly string[] Names = { "Classic stack", "Horizontal dashboard", "Minimal transparent", "Spectrum stack" };
         private static readonly Lazy<OsdConfiguration>[] Embedded =
         {
             new Lazy<OsdConfiguration>(() => ReadEmbedded(1)),
             new Lazy<OsdConfiguration>(() => ReadEmbedded(2)),
-            new Lazy<OsdConfiguration>(() => ReadEmbedded(3))
+            new Lazy<OsdConfiguration>(() => ReadEmbedded(3)),
+            new Lazy<OsdConfiguration>(() => ReadEmbedded(4))
         };
 
         internal static OsdConfiguration LoadEmbedded(int index) => Embedded[index].Value.Clone();

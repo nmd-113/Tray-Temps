@@ -85,12 +85,6 @@ internal static class OsdMetricListTests
         var invalid = Config(); invalid.MetricStyles["Fps"].FontSize = float.NaN; invalid.MetricGroups["Fps"] = "  A\r\n "; invalid.GroupSeparator = " ";
         OsdMetricDefinitions.Migrate(invalid);
         Check(invalid.MetricStyles["Fps"].FontSize == 16 && invalid.MetricGroups["Fps"] == "A" && invalid.GroupSeparator == " ", "invalid sizes and multiline names normalize while explicit spaces survive");
-        Check(OsdMetricDefinitions.Separator(null, null) == " ", "ordinary grouped metrics use one built-in space");
-        var separatorConfig = Config();
-        var fpsPair = new[] { Metric(separatorConfig, "Fps", "144"), Metric(separatorConfig, "FpsOnePercentLow", "92") };
-        Check(OsdMetricDefinitions.Separator(fpsPair[0], fpsPair[1]) == "    " &&
-            OsdMetricDefinitions.Separator(fpsPair[1], fpsPair[0]) == "    ",
-            "empty FPS/1% Low separator keeps two base spaces plus one padding space on both sides in either order");
         var appDefaults = OsdConfiguration.CreateAppDefault();
         var missingOsd = System.Text.Json.JsonSerializer.Deserialize<AppSettings>("{\"LightMode\":true}");
         Check(!appDefaults.Enabled && appDefaults.LabelValueSpacing == 10 && missingOsd.Osd.LabelValueSpacing == 10 &&
@@ -191,6 +185,42 @@ internal static class OsdMetricListTests
             "fresh defaults are neutral and distinct from the explicitly loaded preset");
         first.MetricStyles["Fps"].FontSize = 48;
         Check(OsdPresets.LoadEmbedded(0).MetricStyles["Fps"].FontSize != 48, "embedded preset loads return independent deep copies");
+        var spectrum = OsdPresets.LoadEmbedded(3);
+        Check(OsdPresets.Names.Length == 4 && OsdPresets.Names[3] == "Spectrum stack" &&
+            OsdMetricDefinitions.Keys.All(key => OsdMetricDefinitions.IsVisible(spectrum, key)),
+            "Spectrum stack is the fourth embedded preset and includes every performance metric");
+        Check(spectrum.Position == OsdPosition.TopLeft && spectrum.Columns == 1 &&
+            spectrum.BackgroundColor == Color.Black.ToArgb() && spectrum.BackgroundOpacityPercent == 50 &&
+            spectrum.OpacityPercent == 90 && spectrum.BackgroundCornerRoundness == 15 &&
+            spectrum.RowsSpacing == 5 && spectrum.ScreenMargin == 10 && spectrum.ExternalSpacing == 5,
+            "Spectrum stack preserves the captured single-column translucent black appearance");
+        Check(spectrum.FrameTimeGraphWidth == 250 && spectrum.FrameTimeGraphHeight == 30 && spectrum.FpsRefreshIntervalSeconds == .25m &&
+            spectrum.GroupedValuesGapPercent == 150 && spectrum.MetricLabelValueGaps["Group:CPU:"] == 20 &&
+            spectrum.MetricLabelValueGaps["Group:FPS:"] == 15 && spectrum.MetricLabelValueGaps["FrameTime"] == 8,
+            "Spectrum stack uses the minimum refresh interval and preserves graph dimensions and custom metric/group gaps");
+        Check(spectrum.LabelOverrides["CurrentTime"] == "\U0001F552" && spectrum.LabelOverrides["FpsOnePercentLow"] == "1%:" &&
+            spectrum.LabelOverrides["AverageFps"] == "AVG:" && spectrum.LabelOverrides["FrameTimeGraph"] == "" &&
+            spectrum.ItemOrder == "CurrentTime,CpuTemperature,CpuUsage,GpuTemperature,GpuUsage,RamUsage,VramUsage,Fps,AverageFps,FpsOnePercentLow,FrameTime,FrameTimeGraph" &&
+            new[] { "Fps", "FpsOnePercentLow", "AverageFps" }.All(key => OsdMetricDefinitions.Group(spectrum, key) == "FPS:") &&
+            OsdMetricDefinitions.Group(spectrum, "RamUsage") == "" && OsdMetricDefinitions.Group(spectrum, "VramUsage") == "",
+            "Spectrum stack preserves the clock icon, captions, FPS grouping and display order");
+        Check(new[] { "CpuTemperature", "CpuUsage", "GpuTemperature", "GpuUsage", "RamUsage", "VramUsage", "Fps" }
+            .All(key => spectrum.MetricStyles[key].FontSize == 12) &&
+            spectrum.MetricStyles["CurrentTime"].FontSize == 9 && spectrum.MetricStyles["FpsOnePercentLow"].FontSize == 9 &&
+            spectrum.MetricStyles["AverageFps"].FontSize == 9 && spectrum.MetricStyles["FrameTime"].FontSize == 7.5f &&
+            spectrum.MetricStyles["FrameTimeGraph"].FontFamily == OsdFontHelper.EmbeddedJetBrainsMonoRegularDisplayName &&
+            spectrum.MetricStyles.Values.All(style => style.ValueColor == Color.White.ToArgb()) &&
+            spectrum.MetricStyles["CpuTemperature"].LabelColor == -16711681 && spectrum.MetricStyles["GpuTemperature"].LabelColor == -32640 &&
+            spectrum.MetricStyles["RamUsage"].LabelColor == -16711872 && spectrum.MetricStyles["VramUsage"].LabelColor == -24768 &&
+            spectrum.MetricStyles["Fps"].LabelColor == -8323200,
+            "Spectrum stack retains captured fonts, mixed sizes, colored labels and white values");
+        spectrum.MetricStyles["Fps"].FontSize = 48; spectrum.LabelOverrides["CurrentTime"] = "Edited";
+        spectrum.MetricLabelValueGaps["Group:CPU:"] = 99; spectrum.MetricGroups["Fps"] = "Edited";
+        var spectrumReloaded = OsdPresets.LoadEmbedded(3);
+        Check(spectrumReloaded.MetricStyles["Fps"].FontSize == 12 && spectrumReloaded.LabelOverrides["CurrentTime"] == "\U0001F552" &&
+            spectrumReloaded.MetricLabelValueGaps["Group:CPU:"] == 20 && spectrumReloaded.MetricGroups["Fps"] == "FPS:" &&
+            !spectrumReloaded.Enabled && !spectrumReloaded.HotkeyEnabled,
+            "Spectrum stack loads return independent drafts without imposing OSD or shortcut activation");
         string path = Path.Combine(Path.GetTempPath(), "TrayTemps-preset-test-" + Guid.NewGuid().ToString("N") + ".json");
         try
         {
@@ -233,8 +263,9 @@ internal static class OsdMetricListTests
                     .Select(button => button.Name).SequenceEqual(navigationOrder),
                 "OSD opens on Presets with the sidebar ordered Presets, Metrics, Appearance, Layout");
             Call(form, "PresetsNavButton_Click", null, EventArgs.Empty);
-            Check(Control<TabControl>(form, "pageTabs").SelectedTab.Name == "presetsPage" && Control<ComboBox>(form, "presetList").Items.Count == 3,
-                "Presets navigation opens the Designer page with three embedded templates");
+            Check(Control<TabControl>(form, "pageTabs").SelectedTab.Name == "presetsPage" && Control<ComboBox>(form, "presetList").Items.Count == 4 &&
+                Control<ComboBox>(form, "presetList").Items.Cast<string>().SequenceEqual(OsdPresets.Names),
+                "Presets navigation opens the Designer page with all four named embedded templates");
             using (var bitmap = new Bitmap(form.Width, form.Height))
             {
                 form.DrawToBitmap(bitmap, form.ClientRectangle);
@@ -247,6 +278,15 @@ internal static class OsdMetricListTests
             groupedGap.SelectedIndex = 5;
             Check(previews == 1 && ((OsdConfiguration)Call(form, "CreateConfigurationFromControls")).GroupedValuesGapPercent == 150,
                 "group gap selector immediately previews its saved percentage");
+            previews = 0;
+            Control<ComboBox>(form, "presetList").SelectedIndex = 3;
+            Call(form, "LoadEmbeddedPreset_Click", null, EventArgs.Empty);
+            var spectrumDraft = (OsdConfiguration)Call(form, "CreateConfigurationFromControls");
+            Check(previews == 1 && spectrumDraft.FrameTimeGraphWidth == 250 && spectrumDraft.FrameTimeGraphHeight == 30 &&
+                spectrumDraft.FpsRefreshIntervalSeconds == .25m &&
+                spectrumDraft.GroupedValuesGapPercent == 150 && spectrumDraft.ItemOrder == spectrumReloaded.ItemOrder &&
+                !spectrumDraft.Enabled && !spectrumDraft.HotkeyEnabled,
+                "loading Spectrum stack through the selector previews its layout while preserving activation and shortcut state");
             previews = 0;
             Call(form, "ApplyPreset", OsdPresets.LoadEmbedded(1));
             var draft = (OsdConfiguration)Call(form, "CreateConfigurationFromControls");
@@ -303,10 +343,10 @@ internal static class OsdMetricListTests
             form.Show(host);
             Control<CheckBox>(form, "hotkeyEnabled").Checked = true;
             Call(form, "TryCaptureHotkey", Keys.Control | Keys.Alt | Keys.F8);
-            Call(form, "ApplyPreset", OsdPresets.LoadEmbedded(1));
+            Call(form, "ApplyPreset", OsdPresets.LoadEmbedded(3));
             var draft = (OsdConfiguration)Call(form, "CreateConfigurationFromControls");
-            Check(draft.Enabled && draft.HotkeyEnabled && draft.HotkeyKey == (int)Keys.F8 && draft.HotkeyModifiers == 3,
-                "preset loading also preserves enabled OSD and a shortcut edited in the current dialog");
+            Check(draft.Enabled && draft.HotkeyEnabled && draft.HotkeyKey == (int)Keys.F8 && draft.HotkeyModifiers == 3 && draft.FpsRefreshIntervalSeconds == .25m,
+                "Spectrum stack preserves enabled OSD and an edited shortcut while applying minimum refresh");
             var nine = Config();
             foreach (string key in OsdMetricDefinitions.Keys) OsdMetricDefinitions.SetVisible(nine, key, true);
             nine.Columns = OsdMetricDefinitions.Keys.Length;
@@ -317,6 +357,29 @@ internal static class OsdMetricListTests
             Check(form.SelectedConfiguration == null && JsonSerializer.Serialize(original) == before,
                 "closing after multiple preset previews discards the draft and leaves the original configuration intact");
         }
+        OsdConfiguration savedSpectrum;
+        using (var form = new OsdSettingsDialog(host, original))
+        {
+            form.Show(host);
+            Control<ComboBox>(form, "presetList").SelectedIndex = 3;
+            Call(form, "LoadEmbeddedPreset_Click", null, EventArgs.Empty);
+            Call(form, "ShowPage", Enum.Parse(typeof(OsdSettingsDialog).GetNestedType("OsdSettingsPage", BindingFlags.NonPublic), "Appearance"));
+            Call(form, "SaveBtn_Click", null, EventArgs.Empty);
+            savedSpectrum = form.SelectedConfiguration;
+            var expected = host.NormalizeOsdConfiguration(OsdPresets.LoadEmbedded(3));
+            expected.Enabled = original.Enabled; expected.HotkeyEnabled = original.HotkeyEnabled;
+            expected.HotkeyModifiers = original.HotkeyModifiers; expected.HotkeyKey = original.HotkeyKey;
+            Check(savedSpectrum != null && JsonSerializer.Serialize(savedSpectrum) == JsonSerializer.Serialize(expected),
+                "saving Spectrum stack after opening Appearance preserves every normalized preset setting and current activation state");
+        }
+        var restoredSpectrum = JsonSerializer.Deserialize<OsdConfiguration>(JsonSerializer.Serialize(savedSpectrum));
+        using (var form = new OsdSettingsDialog(host, restoredSpectrum))
+        {
+            var reopened = (OsdConfiguration)Call(form, "CreateConfigurationFromControls");
+            Check(JsonSerializer.Serialize(reopened) == JsonSerializer.Serialize(savedSpectrum) && reopened.FpsRefreshIntervalSeconds == .25m,
+                "Spectrum stack survives settings serialization and dialog reopening with minimum refresh and all appearance settings intact");
+        }
+        Check(JsonSerializer.Serialize(original) == before, "saving a Spectrum stack draft leaves the supplied original configuration untouched");
     }
     private static async Task Ui(Host host)
     {
@@ -533,7 +596,7 @@ internal static class OsdMetricListTests
         Check(Equals(grid.Rows[0].Cells[column].Value, last), grid.Columns[column].HeaderText + " choices beyond the first eight remain selectable");
         grid.Rows[0].Cells[column].Value = original;
     }
-    private static OsdMetric Metric(OsdConfiguration config, string key, string value) => new OsdMetric(OsdMetricDefinitions.ResolveLabel(config, key), value) { Key = key, Style = config.MetricStyles[key], ValueWidthTemplate = "####", LabelValueSpacingOverride = 15 };
+    private static OsdMetric Metric(OsdConfiguration config, string key, string value) => new OsdMetric(OsdMetricDefinitions.ResolveLabel(config, key), value) { Key = key, Style = config.MetricStyles[key], ValueWidthTemplate = "####" };
     private static IEnumerable<TreeNode> TreeNodes(TreeNodeCollection nodes)
     {
         foreach (TreeNode node in nodes)
@@ -639,9 +702,9 @@ internal static class OsdMetricListTests
                 "grouped metrics and captions begin at the left and values retain natural order");
             var fpsParts = Parts(layouts[performanceIndex]);
             Check((string)Field(fpsParts[0], "Text") == "Performance" &&
-                (int)Field(fpsParts[2], "X") - ((int)Field(fpsParts[1], "X") + (int)Field(fpsParts[1], "Width")) == 15 &&
-                (int)Field(fpsParts[5], "X") - ((int)Field(fpsParts[4], "X") + (int)Field(fpsParts[4], "Width")) == 15,
-                "a grouped FPS pair uses its group name and keeps both dedicated label/value gaps");
+                (int)Field(fpsParts[2], "X") - ((int)Field(fpsParts[1], "X") + (int)Field(fpsParts[1], "Width")) == OsdMetricDefinitions.LabelGap(alignmentConfig, "Fps", null) &&
+                (int)Field(fpsParts[5], "X") - ((int)Field(fpsParts[4], "X") + (int)Field(fpsParts[4], "Width")) == OsdMetricDefinitions.LabelGap(alignmentConfig, "FpsOnePercentLow", null),
+                "a grouped FPS pair uses the common per-metric label/value gap rules");
 
             var clock = Metric(alignmentConfig, "CurrentTime", "01:11");
             overlay.UpdateDisplay(alignmentConfig, new[] { clock }, new Rectangle(0, 0, 4000, 2000));

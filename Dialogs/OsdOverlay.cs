@@ -44,6 +44,9 @@ namespace TrayTemps
             new Dictionary<string, UnicodeTextRun[]>(StringComparer.Ordinal);
         private Bitmap _presentationBitmap;
         private Graphics _presentationGraphics;
+        private Bitmap _staticPresentationBitmap;
+        private Graphics _staticPresentationGraphics;
+        private bool _staticPresentationDirty = true;
         private GraphicsPath _backgroundPath;
         private Size _presentationSize;
         private Size _backgroundPathSize;
@@ -159,12 +162,22 @@ namespace TrayTemps
             _presentationGraphics = null;
             _presentationBitmap?.Dispose();
             _presentationBitmap = null;
+            DisposeStaticPresentationSurface();
             _backgroundPath?.Dispose();
             _backgroundPath = null;
             _presentationSize = Size.Empty;
             _backgroundPathSize = Size.Empty;
             _backgroundPathRadius = -1;
             _presentationDpi = 0;
+        }
+
+        private void DisposeStaticPresentationSurface()
+        {
+            _staticPresentationGraphics?.Dispose();
+            _staticPresentationGraphics = null;
+            _staticPresentationBitmap?.Dispose();
+            _staticPresentationBitmap = null;
+            _staticPresentationDirty = true;
         }
 
         private void DisposeDisplayFont()
@@ -187,7 +200,8 @@ namespace TrayTemps
                     nextMetrics,
                     workingArea,
                     out bool layoutChanged,
-                    out bool fontSettingsChanged))
+                    out bool fontSettingsChanged,
+                    out bool graphOnlyChanged))
             {
                 return;
             }
@@ -226,6 +240,7 @@ namespace TrayTemps
                 RebuildLayout();
             if (positionChanged)
                 ApplyConfiguredPosition();
+            _staticPresentationDirty |= !graphOnlyChanged;
             PresentLayeredWindow();
         }
 
@@ -234,7 +249,8 @@ namespace TrayTemps
             IReadOnlyList<OsdMetric> metrics,
             Rectangle workingArea,
             out bool layoutChanged,
-            out bool fontSettingsChanged)
+            out bool fontSettingsChanged,
+            out bool graphOnlyChanged)
         {
             fontSettingsChanged = _displayFont == null || _layoutDpi != DeviceDpi ||
                 _configuration.FontFamily != configuration.FontFamily || _configuration.FontSize != configuration.FontSize;
@@ -243,6 +259,8 @@ namespace TrayTemps
                 _configuration.Columns != configuration.Columns || _configuration.ScreenMargin != configuration.ScreenMargin ||
                 _configuration.RowsSpacing != configuration.RowsSpacing || _configuration.ColumnsSpacing != configuration.ColumnsSpacing ||
                 _configuration.GroupedValuesGapPercent != configuration.GroupedValuesGapPercent ||
+                _configuration.FrameTimeGraphWidth != configuration.FrameTimeGraphWidth ||
+                _configuration.FrameTimeGraphHeight != configuration.FrameTimeGraphHeight ||
                 _configuration.LabelValueSpacing != configuration.LabelValueSpacing ||
                 !MetricGapsEqual(_configuration.MetricLabelValueGaps, configuration.MetricLabelValueGaps) ||
                 _configuration.FontFamily != configuration.FontFamily || _configuration.FontSize != configuration.FontSize;
@@ -252,6 +270,7 @@ namespace TrayTemps
                 _configuration.BackgroundCornerRoundness != configuration.BackgroundCornerRoundness ||
                 _configuration.OpacityPercent != configuration.OpacityPercent ||
                 _configuration.BackgroundOpacityPercent != configuration.BackgroundOpacityPercent;
+            bool textChanged = changed;
             for (int i = 0; i < Math.Min(_metrics.Count, metrics.Count); i++)
             {
                 var before = _metrics[i]; var after = metrics[i];
@@ -267,14 +286,17 @@ namespace TrayTemps
                     var ys = y.Style ?? OsdMetricDefinitions.LegacyStyle(configuration, y.Key ?? "");
                     fontSettingsChanged |= xs.FontFamily != ys.FontFamily || xs.FontSize != ys.FontSize;
                     if (x.Key != y.Key || x.Label != y.Label || xs.FontFamily != ys.FontFamily || xs.FontSize != ys.FontSize ||
-                        x.LabelValueSpacingOverride != y.LabelValueSpacingOverride || x.ValueWidthTemplate != y.ValueWidthTemplate ||
+                        x.ValueWidthTemplate != y.ValueWidthTemplate ||
                         x.AlternateValueWidthTemplate != y.AlternateValueWidthTemplate ||
-                        (configuration.RowsSpacing == 0 && (x.Value == "N/A") != (y.Value == "N/A")) ||
+                        (y.Key != "FrameTimeGraph" && (x.Value == "N/A") != (y.Value == "N/A")) ||
                         (string.IsNullOrEmpty(y.ValueWidthTemplate) && x.Value != y.Value))
                         layoutChanged = true;
-                    changed |= x.Value != y.Value || x.TextColor != y.TextColor || xs.LabelColor != ys.LabelColor || xs.ValueColor != ys.ValueColor || !ReferenceEquals(x.Graph, y.Graph);
+                    bool textOrColorChanged = x.Value != y.Value || x.TextColor != y.TextColor || xs.LabelColor != ys.LabelColor || xs.ValueColor != ys.ValueColor;
+                    textChanged |= textOrColorChanged;
+                    changed |= textOrColorChanged || !ReferenceEquals(x.Graph, y.Graph) || x.GraphOffset != y.GraphOffset;
                 }
             }
+            graphOnlyChanged = !textChanged && !layoutChanged;
             return changed || layoutChanged;
         }
 
@@ -358,23 +380,22 @@ namespace TrayTemps
                             if (labelWidth > 0)
                             {
                                 layout.Parts.Add(new TextPlacement(label, metric.Style, true, x, labelWidth) { Owner = member });
-                                int labelGap = row.Members == null
-                                    ? ScaleLogical(OsdMetricDefinitions.LabelGap(_configuration, metric.Key, null))
-                                    : GetMetricLabelGap(graphics, metric, ScaleLogical(_configuration.LabelValueSpacing));
+                                int labelGap = ScaleLogical(OsdMetricDefinitions.LabelGap(_configuration, metric.Key, null));
                                 x += labelWidth + labelGap;
                             }
-                            int valueWidth = layout.IsGraph ? ScaleLogical(160) : GetPrimaryValueSlotWidth(graphics, metric, MeasureDisplayTextWidth(graphics, metric.Value));
+                            int valueWidth = layout.IsGraph
+                                ? ScaleLogical(ValueHelper.ClampInt(_configuration.FrameTimeGraphWidth,
+                                    OsdConfiguration.MinFrameTimeGraphWidth, OsdConfiguration.MaxFrameTimeGraphWidth))
+                                : GetPrimaryValueSlotWidth(graphics, metric, MeasureDisplayTextWidth(graphics, metric.Value));
                             layout.Parts.Add(new TextPlacement(metric.Value, metric.Style, false, x, valueWidth, member));
                             x += valueWidth;
                             if (member + 1 < members.Count)
                             {
-                                string separator = OsdMetricDefinitions.Separator(metric, members[member + 1]);
+                                string separator = OsdMetricDefinitions.GroupValueSeparator;
                                 using (var format = StringFormat.GenericTypographic)
                                 {
                                     format.FormatFlags |= StringFormatFlags.MeasureTrailingSpaces | StringFormatFlags.NoWrap;
-                                    // Keep numeric slots and the dedicated FPS pair spacing intact.
-                                    float gapScale = separator.Length == 1
-                                        ? ValueHelper.ClampInt(_configuration.GroupedValuesGapPercent, 100, 200) / 100f : 1f;
+                                    float gapScale = ValueHelper.ClampInt(_configuration.GroupedValuesGapPercent, 100, 200) / 100f;
                                     int separatorWidth = (int)Math.Ceiling(graphics.MeasureString(separator, _displayFont, int.MaxValue, format).Width * gapScale);
                                     layout.Parts.Add(new TextPlacement(separator, metric.Style, false, x, separatorWidth) { Owner = member });
                                     x += separatorWidth;
@@ -383,7 +404,7 @@ namespace TrayTemps
                         }
                         layout.Width = x; layout.Ascent = ascent;
                         layout.Height = (int)Math.Ceiling(ascent + descent + GetStrokeWidth());
-                        if (layout.IsGraph) layout.Height = Math.Max(layout.Height, ScaleLogical(42));
+                        if (layout.IsGraph) layout.Height = Math.Max(layout.Height, GetFrameTimeGraphHeight());
                         int index = _metricLayouts.Count;
                         widths[index % columns] = Math.Max(widths[index % columns], x);
                         heights[index / columns] = Math.Max(heights[index / columns], layout.Height);
@@ -450,7 +471,7 @@ namespace TrayTemps
                     }
                 };
                 include(part.Text);
-                if (metric != null && !string.IsNullOrEmpty(metric.ValueWidthTemplate))
+                if (metric != null && metric.Value != "N/A" && !string.IsNullOrEmpty(metric.ValueWidthTemplate))
                 {
                     // Reserve every digit and both clock periods so
                     // normal value refreshes keep their baseline and never clip descenders.
@@ -467,6 +488,11 @@ namespace TrayTemps
 
         private void DrawOverlay(Graphics graphics)
         {
+            DrawLayers(graphics, drawGraphs: true, drawText: true);
+        }
+
+        private void DrawLayers(Graphics graphics, bool drawGraphs, bool drawText)
+        {
             if (_metricLayouts.Count != _metrics.Count) return;
             var state = graphics.Save();
             graphics.SmoothingMode = SmoothingMode.AntiAlias;
@@ -477,6 +503,7 @@ namespace TrayTemps
                 for (int rowIndex = 0; rowIndex < _metricLayouts.Count; rowIndex++)
                 {
                     var row = _metricLayouts[rowIndex];
+                    if (!drawText && !row.IsGraph) continue;
                     var metrics = _metrics[rowIndex].Members;
                     foreach (var part in row.Parts)
                     {
@@ -493,11 +520,13 @@ namespace TrayTemps
                         int right = (int)Math.Round((part.X + part.Width) * row.Scale);
                         if (row.IsGraph && part.Member >= 0)
                         {
-                            DrawFrameGraph(graphics, _metrics[rowIndex].Graph,
-                                new Rectangle(row.X + left, row.Y + (row.Height - ScaleLogical(42)) / 2,
-                                    Math.Max(1, right - left), ScaleLogical(42)), color);
+                            int graphHeight = GetFrameTimeGraphHeight();
+                            if (drawGraphs) DrawFrameGraph(graphics, _metrics[rowIndex].Graph,
+                                new Rectangle(row.X + left, row.Y + (row.Height - graphHeight) / 2,
+                                    Math.Max(1, right - left), graphHeight), color, _metrics[rowIndex].GraphOffset);
                             continue;
                         }
+                        if (!drawText) continue;
                         if (row.IsGraph && string.IsNullOrEmpty(_metrics[rowIndex].Label)) continue;
                         // Reserve numeric padding for numbers. N/A starts at the slot's
                         // left edge, without inheriting unused digits or unit spacing.
@@ -512,7 +541,7 @@ namespace TrayTemps
             finally { _drawBaseline = null; graphics.Restore(state); }
         }
 
-        private void DrawFrameGraph(Graphics graphics, FrameGraphPoint[] points, Rectangle bounds, Color color)
+        private void DrawFrameGraph(Graphics graphics, FrameGraphPoint[] points, Rectangle bounds, Color color, float offset = 0)
         {
             points = points ?? Array.Empty<FrameGraphPoint>();
             var plot = Rectangle.Inflate(bounds, -2, -2);
@@ -525,19 +554,28 @@ namespace TrayTemps
             {
                 graphics.DrawLine(guide, plot.Left, plot.Bottom, plot.Right, plot.Bottom);
                 graphics.DrawLine(guide, plot.Left, plot.Bottom - plot.Height / 2f, plot.Right, plot.Bottom - plot.Height / 2f);
-                PointF? previous = null;
-                for (int i = 0; i < points.Length; i++)
+                var state = graphics.Save();
+                graphics.SetClip(plot, CombineMode.Intersect);
+                try
                 {
-                    var point = points[i];
-                    if (double.IsNaN(point.Mean)) { previous = null; continue; }
-                    float x = plot.Left + i * plot.Width / (float)Math.Max(1, points.Length - 1);
-                    float y = plot.Bottom - (float)(point.Mean / max * plot.Height);
-                    float peak = plot.Bottom - (float)(point.Peak / max * plot.Height);
-                    graphics.DrawLine(line, x, y, x, peak);
-                    var current = new PointF(x, y);
-                    if (previous.HasValue) graphics.DrawLine(line, previous.Value, current);
-                    previous = current;
+                    PointF? previous = null;
+                    for (int i = 0; i < points.Length; i++)
+                    {
+                        var point = points[i];
+                        // Empty buckets can be spanned by a single long frame. These
+                        // points belong to one continuous capture; stale/source resets
+                        // clear the buffer, so only join actual completed samples.
+                        if (double.IsNaN(point.Mean)) continue;
+                        float x = plot.Left + (i - offset) * plot.Width / Math.Max(1, points.Length - 1);
+                        float y = plot.Bottom - (float)(point.Mean / max * plot.Height);
+                        float peak = plot.Bottom - (float)(point.Peak / max * plot.Height);
+                        graphics.DrawLine(line, x, y, x, peak);
+                        var current = new PointF(x, y);
+                        if (previous.HasValue) graphics.DrawLine(line, previous.Value, current);
+                        previous = current;
+                    }
                 }
+                finally { graphics.Restore(state); }
             }
         }
 
@@ -598,7 +636,9 @@ namespace TrayTemps
             OsdMetric metric,
             int measuredValueWidth)
         {
-            if (string.IsNullOrEmpty(metric.ValueWidthTemplate))
+            // Missing readings need no unused digits or unit suffix. Restore the
+            // stable numeric slot when data becomes available again.
+            if (metric.Value == "N/A" || string.IsNullOrEmpty(metric.ValueWidthTemplate))
                 return measuredValueWidth;
 
             return Math.Max(
@@ -1147,30 +1187,6 @@ namespace TrayTemps
             return Math.Max(0.85f, DeviceDpi / 96f);
         }
 
-        private int GetMetricLabelGap(Graphics graphics, OsdMetric metric, int defaultGap)
-        {
-            if (string.IsNullOrEmpty(metric.Label))
-                return 0;
-
-            if (metric.Key == OsdItemKind.CurrentTime.ToString())
-            {
-                using (var format = (StringFormat)StringFormat.GenericTypographic.Clone())
-                {
-                    format.FormatFlags |= StringFormatFlags.MeasureTrailingSpaces | StringFormatFlags.NoWrap;
-                    return (int)Math.Ceiling(graphics.MeasureString(" ", _displayFont, int.MaxValue, format).Width);
-                }
-            }
-
-            return GetConfiguredMetricLabelGap(metric, defaultGap);
-        }
-
-        private int GetConfiguredMetricLabelGap(OsdMetric metric, int defaultGap)
-        {
-            return metric.LabelValueSpacingOverride.HasValue
-                ? ScaleLogical(Math.Max(0, metric.LabelValueSpacingOverride.Value))
-                : defaultGap;
-        }
-
         private void PresentLayeredWindow()
         {
             if (IsDisposed || !IsHandleCreated || ClientSize.Width <= 0 || ClientSize.Height <= 0)
@@ -1179,38 +1195,32 @@ namespace TrayTemps
             EnsurePresentationSurface();
             Bitmap bitmap = _presentationBitmap;
             Graphics graphics = _presentationGraphics;
-            graphics.Clear(Color.Transparent);
-
-            int backgroundOpacity = Math.Max(
-                0,
-                Math.Min(100, _configuration.BackgroundOpacityPercent));
-            if (backgroundOpacity > 0)
+            if (_metrics.Any(metric => metric.Key == "FrameTimeGraph"))
             {
-                int alpha = (int)Math.Round(255d * backgroundOpacity / 100d);
-                using (var backgroundBrush = new SolidBrush(Color.FromArgb(alpha, _backgroundColor)))
+                if (_staticPresentationBitmap == null)
                 {
-                    EnsureBackgroundPath(bitmap.Size);
-                    if (_backgroundPath == null)
-                    {
-                        graphics.FillRectangle(backgroundBrush, 0, 0, bitmap.Width, bitmap.Height);
-                    }
-                    else
-                    {
-                        SmoothingMode previousSmoothingMode = graphics.SmoothingMode;
-                        graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                        try
-                        {
-                            graphics.FillPath(backgroundBrush, _backgroundPath);
-                        }
-                        finally
-                        {
-                            graphics.SmoothingMode = previousSmoothingMode;
-                        }
-                    }
+                    _staticPresentationBitmap = new Bitmap(bitmap.Width, bitmap.Height, PixelFormat.Format32bppPArgb);
+                    _staticPresentationBitmap.SetResolution(DeviceDpi, DeviceDpi);
+                    _staticPresentationGraphics = Graphics.FromImage(_staticPresentationBitmap);
                 }
+                if (_staticPresentationDirty) RebuildStaticPresentation();
+                // Copy alpha as well as color so a moving graph cannot leave trails
+                // on translucent or fully transparent backgrounds.
+                var previousCompositingMode = graphics.CompositingMode;
+                try
+                {
+                    graphics.CompositingMode = CompositingMode.SourceCopy;
+                    graphics.DrawImageUnscaled(_staticPresentationBitmap, 0, 0);
+                }
+                finally { graphics.CompositingMode = previousCompositingMode; }
+                DrawLayers(graphics, drawGraphs: true, drawText: false);
             }
-
-            DrawOverlay(graphics);
+            else
+            {
+                DisposeStaticPresentationSurface();
+                DrawBackground(graphics, bitmap.Size);
+                DrawOverlay(graphics);
+            }
 
             IntPtr screenDc = GetDC(IntPtr.Zero);
             if (screenDc == IntPtr.Zero)
@@ -1266,6 +1276,35 @@ namespace TrayTemps
                     DeleteDC(memoryDc);
                 if (screenDc != IntPtr.Zero)
                     ReleaseDC(IntPtr.Zero, screenDc);
+            }
+        }
+
+        private void RebuildStaticPresentation()
+        {
+            var graphics = _staticPresentationGraphics;
+            DrawBackground(graphics, _staticPresentationBitmap.Size);
+            DrawLayers(graphics, drawGraphs: false, drawText: true);
+            _staticPresentationDirty = false;
+        }
+
+        private void DrawBackground(Graphics graphics, Size size)
+        {
+            graphics.Clear(Color.Transparent);
+            int backgroundOpacity = ValueHelper.ClampInt(_configuration.BackgroundOpacityPercent, 0, 100);
+            if (backgroundOpacity > 0)
+            {
+                using (var brush = new SolidBrush(Color.FromArgb((int)Math.Round(255d * backgroundOpacity / 100d), _backgroundColor)))
+                {
+                    EnsureBackgroundPath(size);
+                    if (_backgroundPath == null)
+                        graphics.FillRectangle(brush, 0, 0, size.Width, size.Height);
+                    else
+                    {
+                        var previousSmoothingMode = graphics.SmoothingMode;
+                        try { graphics.SmoothingMode = SmoothingMode.AntiAlias; graphics.FillPath(brush, _backgroundPath); }
+                        finally { graphics.SmoothingMode = previousSmoothingMode; }
+                    }
+                }
             }
         }
 
@@ -1379,6 +1418,12 @@ namespace TrayTemps
         private int GetRowsSpacing()
         {
             return ScaleLogical(Math.Max(0, _configuration.RowsSpacing));
+        }
+
+        private int GetFrameTimeGraphHeight()
+        {
+            return ScaleLogical(ValueHelper.ClampInt(_configuration.FrameTimeGraphHeight,
+                OsdConfiguration.MinFrameTimeGraphHeight, OsdConfiguration.MaxFrameTimeGraphHeight));
         }
 
         private int GetColumnsSpacing()

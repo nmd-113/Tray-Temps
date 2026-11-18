@@ -56,7 +56,7 @@
     <ApplicationManifest>Properties\app.Debug.manifest</ApplicationManifest>
   </PropertyGroup>
   <PropertyGroup>
-    <ApplicationIcon>traytemps.ico</ApplicationIcon>
+    <ApplicationIcon>Resources\traytemps.ico</ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup>
     <StartupObject>TrayTemps.Program</StartupObject>
@@ -264,6 +264,9 @@
     <EmbeddedResource Include="Dialogs\OsdSettingsDialog.resx">
       <DependentUpon>OsdSettingsDialog.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="Dialogs\PerformanceHistoryDialog.resx">
+      <DependentUpon>PerformanceHistoryDialog.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Resources\OsdPresets\1.json">
       <LogicalName>TrayTemps.OsdPresets.1.json</LogicalName>
     </EmbeddedResource>
@@ -273,6 +276,9 @@
     <EmbeddedResource Include="Resources\OsdPresets\3.json">
       <LogicalName>TrayTemps.OsdPresets.3.json</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="Resources\OsdPresets\4.json">
+      <LogicalName>TrayTemps.OsdPresets.4.json</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="MainForm.resx">
       <DependentUpon>MainForm.cs</DependentUpon>
     </EmbeddedResource>
@@ -281,15 +287,6 @@
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
     <None Include="Properties\app.manifest" />
-    <None Include="Properties\Settings.settings">
-      <Generator>SettingsSingleFileGenerator</Generator>
-      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
-    </None>
-    <Compile Include="Properties\Settings.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Settings.settings</DependentUpon>
-      <DesignTimeSharedInput>True</DesignTimeSharedInput>
-    </Compile>
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="App.config" />
@@ -308,7 +305,7 @@
     <None Include="Resources\ssd.png" />
     <None Include="Resources\cpu.png" />
     <Content Include="FodyWeavers.xml" />
-    <Content Include="traytemps.ico" />
+    <Content Include="Resources\traytemps.ico" />
     <None Include="Resources\border.png" />
     <None Include="Resources\donate.png" />
     <Content Include="Resources\TrayTemps.ico" />
