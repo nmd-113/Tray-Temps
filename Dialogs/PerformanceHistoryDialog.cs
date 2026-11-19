@@ -162,7 +162,12 @@ namespace TrayTemps
             try
             {
                 recording.Checked = _host.HistoryPreferences.RecordingEnabled;
-                range.SelectedIndex = Array.IndexOf(new[] { 1, 5, 10, 30 }, _host.HistoryPreferences.Minutes);
+                // Native hot tracking can differ from the committed range while open.
+                if (!range.DroppedDown)
+                {
+                    int index = Array.IndexOf(new[] { 1, 5, 10, 30 }, _host.HistoryPreferences.Minutes);
+                    if (range.SelectedIndex != index) range.SelectedIndex = index;
+                }
             }
             finally { _loading = false; }
             long now = Stopwatch.GetTimestamp();

@@ -4308,13 +4308,7 @@ namespace TrayTemps
             _fpsMonitor?.GetLatestValues(out fps, out onePercentLow);
             string key = low ? "FpsOnePercentLow" : "Fps";
             int? value = low ? onePercentLow : fps;
-            return new OsdMetric(OsdMetricDefinitions.ResolveLabel(configuration, key),
-                value.HasValue ? value.Value.ToString(CultureInfo.InvariantCulture) : "N/A")
-            {
-                Key = key,
-                Style = configuration.MetricStyles != null ? configuration.MetricStyles[key] : OsdMetricDefinitions.LegacyStyle(configuration, key),
-                ValueWidthTemplate = "####"
-            };
+            return CreateFrameValueMetric(configuration, key, value?.ToString(CultureInfo.InvariantCulture));
         }
         private static string GetOsdLabel(
             OsdConfiguration configuration,
@@ -4634,6 +4628,7 @@ namespace TrayTemps
 
         private void StopFpsMonitoring()
         {
+            _frameValueDigits.Clear();
             _latestFrameStatistics = default(FrameStatistics);
             _lastFrameStatisticsRefresh = _lastFpsForegroundRefresh = _lastFrameHistoryRefresh = 0;
             try

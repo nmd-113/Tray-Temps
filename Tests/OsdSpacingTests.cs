@@ -21,6 +21,7 @@ internal static class OsdSpacingTests
     private static IList Layouts(OsdOverlay overlay) => (IList)Field(overlay, "_metricLayouts");
     private static string Template(double capacity) => (string)typeof(MainForm).GetMethod("CreateMemoryWidthTemplate", BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, new object[] { capacity });
     private static readonly Rectangle Area = new Rectangle(0, 0, 4000, 2000);
+    private sealed class Host : MainForm { protected override void OnLoad(EventArgs e) { } }
 
     internal static void Run()
     {
@@ -61,6 +62,7 @@ internal static class OsdSpacingTests
             {
                 MemoryAlignment(family, dpi);
                 MissingGroupedValues(family, dpi);
+                AdaptiveFrameSlots(family, dpi);
                 GroupedValueGaps(family, dpi);
                 GroupedGapIncrease(family, dpi);
                 OversizedLayout(family, dpi);
@@ -242,6 +244,63 @@ internal static class OsdSpacingTests
             }
         }
     }
+    private static void AdaptiveFrameSlots(string family, int dpi)
+    {
+        using (var host = new Host())
+        foreach (bool grouped in new[] { false, true })
+        foreach (int gap in new[] { 0, 5 })
+        using (var overlay = new OsdOverlay())
+        {
+            string[] keys = { "Fps", "AverageFps", "FpsOnePercentLow", "FrameTime" };
+            var config = Config(); config.RowsSpacing = gap; config.ItemOrder = string.Join(",", keys);
+            foreach (string key in keys)
+            {
+                config.MetricStyles[key] = Style(family, 16);
+                if (grouped) config.MetricGroups[key] = "Frames";
+            }
+            var factory = typeof(MainForm).GetMethod("CreateFrameValueMetric", Flags);
+            Size compact = Size.Empty, expanded = Size.Empty; object previous = null;
+            bool wide = false;
+            foreach (int? value in new int?[] { null, 9, 98, 600, 907, 999, 1000, 6007, 9999, 999, 9, null, 99 })
+            {
+                bool wasWide = wide;
+                if (!value.HasValue) wide = false;
+                else if (value.Value == 1000) wide = true;
+                var metrics = keys.Select(key => (OsdMetric)factory.Invoke(host, new object[] { config, key,
+                    value.HasValue ? value.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) +
+                    (key == "FrameTime" ? (value.Value % 2 == 0 ? ".71 ms" : ".99 ms") : "") : null })).ToArray();
+                var rows = OsdMetricDefinitions.Compose(config, metrics);
+                if (previous == null) LayoutAtDpi(overlay, config, rows, dpi);
+                else overlay.UpdateDisplay(config, rows, Area);
+                if (compact == Size.Empty) compact = overlay.Size;
+                if (wide && expanded == Size.Empty) expanded = overlay.Size;
+                Check(overlay.Size == (wide ? expanded : compact) && (!wide || expanded.Width > compact.Width),
+                    "dashes and one/three-digit readings share geometry; four-digit slots stay expanded: " + family + ", DPI=" + dpi + ", grouped=" + grouped + ", gap=" + gap + ", value=" + value);
+                Check(previous == null || ReferenceEquals(previous, Layouts(overlay)[0]) == (wide == wasWide),
+                    "frame slots rebuild only when their digit capacity changes");
+                using (var bitmap = new Bitmap(overlay.Width, overlay.Height))
+                {
+                    bitmap.SetResolution(dpi, dpi);
+                    using (var graphics = Graphics.FromImage(bitmap))
+                    {
+                        foreach (var row in Layouts(overlay).Cast<object>())
+                        foreach (var part in ((IList)Field(row, "Parts")).Cast<object>().Where(p => (int)Field(p, "Member") >= 0))
+                        {
+                            var metric = grouped ? metrics[(int)Field(part, "Member")] : metrics[Array.IndexOf(Layouts(overlay).Cast<object>().ToArray(), row)];
+                            Call(overlay, "ActivateFont", metric.Style);
+                            int measured = (int)Call(overlay, "MeasureDisplayTextWidth", graphics, metric.Value);
+                            Check(measured <= (int)Field(part, "Width"), "complete frame reading fits its reserved slot without glyph compression: " + metric.Value);
+                        }
+                        graphics.Clear(Color.Transparent); Call(overlay, "DrawOverlay", graphics);
+                    }
+                    if (family == "JetBrains Mono ExtraBold" && dpi == 96 && gap == 0 && !value.HasValue)
+                        bitmap.Save(Path.Combine(Path.GetTempPath(), "TrayTemps-adaptive-frame-slots-" + grouped + ".png"));
+                }
+                previous = Layouts(overlay)[0];
+            }
+        }
+    }
+
     private static void GroupedGapIncrease(string family, int dpi)
     {
         var config = Config(); config.RowsSpacing = 5;

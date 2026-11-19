@@ -28,7 +28,7 @@ using System.Runtime.InteropServices;
 //      Build Number
 //      Revision
 //
-[assembly: AssemblyVersion("2.5.1.0")]
-[assembly: AssemblyFileVersion("2.5.1.0")]
+[assembly: AssemblyVersion("2.5.1.1")]
+[assembly: AssemblyFileVersion("2.5.1.1")]
 
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("TrayTemps.FpsLimiterTests")]

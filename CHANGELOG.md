@@ -1,5 +1,27 @@
 # Changelog
 
+## 2.5.1.1
+
+### Added
+
+- History graph hover tooltips with nearest recorded values, units, time relative to the latest edge and distinct peaks. Missing-data and source-change gaps remain unavailable.
+
+### Changed
+
+- Horizontal dashboard's Current time label uses the clock icon without a trailing colon.
+- Refreshed Spectrum stack with a 160 × 30 graph, separate 1% Low/frametime grouping, and updated clock, memory and group spacing.
+- OSD frametime graphs use a thin trace over a transparent background with subtle top and bottom guide lines, visible even without game samples. Graph and text are vertically centered in shared dashboard rows.
+- Graph size supports widths of 20–800 and heights of 8–400 logical pixels, with compact 80 × 20 defaults. Existing saved dimensions are preserved.
+- FPS, average FPS, 1% Low and frametime use three-digit slots with `---` / `---.-- ms` placeholders. Each slot expands for larger formatted readings and stays expanded until data becomes unavailable or capture changes, avoiding jumps around 1000. Unavailable sensor readings retain compact `N/A` text.
+
+### Fixed
+
+- Live history refresh resetting the highlighted Show last option while its dropdown is open. Recording and graph updates continue during range selection.
+
+### Maintenance
+
+- Updated app version metadata, README and portable release packaging to 2.5.1.1.
+
 ## 2.5.1.0
 
 ### Added

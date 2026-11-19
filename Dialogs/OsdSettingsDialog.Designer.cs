@@ -1431,7 +1431,7 @@ namespace TrayTemps
             this.frameTimeGraphSizeLabel.TabIndex = 15;
             this.frameTimeGraphSizeLabel.Text = "Graph size:";
             this.frameTimeGraphSizeLabel.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-            this.settingsToolTip.SetToolTip(this.frameTimeGraphSizeLabel, "Frametime graph width x height in pixels at 100% display scaling (default 160 x 42). Scales with DPI and fits the available screen space.");
+            this.settingsToolTip.SetToolTip(this.frameTimeGraphSizeLabel, "Frametime graph width x height in pixels at 100% display scaling (default 80 x 20). Scales with DPI and fits the available screen space.");
             //
             // frameTimeGraphSizeLayout
             //
@@ -1465,7 +1465,7 @@ namespace TrayTemps
             this.frameTimeGraphWidthValue.Name = "frameTimeGraphWidthValue";
             this.frameTimeGraphWidthValue.Size = new System.Drawing.Size(77, 21);
             this.frameTimeGraphWidthValue.TabIndex = 0;
-            this.settingsToolTip.SetToolTip(this.frameTimeGraphWidthValue, "Frametime graph width in pixels at 100% display scaling (80-800; default 160). Scales with DPI and fits the available screen space.");
+            this.settingsToolTip.SetToolTip(this.frameTimeGraphWidthValue, "Frametime graph width in pixels at 100% display scaling (20-800; default 80). Scales with DPI and fits the available screen space.");
             this.frameTimeGraphWidthValue.SelectedIndexChanged += new System.EventHandler(this.VisualSettingChanged);
             //
             // frameTimeGraphSizeSeparator
@@ -1494,7 +1494,7 @@ namespace TrayTemps
             this.frameTimeGraphHeightValue.Name = "frameTimeGraphHeightValue";
             this.frameTimeGraphHeightValue.Size = new System.Drawing.Size(78, 21);
             this.frameTimeGraphHeightValue.TabIndex = 2;
-            this.settingsToolTip.SetToolTip(this.frameTimeGraphHeightValue, "Frametime graph height in pixels at 100% display scaling (20-400; default 42). Scales with DPI and fits the available screen space.");
+            this.settingsToolTip.SetToolTip(this.frameTimeGraphHeightValue, "Frametime graph height in pixels at 100% display scaling (8-400; default 20). Scales with DPI and fits the available screen space.");
             this.frameTimeGraphHeightValue.SelectedIndexChanged += new System.EventHandler(this.VisualSettingChanged);
             //
             // groupedValuesGapLabel

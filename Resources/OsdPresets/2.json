@@ -46,7 +46,7 @@
                            "VramUsage":  "",
                            "Fps":  "🎯 FPS:",
                            "FpsOnePercentLow":  "📈 1%Low:",
-                           "CurrentTime":  "🕒:",
+                           "CurrentTime":  "🕒",
                            "AverageFps":  "Avg FPS",
                            "FrameTime":  "Frametime",
                            "FrameTimeGraph":  "Frametime"

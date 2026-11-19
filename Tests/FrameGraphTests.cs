@@ -14,6 +14,7 @@ using Timer = System.Windows.Forms.Timer;
 
 internal static class FrameGraphTests
 {
+    [DllImport("user32.dll")] private static extern IntPtr SetThreadDpiAwarenessContext(IntPtr context);
     private const BindingFlags Flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
     private static int _checks;
     private sealed class Host : MainForm { protected override void OnLoad(EventArgs e) { } }
@@ -34,7 +35,13 @@ internal static class FrameGraphTests
     internal static void Run()
     {
         _checks = 0;
-        ContinuousFrames(); CaptureReads(); CachedRendering(); Cadence();
+        var helper = typeof(Control).Assembly.GetType("System.Windows.Forms.DpiHelper");
+        helper.GetProperty("EnableDpiChangedMessageHandling", BindingFlags.Static | Flags).GetValue(null);
+        var flag = helper.GetField("enableDpiChangedMessageHandling", BindingFlags.Static | Flags);
+        object prior = flag.GetValue(null); flag.SetValue(null, true);
+        IntPtr awareness = SetThreadDpiAwarenessContext(new IntPtr(-4));
+        try { ContinuousFrames(); MinimalistRendering(); DashboardAlignment(); CaptureReads(); CachedRendering(); Cadence(); }
+        finally { flag.SetValue(null, prior); SetThreadDpiAwarenessContext(awareness); }
         Console.WriteLine("ALL FRAMETIME GRAPH CHECKS PASSED: " + _checks);
     }
 
@@ -89,17 +96,17 @@ internal static class FrameGraphTests
                 "fixture contains real long frames spanning empty 100 ms buckets at interval " + interval);
             using (var overlay = new OsdOverlay())
             foreach (float offset in new[] { 0f, .5f, 1.25f })
-            using (var bitmap = new Bitmap(250, 40))
+            using (var bitmap = new Bitmap(254, 44))
             using (var graphics = Graphics.FromImage(bitmap))
             {
                 graphics.Clear(Color.Black);
-                Call(overlay, "DrawFrameGraph", graphics, stats.Graph, new Rectangle(0, 0, 250, 40), Color.Magenta, offset);
+                Call(overlay, "DrawFrameGraph", graphics, stats.Graph, new Rectangle(2, 2, 250, 40), Color.Magenta, offset);
                 int gaps = 0;
-                for (int x = Math.Max(2, 2 + (int)Math.Ceiling((first - offset) * 246d / 99));
-                    x < 2 + (int)((last - offset) * 246d / 99); x++)
-                    if (!Enumerable.Range(1, 38).Any(y => Ink(bitmap.GetPixel(x, y)))) gaps++;
+                for (int x = Math.Max(3, (int)Math.Ceiling(2.625 + (first - offset) * 248.75 / 99));
+                    x < 2.625 + (last - offset) * 248.75 / 99; x++)
+                    if (!Enumerable.Range(2, 40).Any(y => Ink(bitmap.GetPixel(x, y)))) gaps++;
                 Check(gaps == 0, "completed frame samples form an uninterrupted line, offset=" + offset + ", interval=" + interval);
-                Check(!Enumerable.Range(0, 40).Any(y => Ink(bitmap.GetPixel(0, y)) || Ink(bitmap.GetPixel(249, y))),
+                Check(!Enumerable.Range(0, 44).Any(y => Ink(bitmap.GetPixel(0, y)) || Ink(bitmap.GetPixel(253, y))),
                     "scrolling stays clipped inside graph bounds");
                 bitmap.Save(Path.Combine(Path.GetTempPath(), "TrayTemps-continuous-graph-" + interval + "-" + offset + ".png"));
             }
@@ -112,6 +119,103 @@ internal static class FrameGraphTests
             Check(window.GetStatistics(time, 2, 250, true).Graph.Count(point => !double.IsNaN(point.Mean)) == 1 &&
                 window.GetStatistics(time, 1, 250, true).Graph == null,
                 "target/source resets never bridge different capture generations");
+        }
+    }
+
+    private static void MinimalistRendering()
+    {
+        foreach (int dpi in new[] { 96, 120, 144, 192 })
+        foreach (var size in new[] { new Size(20, 8), new Size(80, 20), new Size(800, 400) })
+        foreach (bool light in new[] { false, true })
+        using (var overlay = new OsdOverlay())
+        {
+            Set(overlay, "deviceDpi", dpi);
+            Set(overlay, "_backgroundColor", light ? Color.White : Color.Black);
+            int width = (int)Math.Round(size.Width * dpi / 96f), height = (int)Math.Round(size.Height * dpi / 96f);
+            var bounds = new Rectangle(3, 3, width, height);
+            using (var bitmap = new Bitmap(width + 6, height + 6))
+            using (var graphics = Graphics.FromImage(bitmap))
+            {
+                foreach (var empty in new[] { null, Array.Empty<FrameGraphPoint>(),
+                    Enumerable.Repeat(new FrameGraphPoint(double.NaN, double.NaN), 100).ToArray(),
+                    Enumerable.Repeat(new FrameGraphPoint(double.PositiveInfinity, double.PositiveInfinity), 100).ToArray() })
+                {
+                    graphics.Clear(Color.Transparent);
+                    Call(overlay, "DrawFrameGraph", graphics, empty, bounds, Color.Magenta, 0f);
+                    int centerX = bounds.Left + width / 2;
+                    bool guides = Enumerable.Range(bounds.Top, (int)Math.Ceiling(dpi / 96f) + 1).Any(y => bitmap.GetPixel(centerX, y).A > 0) &&
+                        Enumerable.Range(bounds.Bottom - (int)Math.Ceiling(dpi / 96f) - 1, (int)Math.Ceiling(dpi / 96f) + 1).Any(y => bitmap.GetPixel(centerX, y).A > 0);
+                    bool clean = true;
+                    for (int y = 0; y < bitmap.Height; y++)
+                    for (int x = 0; x < bitmap.Width; x++)
+                    {
+                        Color pixel = bitmap.GetPixel(x, y);
+                        if (pixel.A == 0) continue;
+                        clean &= bounds.Contains(x, y) && pixel.A <= 45 && pixel.R == pixel.G && pixel.G == pixel.B &&
+                            (light ? pixel.R <= 5 : pixel.R >= 250) && (y < bounds.Top + dpi / 96f + 1 || y >= bounds.Bottom - dpi / 96f - 1);
+                    }
+                    Check(guides && clean && bitmap.GetPixel(centerX, bounds.Top + height / 2).A == 0,
+                        "empty graph shows only subtle top/bottom guides with a transparent interior: " + size + ", DPI=" + dpi + ", light=" + light);
+                }
+                var points = Enumerable.Repeat(new FrameGraphPoint(16.67, 16.67), 100).ToArray();
+                Call(overlay, "DrawFrameGraph", graphics, points, bounds, Color.Magenta, 0f);
+                int top = bitmap.Height, bottom = -1, left = bitmap.Width, right = -1;
+                for (int y = 0; y < bitmap.Height; y++)
+                for (int x = 0; x < bitmap.Width; x++)
+                {
+                    if (!Ink(bitmap.GetPixel(x, y))) continue;
+                    top = Math.Min(top, y); bottom = Math.Max(bottom, y); left = Math.Min(left, x); right = Math.Max(right, x);
+                }
+                Check(left <= bounds.Left + 1 && right >= bounds.Right - 2 &&
+                    Math.Abs((top + bottom + 1) / 2f - (bounds.Top + height / 2f)) <= 1 && bottom - top <= Math.Ceiling(1.25 * dpi / 96) + 1,
+                    "flat trace remains thin, centered and full-width between guides: " + size + ", DPI=" + dpi);
+                graphics.Clear(Color.Transparent);
+                points[50] = new FrameGraphPoint(16.67, 5000);
+                Call(overlay, "DrawFrameGraph", graphics, points, bounds, Color.Magenta, .5f);
+                top = bitmap.Height; bottom = -1; bool spill = false;
+                for (int y = 0; y < bitmap.Height; y++)
+                for (int x = 0; x < bitmap.Width; x++)
+                {
+                    if (bitmap.GetPixel(x, y).A == 0) continue;
+                    spill |= !bounds.Contains(x, y);
+                    if (Ink(bitmap.GetPixel(x, y))) { top = Math.Min(top, y); bottom = Math.Max(bottom, y); }
+                }
+                Check(!spill && bottom - top >= height * .7, "large spikes remain visible within compact/full bounds: " + size + ", DPI=" + dpi);
+            }
+        }
+    }
+
+    private static void DashboardAlignment()
+    {
+        using (var host = new Host())
+        foreach (int dpi in new[] { 96, 120, 144, 192 })
+        foreach (var size in new[] { new Size(20, 8), new Size(80, 20), new Size(800, 400) })
+        foreach (int columns in new[] { 1, 4 })
+        foreach (int gap in new[] { 0, 5 })
+        using (var overlay = new OsdOverlay())
+        {
+            overlay.Show(); Set(overlay, "deviceDpi", dpi);
+            var config = host.NormalizeOsdConfiguration(new OsdConfiguration {
+                Columns = columns, RowsSpacing = gap, FrameTimeGraphWidth = size.Width, FrameTimeGraphHeight = size.Height });
+            var metrics = new[] {
+                new OsdMetric("FPS:", "60") { Key = "Fps", Style = config.MetricStyles["Fps"], ValueWidthTemplate = "####" },
+                new OsdMetric("CPU:", "41°C") { Key = "CpuTemperature", Style = config.MetricStyles["CpuTemperature"], ValueWidthTemplate = "###°C" },
+                new OsdMetric("GPU:", "46°C") { Key = "GpuTemperature", Style = config.MetricStyles["GpuTemperature"], ValueWidthTemplate = "###°C" },
+                new OsdMetric("", "") { Key = "FrameTimeGraph", Style = config.MetricStyles["FrameTimeGraph"], ValueWidthTemplate = "graph",
+                    Graph = Enumerable.Repeat(new FrameGraphPoint(16.67, 16.67), 100).ToArray() }
+            };
+            overlay.UpdateDisplay(config, metrics, new Rectangle(0, 0, 3840, 2160));
+            var rows = ((System.Collections.IList)Get(overlay, "_metricLayouts")).Cast<object>().ToArray();
+            float center = (int)Get(rows[3], "Y") + (int)Get(rows[3], "Height") / 2f;
+            Check(columns == 1 ? Enumerable.Range(1, 3).All(i => (int)Get(rows[i], "Y") >=
+                    (int)Get(rows[i - 1], "Y") + (int)Get(rows[i - 1], "Height")) :
+                rows.All(row => Math.Abs((int)Get(row, "Y") + (int)Get(row, "Height") / 2f - center) <= .5f),
+                "dashboard glyph/graph centers align without overlapping vertical rows: " + size + ", DPI=" + dpi + ", columns=" + columns + ", gap=" + gap);
+            Check((int)Get(rows[3], "Height") == (int)Math.Round(size.Height * dpi / 96f),
+                "unlabeled graph height contains no font padding");
+            if (dpi == 96 && gap == 5)
+                ((Bitmap)Get(overlay, "_presentationBitmap")).Save(Path.Combine(Path.GetTempPath(), "TrayTemps-minimal-graph-" + size.Width + "x" + size.Height + "-columns" + columns + ".png"));
+            overlay.Close();
         }
     }
 

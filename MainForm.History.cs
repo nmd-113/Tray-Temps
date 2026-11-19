@@ -19,6 +19,7 @@ namespace TrayTemps
         private const int FrameGraphCaptureIntervalMilliseconds = 100;
         private long _lastFrameStatisticsRefresh, _lastFpsForegroundRefresh, _lastFrameHistoryRefresh;
         private readonly Dictionary<string, OsdMetric> _displayedFrameMetrics = new Dictionary<string, OsdMetric>(StringComparer.Ordinal);
+        private readonly Dictionary<string, int> _frameValueDigits = new Dictionary<string, int>(StringComparer.Ordinal);
         private OsdConfiguration _frameOsdConfiguration;
         private int _frameOsdGeneration;
         private long _frameOsdSource;
@@ -103,6 +104,8 @@ namespace TrayTemps
 
         private void BeginFrameOsdRefresh(OsdConfiguration config, long now)
         {
+            if (_frameOsdGeneration != (_fpsMonitor?.TargetGeneration ?? 0) || _frameOsdSource != _latestFrameStatistics.Source)
+                _frameValueDigits.Clear();
             _displayedFrameMetrics.Clear();
             _frameOsdConfiguration = config;
             _frameOsdGeneration = _fpsMonitor?.TargetGeneration ?? 0;
@@ -120,15 +123,40 @@ namespace TrayTemps
         private OsdMetric CreateFrameMetric(OsdConfiguration config, string key)
         {
             if (key == "Fps" || key == "FpsOnePercentLow") return CreateFpsMetric(config, key == "FpsOnePercentLow");
+            if (key == "FrameTimeGraph")
+                return new OsdMetric(OsdMetricDefinitions.ResolveLabel(config, key), "")
+                {
+                    Key = key, Style = config.MetricStyles[key], ValueWidthTemplate = "graph",
+                    Graph = _latestFrameStatistics.Graph ?? EmptyFrameGraph,
+                    GraphOffset = _latestFrameStatistics.GraphTimestamp > 0
+                        ? (float)Math.Max(0, (Stopwatch.GetTimestamp() - _latestFrameStatistics.GraphTimestamp) / (Stopwatch.Frequency / 10d)) : 0
+                };
             double? value = key == "AverageFps" ? _latestFrameStatistics.AverageFps : _latestFrameStatistics.FrameTimeMs;
-            string text = !value.HasValue ? "N/A" : key == "AverageFps" ? value.Value.ToString("0", CultureInfo.InvariantCulture) : value.Value.ToString("0.00", CultureInfo.InvariantCulture) + " ms";
-            return new OsdMetric(OsdMetricDefinitions.ResolveLabel(config, key), key == "FrameTimeGraph" ? "" : text)
+            string text = !value.HasValue ? null : key == "AverageFps" ? value.Value.ToString("0", CultureInfo.InvariantCulture) : value.Value.ToString("0.00", CultureInfo.InvariantCulture) + " ms";
+            return CreateFrameValueMetric(config, key, text);
+        }
+
+        private OsdMetric CreateFrameValueMetric(OsdConfiguration config, string key, string value)
+        {
+            string suffix = key == "FrameTime" ? ".## ms" : "";
+            string placeholder = key == "FrameTime" ? "---.-- ms" : "---";
+            int digits = 3;
+            if (value == null) _frameValueDigits.Remove(key);
+            else
             {
-                Key = key, Style = config.MetricStyles[key],
-                ValueWidthTemplate = key == "AverageFps" ? "####" : key == "FrameTimeGraph" ? "graph" : "####.## ms",
-                Graph = key == "FrameTimeGraph" ? _latestFrameStatistics.Graph ?? EmptyFrameGraph : null,
-                GraphOffset = key == "FrameTimeGraph" && _latestFrameStatistics.GraphTimestamp > 0
-                    ? (float)Math.Max(0, (Stopwatch.GetTimestamp() - _latestFrameStatistics.GraphTimestamp) / (Stopwatch.Frequency / 10d)) : 0
+                // Use the formatted value: rounding 999.995 can itself require four digits.
+                int integerDigits = 0;
+                while (integerDigits < value.Length && value[integerDigits] >= '0' && value[integerDigits] <= '9') integerDigits++;
+                _frameValueDigits.TryGetValue(key, out int previousDigits);
+                digits = Math.Max(3, Math.Max(previousDigits, integerDigits));
+                _frameValueDigits[key] = digits;
+            }
+            return new OsdMetric(OsdMetricDefinitions.ResolveLabel(config, key), value ?? placeholder)
+            {
+                Key = key,
+                Style = config.MetricStyles != null ? config.MetricStyles[key] : OsdMetricDefinitions.LegacyStyle(config, key),
+                ValueWidthTemplate = new string('#', digits) + suffix,
+                AlternateValueWidthTemplate = placeholder
             };
         }
 

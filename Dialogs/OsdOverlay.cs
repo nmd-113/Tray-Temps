@@ -349,6 +349,7 @@ namespace TrayTemps
             int rows = Math.Max(1, (count + columns - 1) / columns);
             int padding = GetConfiguredPadding(), rowGap = GetRowsSpacing(), columnGap = GetColumnsSpacing();
             int[] widths = new int[columns], heights = new int[rows];
+            bool[] graphLines = new bool[rows];
             int fullWidth;
             using (var bitmap = new Bitmap(1, 1))
             {
@@ -406,6 +407,7 @@ namespace TrayTemps
                         layout.Height = (int)Math.Ceiling(ascent + descent + GetStrokeWidth());
                         if (layout.IsGraph) layout.Height = Math.Max(layout.Height, GetFrameTimeGraphHeight());
                         int index = _metricLayouts.Count;
+                        graphLines[index / columns] |= layout.IsGraph;
                         widths[index % columns] = Math.Max(widths[index % columns], x);
                         heights[index / columns] = Math.Max(heights[index / columns], layout.Height);
                         _metricLayouts.Add(layout);
@@ -418,14 +420,15 @@ namespace TrayTemps
                     if (available >= columns && widths.Sum() > available)
                         for (int c = 0; c < columns; c++) widths[c] = available / columns + (c < available % columns ? 1 : 0);
                     fullWidth = padding * 2 + widths.Sum() + columnGap * (columns - 1);
-                    if (_configuration.RowsSpacing == 0)
+                    if (_configuration.RowsSpacing == 0 || graphLines.Any(line => line))
                     {
                         Array.Clear(heights, 0, heights.Length);
                         for (int i = 0; i < _metricLayouts.Count; i++)
                         {
                             var layout = _metricLayouts[i];
                             float scale = layout.Width > widths[i % columns] ? widths[i % columns] / (float)Math.Max(1, layout.Width) : 1f;
-                            if (!layout.IsGraph) MeasureCompactRow(graphics, layout, _metrics[i], scale);
+                            if (!layout.IsGraph && (_configuration.RowsSpacing == 0 || graphLines[i / columns]))
+                                MeasureCompactRow(graphics, layout, _metrics[i], scale);
                             heights[i / columns] = Math.Max(heights[i / columns], layout.Height);
                         }
                     }
@@ -444,6 +447,8 @@ namespace TrayTemps
                 var row = _metricLayouts[i]; int column = i % columns, line = i / columns;
                 row.X = padding + widths.Take(column).Sum() + columnGap * column;
                 row.Y = padding + heights.Take(line).Sum() + rowGap * line;
+                // Center the graph and neighboring glyph bounds within their shared line.
+                if (graphLines[line]) row.Y += (heights[line] - row.Height) / 2;
                 row.Scale = row.Width > widths[column] ? widths[column] / (float)Math.Max(1, row.Width) : 1f;
             }
             _layoutDpi = DeviceDpi;
@@ -543,21 +548,27 @@ namespace TrayTemps
 
         private void DrawFrameGraph(Graphics graphics, FrameGraphPoint[] points, Rectangle bounds, Color color, float offset = 0)
         {
+            if (bounds.Width <= 0 || bounds.Height <= 0) return;
             points = points ?? Array.Empty<FrameGraphPoint>();
-            var plot = Rectangle.Inflate(bounds, -2, -2);
-            if (plot.Width <= 0 || plot.Height <= 0) return;
             double max = 33.34;
-            foreach (var point in points) if (!double.IsNaN(point.Peak)) max = Math.Max(max, point.Peak * 1.05);
-            Color guideColor = _backgroundColor.GetBrightness() < 0.5f ? Color.White : Color.Black;
-            using (var guide = new Pen(Color.FromArgb(45, guideColor)))
-            using (var line = new Pen(color, Math.Max(1f, DeviceDpi / 96f)))
+            foreach (var point in points)
+                if (!double.IsNaN(point.Peak) && !double.IsInfinity(point.Peak)) max = Math.Max(max, point.Peak * 1.05);
+            using (var line = new Pen(color, 1.25f * DeviceDpi / 96f))
             {
-                graphics.DrawLine(guide, plot.Left, plot.Bottom, plot.Right, plot.Bottom);
-                graphics.DrawLine(guide, plot.Left, plot.Bottom - plot.Height / 2f, plot.Right, plot.Bottom - plot.Height / 2f);
+                // Reserve only the stroke's radius so edge samples remain inside the bounds.
+                var plot = RectangleF.Inflate(bounds, -line.Width / 2, -line.Width / 2);
+                if (plot.Width <= 0 || plot.Height <= 0) return;
                 var state = graphics.Save();
-                graphics.SetClip(plot, CombineMode.Intersect);
+                graphics.SetClip(bounds, CombineMode.Intersect);
+                graphics.SmoothingMode = SmoothingMode.AntiAlias;
                 try
                 {
+                    Color guideColor = _backgroundColor.GetBrightness() < 0.5f ? Color.White : Color.Black;
+                    using (var guide = new Pen(Color.FromArgb(45, guideColor), Math.Max(1f, DeviceDpi / 96f)))
+                    {
+                        graphics.DrawLine(guide, plot.Left, bounds.Top + guide.Width / 2, plot.Right, bounds.Top + guide.Width / 2);
+                        graphics.DrawLine(guide, plot.Left, bounds.Bottom - guide.Width / 2, plot.Right, bounds.Bottom - guide.Width / 2);
+                    }
                     PointF? previous = null;
                     for (int i = 0; i < points.Length; i++)
                     {
@@ -565,10 +576,11 @@ namespace TrayTemps
                         // Empty buckets can be spanned by a single long frame. These
                         // points belong to one continuous capture; stale/source resets
                         // clear the buffer, so only join actual completed samples.
-                        if (double.IsNaN(point.Mean)) continue;
+                        if (double.IsNaN(point.Mean) || double.IsInfinity(point.Mean) || point.Mean < 0) continue;
                         float x = plot.Left + (i - offset) * plot.Width / Math.Max(1, points.Length - 1);
                         float y = plot.Bottom - (float)(point.Mean / max * plot.Height);
-                        float peak = plot.Bottom - (float)(point.Peak / max * plot.Height);
+                        double peakValue = double.IsNaN(point.Peak) || double.IsInfinity(point.Peak) ? point.Mean : point.Peak;
+                        float peak = plot.Bottom - (float)(peakValue / max * plot.Height);
                         graphics.DrawLine(line, x, y, x, peak);
                         var current = new PointF(x, y);
                         if (previous.HasValue) graphics.DrawLine(line, previous.Value, current);

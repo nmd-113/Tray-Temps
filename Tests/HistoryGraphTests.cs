@@ -3,12 +3,15 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
 using TrayTemps;
 
 internal static class HistoryGraphTests
 {
+    [DllImport("user32.dll")] private static extern IntPtr SetThreadDpiAwarenessContext(IntPtr context);
+    [DllImport("user32.dll")] private static extern IntPtr SendMessage(IntPtr window, int message, IntPtr wParam, IntPtr lParam);
     private const BindingFlags Flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
     private static int _checks;
     private sealed class Host : MainForm { protected override void OnLoad(EventArgs e) { } }
@@ -35,7 +38,7 @@ internal static class HistoryGraphTests
 
     internal static void Run()
     {
-        _checks = 0; Rendering(); RefreshAndPause(); BoundedWork();
+        _checks = 0; Rendering(); HoverValues(); RangeDropdown(); RefreshAndPause(); BoundedWork();
         Console.WriteLine("ALL HISTORY GRAPH CHECKS PASSED: " + _checks);
     }
 
@@ -84,6 +87,132 @@ internal static class HistoryGraphTests
                 Check(Enumerable.Range(plot.Top, plot.Height).Count(y => Ink(bitmap.GetPixel(peakX, y))) > plot.Height / 2,
                     "several samples in one pixel retain their peak extent");
             }
+        }
+    }
+
+    private static void HoverValues()
+    {
+        var helper = typeof(Control).Assembly.GetType("System.Windows.Forms.DpiHelper");
+        helper.GetProperty("EnableDpiChangedMessageHandling", BindingFlags.Static | Flags).GetValue(null);
+        var flag = helper.GetField("enableDpiChangedMessageHandling", BindingFlags.Static | Flags);
+        object prior = flag.GetValue(null); flag.SetValue(null, true);
+        IntPtr awareness = SetThreadDpiAwarenessContext(new IntPtr(-4));
+        var culture = Thread.CurrentThread.CurrentCulture;
+        Thread.CurrentThread.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
+        try
+        {
+            foreach (int dpi in new[] { 96, 144, 192 })
+            foreach (bool light in new[] { false, true })
+            using (var form = new Form { ShowInTaskbar = false, ClientSize = new Size(1100, 350) })
+            using (var graph = new HistoryGraphControl { Size = new Size(500 * dpi / 96, 140 * dpi / 96),
+                BackColor = light ? Color.White : Color.Black, ForeColor = light ? Color.Black : Color.White })
+            {
+                form.Controls.Add(graph); form.Show(); Set(graph, "deviceDpi", dpi);
+                Rectangle plot;
+                using (var graphics = graph.CreateGraphics()) plot = Plot(graph, graphics);
+                Func<double, Point> cursor = time => new Point(plot.Left + (int)Math.Round(time / 60 * (plot.Width - 1)), plot.Top + plot.Height / 2);
+                Func<double, string> text = time => (string)Call(graph, "GetHoverText", cursor(time));
+                var cpu = new HistoryTrace { Name = "CPU temp", Color = Color.Cyan, Points = new[] { Point(10, 40), Point(20, 45) } };
+                var gpu = new HistoryTrace { Name = "GPU temp", Color = Color.Gold, Points = new[] { Point(10, 60), Point(20, 67) } };
+                graph.SetData("Temperatures", "°C", 0, 60, new[] { cpu, gpu });
+                Check(graph.DeviceDpi == dpi && text(19).Contains("CPU temp: 45°C") && text(19).Contains("GPU temp: 67°C") &&
+                    text(19).Contains("00:40.0 before latest"), "hover selects actual CPU/GPU samples with units and their recorded time, DPI=" + dpi + ", light=" + light);
+                Check(text(0) == "" && text(35) == "" && (string)Call(graph, "GetHoverText", System.Drawing.Point.Empty) == "",
+                    "empty time regions and graph captions never show stale hover values");
+                Check(Get(graph, "_hoverToolTip") == null, "data refresh and lookup do not allocate a native tooltip before hovering");
+                foreach (var points in new[] {
+                    new[] { Point(10, 40), Point(20, double.NaN), Point(30, 50) },
+                    new[] { Point(10, 40), Point(20, 50, 2) },
+                    new[] { Point(10, 40), Point(40, 50) } })
+                {
+                    graph.SetData("Temperatures", "°C", 0, 60, new[] { Trace(points) });
+                    Check(text(points.Length == 3 ? 20 : points[1].Time == 40 ? 25 : 15) == "",
+                        "hover respects explicit missing, source-change and long-pause gaps");
+                }
+                gpu.Points = new[] { Point(10, double.NaN), Point(20, double.NaN) };
+                graph.SetData("Temperatures", "°C", 0, 60, new[] { cpu, gpu });
+                Check(text(19).Contains("CPU temp: 45°C") && !text(19).Contains("GPU"),
+                    "one missing trace does not hide another trace or invent a reading");
+                foreach (var unit in new[] { "°F", "%", "FPS", "GB", "ms" })
+                {
+                    graph.SetData("Metric", unit, 0, 60, new[] { Trace(new[] { Point(60, 0) }) });
+                    Check(text(60).Contains(unit) && text(60).Contains("Trace: 0"),
+                        "newest zero sample remains inspectable with unit " + unit);
+                }
+                graph.SetData("Frametime", "ms", 0, 60, new[] { Trace(new[] { Point(30, 16.67, peak: 89.12) }) });
+                Check(text(30).Contains("16.67 ms (peak 89.12 ms)"), "hover preserves the distinct frametime average and peak");
+                graph.SetData("Temperatures", "°C", 0, 60, new[] { cpu });
+                Call(graph, "OnMouseMove", new MouseEventArgs(MouseButtons.None, 0, cursor(19).X, cursor(19).Y, 0));
+                var tooltip = (ToolTip)Get(graph, "_hoverToolTip");
+                Check(tooltip != null && ((string)Get(graph, "_hoverText")).Contains("45°C"),
+                    "moving over the plot shows the native tooltip");
+                graph.SetData("Temperatures", "°C", 0, 60, new[] { new HistoryTrace { Name = cpu.Name, Color = cpu.Color,
+                    Points = new[] { Point(10, 40), Point(20, 68), Point(30, 75) } } });
+                string beforeScroll = (string)Get(graph, "_hoverText");
+                graph.SetTimeRange(11, 71);
+                Check(ReferenceEquals(tooltip, Get(graph, "_hoverToolTip")) && beforeScroll.Contains("68°C") &&
+                    ((string)Get(graph, "_hoverText")).Contains("75°C"), "stationary hover updates after snapshots and time-axis scrolling without new tooltip instances");
+                graph.SetData("Temperatures", "°C", 0, 60, Array.Empty<HistoryTrace>());
+                Check((string)Get(graph, "_hoverText") == "", "Clear immediately hides a previously visible tooltip");
+                graph.SetData("Temperatures", "°C", 0, 60, new[] { cpu });
+                Call(graph, "OnMouseLeave", EventArgs.Empty);
+                Check(Get(graph, "_hoverLocation") == null && (string)Get(graph, "_hoverText") == "", "mouse leave clears hover state");
+                Call(graph, "OnMouseMove", new MouseEventArgs(MouseButtons.None, 0, cursor(19).X, cursor(19).Y, 0));
+                graph.Hide();
+                Check(Get(graph, "_hoverLocation") == null, "hidden graphs dismiss hover state");
+                graph.Show();
+                Call(graph, "OnMouseMove", new MouseEventArgs(MouseButtons.None, 0, cursor(19).X, cursor(19).Y, 0));
+                graph.Width++;
+                Check(Get(graph, "_hoverLocation") == null, "resizing discards coordinates from the old plot");
+                bool disposed = false; tooltip.Disposed += (sender, e) => disposed = true;
+                graph.Dispose();
+                Check(disposed && Get(graph, "_hoverToolTip") == null, "closing a graph disposes its tooltip");
+                form.Close();
+            }
+        }
+        finally { Thread.CurrentThread.CurrentCulture = culture; flag.SetValue(null, prior); SetThreadDpiAwarenessContext(awareness); }
+    }
+
+    private static void RangeDropdown()
+    {
+        using (var host = new Host())
+        {
+            host.Show(); host.SetHistoryRange(1); host.SetHistoryRecording(true);
+            using (var dialog = new PerformanceHistoryDialog(host))
+            {
+                dialog.Show(host);
+                var range = (ComboBox)dialog.Controls.Find("range", true).Single();
+                var graph = (HistoryGraphControl)dialog.Controls.Find("temperatureGraph", true).Single();
+                range.DroppedDown = true;
+                // Native hot tracking moves the selection without committing it.
+                SendMessage(range.Handle, 0x014E, (IntPtr)2, IntPtr.Zero); // CB_SETCURSEL
+                Check(range.DroppedDown && range.SelectedIndex == 2 && host.HistoryPreferences.Minutes == 1,
+                    "fixture highlights an uncommitted Show last option while recording");
+                double end = (double)Get(graph, "_end");
+                Thread.Sleep(5);
+                for (int i = 0; i < 5; i++) Call(dialog, "ViewTimer_Tick", null, EventArgs.Empty);
+                Check(range.DroppedDown && range.SelectedIndex == 2 && host.HistoryPreferences.Minutes == 1 &&
+                    (double)Get(graph, "_end") > end, "live refresh preserves the open dropdown highlight while graphs keep scrolling");
+                Call(dialog, "RefreshGraphs");
+                Check(range.SelectedIndex == 2, "forced graph refresh also leaves an open range dropdown untouched");
+                Call(dialog, "Range_SelectedIndexChanged", range, EventArgs.Empty);
+                range.DroppedDown = false; Call(dialog, "ViewTimer_Tick", null, EventArgs.Empty);
+                Check(range.SelectedIndex == 2 && host.HistoryPreferences.Minutes == 10,
+                    "committing the highlighted range still updates the host and selected value");
+                range.DroppedDown = true;
+                SendMessage(range.Handle, 0x014E, IntPtr.Zero, IntPtr.Zero);
+                range.DroppedDown = false; Call(dialog, "ViewTimer_Tick", null, EventArgs.Empty);
+                Check(range.SelectedIndex == 2 && host.HistoryPreferences.Minutes == 10,
+                    "canceling an uncommitted highlight restores the saved range");
+                range.DroppedDown = true;
+                SendMessage(range.Handle, 0x014E, (IntPtr)1, IntPtr.Zero);
+                host.SetHistoryRange(30); Call(dialog, "RefreshGraphs");
+                Check(range.SelectedIndex == 1, "external range updates defer selector synchronization while it is open");
+                range.DroppedDown = false; Call(dialog, "ViewTimer_Tick", null, EventArgs.Empty);
+                Check(range.SelectedIndex == 3, "closed range dropdown synchronizes external updates normally");
+                dialog.Close();
+            }
+            host.SetHistoryRecording(false); host.Close();
         }
     }
 

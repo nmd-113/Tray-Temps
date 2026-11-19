@@ -36,7 +36,7 @@ internal static class PerformanceHistoryTests
     internal static async Task Run()
     {
         _checks = 0; Statistics(); OptionalTiming(); Store(); Models(); GraphDpi();
-        using (var host = new Host()) { host.Show(); GraphSizeSettings(host); await Ui(host); RefreshCadence(host); host.Close(); }
+        using (var host = new Host()) { host.Show(); GraphSizeSettings(host); FrameValueFormatting(host); await Ui(host); RefreshCadence(host); host.Close(); }
         Console.WriteLine("ALL PERFORMANCE HISTORY CHECKS PASSED: " + _checks);
     }
 
@@ -422,10 +422,14 @@ internal static class PerformanceHistoryTests
     private static void GraphSizeSettings(Host host)
     {
         var config = JsonSerializer.Deserialize<OsdConfiguration>("{\"ShowCpu\":true}");
-        Check(config.FrameTimeGraphWidth == 160 && config.FrameTimeGraphHeight == 42 &&
-            OsdPresets.LoadEmbedded(0).FrameTimeGraphWidth == 160 && OsdPresets.LoadEmbedded(0).FrameTimeGraphHeight == 42 &&
-            JsonSerializer.Deserialize<OsdConfiguration>("{\"FrameTimeGraphWidth\":320}").FrameTimeGraphHeight == 42,
-            "legacy settings and width-only presets preserve the existing 160 x 42 graph defaults");
+        Check(config.FrameTimeGraphWidth == 80 && config.FrameTimeGraphHeight == 20 &&
+            OsdPresets.LoadEmbedded(0).FrameTimeGraphWidth == 80 && OsdPresets.LoadEmbedded(0).FrameTimeGraphHeight == 20 &&
+            JsonSerializer.Deserialize<OsdConfiguration>("{\"FrameTimeGraphWidth\":320}").FrameTimeGraphHeight == 20,
+            "missing graph dimensions use compact 80 x 20 defaults independently");
+        var savedSize = host.NormalizeOsdConfiguration(JsonSerializer.Deserialize<OsdConfiguration>(
+            "{\"FrameTimeGraphWidth\":160,\"FrameTimeGraphHeight\":42}"));
+        Check(savedSize.FrameTimeGraphWidth == 160 && savedSize.FrameTimeGraphHeight == 42,
+            "explicit saved dimensions retain the previous defaults unchanged");
         config.FrameTimeGraphWidth = 237; config.FrameTimeGraphHeight = 57;
         Check(config.Clone().FrameTimeGraphWidth == 237 &&
             OsdPresets.Parse(JsonSerializer.Serialize(config)).FrameTimeGraphWidth == 237 &&
@@ -438,7 +442,7 @@ internal static class PerformanceHistoryTests
         {
             var invalidConfig = config.Clone(); invalidConfig.FrameTimeGraphWidth = invalid; invalidConfig.FrameTimeGraphHeight = invalid;
             var normalized = host.NormalizeOsdConfiguration(invalidConfig);
-            Check(normalized.FrameTimeGraphWidth == (invalid < 80 ? 80 : 800) && normalized.FrameTimeGraphHeight == (invalid < 20 ? 20 : 400),
+            Check(normalized.FrameTimeGraphWidth == (invalid < 20 ? 20 : 800) && normalized.FrameTimeGraphHeight == (invalid < 8 ? 8 : 400),
                 "out-of-range graph dimensions are bounded during normalization");
         }
         using (var dialog = new OsdSettingsDialog(host, config))
@@ -447,6 +451,9 @@ internal static class PerformanceHistoryTests
             var height = Control<ComboBox>(dialog, "frameTimeGraphHeightValue");
             var graphSize = Control<TableLayoutPanel>(dialog, "frameTimeGraphSizeLayout");
             var spacing = Control<TableLayoutPanel>(dialog, "spacingLayout");
+            Check(width.Items[0].ToString() == "20" && width.Items[width.Items.Count - 1].ToString() == "800" &&
+                height.Items[0].ToString() == "8" && height.Items[height.Items.Count - 1].ToString() == "400",
+                "graph-size selectors expose consistent compact minima and unchanged maxima");
             Check(width.SelectedItem.ToString() == "237" && height.SelectedItem.ToString() == "57" &&
                 spacing.GetColumn(graphSize) == 3 && spacing.GetRow(graphSize) == 3 && graphSize.GetColumn(width) == 0 && graphSize.GetColumn(height) == 2,
                 "graph size loads exact imported dimensions side by side in the spacing-table cell");
@@ -494,8 +501,8 @@ internal static class PerformanceHistoryTests
             finally { Control<CheckBox>(host, "lightModeSwitch").Checked = originalTheme; }
             int beforePreset = previewCount;
             Call(dialog, "ApplyPreset", OsdPresets.LoadEmbedded(0));
-            Check(width.SelectedItem.ToString() == "160" && height.SelectedItem.ToString() == "42" &&
-                preview?.FrameTimeGraphWidth == 160 && preview.FrameTimeGraphHeight == 42 && previewCount == beforePreset + 1,
+            Check(width.SelectedItem.ToString() == "80" && height.SelectedItem.ToString() == "20" &&
+                preview?.FrameTimeGraphWidth == 80 && preview.FrameTimeGraphHeight == 20 && previewCount == beforePreset + 1,
                 "loading a legacy built-in preset resets graph size and emits one complete preview");
             string presetPath = Path.Combine(Path.GetTempPath(), "TrayTemps-graph-width-" + Guid.NewGuid().ToString("N") + ".json");
             try
@@ -511,9 +518,9 @@ internal static class PerformanceHistoryTests
             {
                 var invalidPreset = config.Clone(); invalidPreset.FrameTimeGraphWidth = invalid; invalidPreset.FrameTimeGraphHeight = invalid;
                 Call(dialog, "ApplyPreset", invalidPreset);
-                Check(preview?.FrameTimeGraphWidth == (invalid < 80 ? 80 : 800) &&
+                Check(preview?.FrameTimeGraphWidth == (invalid < 20 ? 20 : 800) &&
                     width.SelectedItem.ToString() == preview.FrameTimeGraphWidth.ToString() &&
-                    preview.FrameTimeGraphHeight == (invalid < 20 ? 20 : 400) && height.SelectedItem.ToString() == preview.FrameTimeGraphHeight.ToString(),
+                    preview.FrameTimeGraphHeight == (invalid < 8 ? 8 : 400) && height.SelectedItem.ToString() == preview.FrameTimeGraphHeight.ToString(),
                     "imported out-of-range graph dimensions preview the same bounded values as the selectors");
             }
             dialog.Close();
@@ -530,6 +537,15 @@ internal static class PerformanceHistoryTests
             Check(dialog.SelectedConfiguration?.FrameTimeGraphWidth == 320 && dialog.SelectedConfiguration.FrameTimeGraphHeight == 100 &&
                 config.FrameTimeGraphWidth == 237 && config.FrameTimeGraphHeight == 57,
                 "Save commits graph size through the existing configuration path");
+        }
+        using (var dialog = new OsdSettingsDialog(host, config))
+        {
+            Control<ComboBox>(dialog, "frameTimeGraphWidthValue").SelectedIndex = 0;
+            Control<ComboBox>(dialog, "frameTimeGraphHeightValue").SelectedIndex = 0;
+            Call(dialog, "SaveBtn_Click", null, EventArgs.Empty);
+            var saved = host.NormalizeOsdConfiguration(JsonSerializer.Deserialize<OsdConfiguration>(JsonSerializer.Serialize(dialog.SelectedConfiguration)));
+            Check(saved.FrameTimeGraphWidth == 20 && saved.FrameTimeGraphHeight == 8,
+                "minimum graph dimensions survive Save, serialization and normalization");
         }
     }
 
@@ -549,13 +565,13 @@ internal static class PerformanceHistoryTests
                 var config = OsdConfiguration.CreateAppDefault();
                 var metric = new OsdMetric("", "") { Key = "FrameTimeGraph", Style = config.MetricStyles["FrameTimeGraph"], ValueWidthTemplate = "graph" };
                 object previous = null;
-                foreach (int width in new[] { 160, 320, 80, 800, int.MinValue, int.MaxValue })
+                foreach (int width in new[] { 80, 320, 20, 800, int.MinValue, int.MaxValue })
                 {
                     config.FrameTimeGraphWidth = width;
                     overlay.UpdateDisplay(config, new[] { metric }, new Rectangle(0, 0, 3840, 2160));
                     var layout = ((IList)Get(overlay, "_metricLayouts"))[0];
                     var parts = (IList)Get(layout, "Parts");
-                    int expected = Math.Max(80, Math.Min(800, width)) * dpi / 96;
+                    int expected = (int)Math.Round(Math.Max(20, Math.Min(800, width)) * dpi / 96f);
                     Check((int)Get(parts[parts.Count - 1], "Width") == expected && !ReferenceEquals(previous, layout),
                         "graph-width edits rebuild bounded, DPI-scaled geometry at " + dpi + " DPI, width " + width);
                     overlay.UpdateDisplay(config, new[] { metric }, new Rectangle(0, 0, 3840, 2160));
@@ -566,13 +582,13 @@ internal static class PerformanceHistoryTests
                 config.FrameTimeGraphWidth = 160;
                 metric.Style = metric.Style.Clone(); metric.Style.ValueColor = Color.Magenta.ToArgb();
                 metric.Graph = Enumerable.Range(0, 100).Select(i => new FrameGraphPoint(10, i == 50 ? 60 : 12)).ToArray();
-                foreach (int height in new[] { 42, 84, 20, 400, 57, int.MinValue, int.MaxValue })
+                foreach (int height in new[] { 20, 84, 8, 400, 57, int.MinValue, int.MaxValue })
                 {
                     config.FrameTimeGraphHeight = height;
                     overlay.UpdateDisplay(config, new[] { metric }, new Rectangle(0, 0, 3840, 2160));
                     var layout = ((IList)Get(overlay, "_metricLayouts"))[0];
                     var parts = (IList)Get(layout, "Parts");
-                    int expected = (int)Math.Round(Math.Max(20, Math.Min(400, height)) * dpi / 96f);
+                    int expected = (int)Math.Round(Math.Max(8, Math.Min(400, height)) * dpi / 96f);
                     Check((int)Get(layout, "Height") == expected && (int)Get(parts[parts.Count - 1], "Width") == 160 * dpi / 96 &&
                         !ReferenceEquals(previous, layout),
                         "height edits rebuild independently with bounded DPI-scaled geometry at " + dpi + " DPI, height " + height);
@@ -600,8 +616,8 @@ internal static class PerformanceHistoryTests
                 metric = new OsdMetric("Frametime", "") { Key = "FrameTimeGraph", Style = metric.Style, ValueWidthTemplate = "graph",
                     Graph = Enumerable.Range(0, 100).Select(i => new FrameGraphPoint(10, i == 50 ? 60 : 12)).ToArray() };
                 var numeric = new OsdMetric("CPU", "60") { Key = "CpuTemperature", Style = config.MetricStyles["CpuTemperature"], ValueWidthTemplate = "###" };
-                foreach (int width in new[] { 80, 800 })
-                foreach (int height in new[] { 20, 400 })
+                foreach (int width in new[] { 20, 800 })
+                foreach (int height in new[] { 8, 400 })
                 foreach (int columns in new[] { 1, 2 })
                 foreach (int rowGap in new[] { 0, 5 })
                 {
@@ -639,6 +655,51 @@ internal static class PerformanceHistoryTests
         }
         finally { flag.SetValue(null, prior); SetThreadDpiAwarenessContext(awareness); }
     }
+    private static void FrameValueFormatting(Host host)
+    {
+        var config = host.NormalizeOsdConfiguration(new OsdConfiguration());
+        foreach (string key in new[] { "Fps", "AverageFps", "FpsOnePercentLow", "FrameTime" })
+        {
+            string suffix = key == "FrameTime" ? ".## ms" : "";
+            string placeholder = key == "FrameTime" ? "---.-- ms" : "---";
+            var metric = (OsdMetric)Call(host, "CreateFrameValueMetric", config, key, null);
+            Check(metric.Value == placeholder && metric.ValueWidthTemplate == "###" + suffix,
+                key + " uses an honest three-digit missing-value placeholder");
+            bool expanded = false;
+            foreach (int value in new[] { 0, 9, 99, 999, 1000, 999, 6007, 9999, 9 })
+            {
+                expanded |= value == 1000;
+                string text = value.ToString(System.Globalization.CultureInfo.InvariantCulture) + (key == "FrameTime" ? ".99 ms" : "");
+                metric = (OsdMetric)Call(host, "CreateFrameValueMetric", config, key, text);
+                Check(metric.Value == text && metric.ValueWidthTemplate == (expanded ? "####" : "###") + suffix,
+                    key + " preserves the actual reading and expands only as needed: " + text);
+            }
+            metric = (OsdMetric)Call(host, "CreateFrameValueMetric", config, key, null);
+            Check(metric.Value == placeholder && metric.ValueWidthTemplate == "###" + suffix,
+                key + " returns to three digits when readings become unavailable");
+        }
+        Set(host, "_latestFrameStatistics", new FrameStatistics { AverageFps = 999.6, FrameTimeMs = 999.999, Source = 1 });
+        Check(((OsdMetric)Call(host, "CreateFrameMetric", config, "AverageFps")).ValueWidthTemplate == "####" &&
+            ((OsdMetric)Call(host, "CreateFrameMetric", config, "FrameTime")).ValueWidthTemplate == "####.## ms",
+            "rounded four-digit average FPS and frametime expand before rendering");
+        var monitor = FakeMonitor(); Set(host, "_fpsMonitor", monitor);
+        Set(monitor, "_lastPresentTimestamp", Stopwatch.GetTimestamp()); Set(monitor, "_latestFps", 6007);
+        Check(((OsdMetric)Call(host, "CreateFpsMetric", config, false)).ValueWidthTemplate == "####" &&
+            ((OsdMetric)Call(host, "CreateFpsMetric", config, true)).Value == "---",
+            "production FPS and missing 1% Low use the common adaptive value path independently");
+        Call(host, "BeginFrameOsdRefresh", config, Stopwatch.GetTimestamp());
+        Check(((Dictionary<string, int>)Get(host, "_frameValueDigits")).Count == 0,
+            "a changed capture source clears previously expanded slots");
+        Call(host, "CreateFrameValueMetric", config, "Fps", "6007");
+        Set(monitor, "_targetGeneration", monitor.TargetGeneration + 1);
+        Call(host, "BeginFrameOsdRefresh", config, Stopwatch.GetTimestamp());
+        Check(((OsdMetric)Call(host, "CreateFrameValueMetric", config, "Fps", "60")).ValueWidthTemplate == "###",
+            "a new foreground target starts with a compact slot");
+        Call(host, "StopFpsMonitoring");
+        Check(((Dictionary<string, int>)Get(host, "_frameValueDigits")).Count == 0,
+            "stopping capture releases runtime width state");
+    }
+
     private static void RefreshCadence(Host host)
     {
         var config = host.NormalizeOsdConfiguration(new OsdConfiguration { ShowCpu = false, ShowGpu = false,
@@ -663,7 +724,7 @@ internal static class PerformanceHistoryTests
         Set(monitor, "_targetGeneration", monitor.TargetGeneration + 1);
         Set(monitor, "_latestFps", -1); Set(monitor, "_lastPresentTimestamp", 0L);
         Call(host, "UpdateOsd", (float?)63, (float?)73);
-        Check(((List<OsdMetric>)Get(host, "_lastOsdMetrics")).Single().Value == "N/A",
+        Check(((List<OsdMetric>)Get(host, "_lastOsdMetrics")).Single().Value == "---",
             "a target change clears cached frame values immediately without waiting for the display interval");
         host.SetHistoryRecording(false); Control<CheckBox>(host, "osdEnable").Checked = false;
     }
@@ -861,7 +922,10 @@ internal static class PerformanceHistoryTests
             using (var image = new Bitmap(overlay.Width, overlay.Height))
             {
                 overlay.DrawToBitmap(image, overlay.ClientRectangle);
-                Check(Enumerable.Range(0, image.Width).Any(x => Enumerable.Range(0, image.Height).Any(y => image.GetPixel(x, y).ToArgb() == Color.Magenta.ToArgb())),
+                Check(Enumerable.Range(0, image.Width).Any(x => Enumerable.Range(0, image.Height).Any(y => {
+                    Color pixel = image.GetPixel(x, y);
+                    return pixel.R > pixel.G + 40 && pixel.B > pixel.G + 40 && Math.Abs(pixel.R - pixel.B) <= 5;
+                })),
                     "frametime graph line uses the Appearance value color while its caption is blank");
             }
         }

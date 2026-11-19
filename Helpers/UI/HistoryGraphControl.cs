@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
+using System.Text;
 using System.Windows.Forms;
 
 namespace TrayTemps
@@ -19,6 +20,9 @@ namespace TrayTemps
         private double _start, _end, _minimum, _maximum;
         private string _unit = "";
         private bool _hasSamples;
+        private ToolTip _hoverToolTip;
+        private Point? _hoverLocation;
+        private string _hoverText = "";
         internal double OldestSampleTime { get; private set; } = double.PositiveInfinity;
         private int ScalePixels(int pixels) => (int)Math.Round(pixels * DeviceDpi / 96f);
         internal int PlotWidth => Math.Max(1, Width - ScalePixels(72));
@@ -43,13 +47,109 @@ namespace TrayTemps
             }
             _minimum = percent ? 0 : double.IsInfinity(min) ? 0 : Math.Min(0, min);
             _maximum = percent ? 100 : double.IsInfinity(max) ? 1 : Math.Max(_minimum + 1, max * 1.08);
+            UpdateHoverToolTip();
             Invalidate();
         }
         internal void SetTimeRange(double start, double end)
         {
             if (_start == start && _end == end) return;
             _start = start; _end = end;
+            UpdateHoverToolTip();
             Invalidate();
+        }
+        protected override void OnMouseMove(MouseEventArgs e)
+        {
+            base.OnMouseMove(e);
+            _hoverLocation = e.Location;
+            UpdateHoverToolTip();
+        }
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            HideHoverToolTip();
+            base.OnMouseLeave(e);
+        }
+        protected override void OnVisibleChanged(EventArgs e)
+        {
+            if (!Visible) HideHoverToolTip();
+            base.OnVisibleChanged(e);
+        }
+        protected override void OnResize(EventArgs e)
+        {
+            HideHoverToolTip();
+            base.OnResize(e);
+        }
+        protected override void OnHandleDestroyed(EventArgs e)
+        {
+            HideHoverToolTip();
+            base.OnHandleDestroyed(e);
+        }
+        private void HideHoverToolTip()
+        {
+            _hoverLocation = null; _hoverText = "";
+            if (IsHandleCreated) _hoverToolTip?.Hide(this);
+        }
+        private void UpdateHoverToolTip()
+        {
+            if (!_hoverLocation.HasValue || !IsHandleCreated || IsDisposed) return;
+            string text = GetHoverText(_hoverLocation.Value);
+            if (text == _hoverText) return;
+            _hoverText = text;
+            if (text.Length == 0) { _hoverToolTip?.Hide(this); return; }
+            if (_hoverToolTip == null) _hoverToolTip = new ToolTip { UseAnimation = false, UseFading = false };
+            _hoverToolTip.Show(text, this, _hoverLocation.Value.X + ScalePixels(12),
+                _hoverLocation.Value.Y + ScalePixels(18), 15000);
+        }
+        private string GetHoverText(Point location)
+        {
+            Rectangle plot;
+            using (var graphics = CreateGraphics()) plot = GetPlotBounds(GetTextHeight(graphics));
+            if (!plot.Contains(location) || _end <= _start) return "";
+            double secondsPerPixel = (_end - _start) / Math.Max(1, plot.Width - 1);
+            double time = _start + (location.X - plot.Left) * secondsPerPixel;
+            double sampleTime = time, nearestDistance = double.PositiveInfinity;
+            var values = new StringBuilder();
+            foreach (var trace in _traces)
+            {
+                var point = FindHoverPoint(trace.Points, time, secondsPerPixel / 2);
+                if (!point.HasValue) continue;
+                double distance = Math.Abs(point.Value.Time - time);
+                if (distance < nearestDistance) { sampleTime = point.Value.Time; nearestDistance = distance; }
+                if (values.Length > 0) values.Append("  |  ");
+                values.Append(trace.Name).Append(": ").Append(FormatHoverValue(point.Value.Value));
+                if (!double.IsNaN(point.Value.Peak) && !double.IsInfinity(point.Value.Peak) && point.Value.Peak > point.Value.Value)
+                    values.Append(" (peak ").Append(FormatHoverValue(point.Value.Peak)).Append(')');
+            }
+            return values.Length == 0 ? "" : "Nearest samples · " + TimeSpan.FromSeconds(Math.Max(0, _end - sampleTime)).ToString(@"mm\:ss\.f") +
+                " before latest\n" + values;
+        }
+        private string FormatHoverValue(double value) =>
+            value.ToString(_unit == "GB" || _unit == "ms" ? "0.00" : "0.#") +
+            (_unit.Length == 0 || _unit.StartsWith("°", StringComparison.Ordinal) || _unit == "%" ? "" : " ") + _unit;
+        private HistoryPoint? FindHoverPoint(HistoryPoint[] points, double time, double tolerance)
+        {
+            int low = 0, high = points.Length;
+            while (low < high)
+            {
+                int mid = low + (high - low) / 2;
+                if (points[mid].Time < time) low = mid + 1; else high = mid;
+            }
+            int index = low == points.Length ? low - 1 : low == 0 ? 0 :
+                time - points[low - 1].Time <= points[low].Time - time ? low - 1 : low;
+            if (index < 0) return null;
+            var point = points[index];
+            if (point.Time < _start || point.Time > _end || double.IsNaN(point.Value) || double.IsInfinity(point.Value)) return null;
+            if (Math.Abs(point.Time - time) > tolerance)
+            {
+                // Only read between samples that the renderer actually connects.
+                if (low == 0 || low == points.Length || double.IsNaN(points[low - 1].Value) || double.IsNaN(points[low].Value) ||
+                    points[low - 1].Source != points[low].Source || points[low].Time - points[low - 1].Time > 15) return null;
+            }
+            return point;
+        }
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) { _hoverToolTip?.Dispose(); _hoverToolTip = null; _hoverLocation = null; _hoverText = ""; }
+            base.Dispose(disposing);
         }
         protected override void OnPaint(PaintEventArgs e)
         {

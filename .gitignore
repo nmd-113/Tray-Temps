@@ -58,7 +58,7 @@ FodyWeavers.xsd
 *.tmp_proj
 *.log
 
-# Raw diagnostics stay local; keep portable summaries in Tests/VALIDATION.md
+# Raw diagnostics stay local; test guidance is maintained in Tests/README.md
 /Tests/Results/
 [Tt]est[Rr]esult*/
 TestResult.xml

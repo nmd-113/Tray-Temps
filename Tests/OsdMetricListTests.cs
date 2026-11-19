@@ -194,14 +194,17 @@ internal static class OsdMetricListTests
             spectrum.OpacityPercent == 90 && spectrum.BackgroundCornerRoundness == 15 &&
             spectrum.RowsSpacing == 5 && spectrum.ScreenMargin == 10 && spectrum.ExternalSpacing == 5,
             "Spectrum stack preserves the captured single-column translucent black appearance");
-        Check(spectrum.FrameTimeGraphWidth == 250 && spectrum.FrameTimeGraphHeight == 30 && spectrum.FpsRefreshIntervalSeconds == .25m &&
-            spectrum.GroupedValuesGapPercent == 150 && spectrum.MetricLabelValueGaps["Group:CPU:"] == 20 &&
-            spectrum.MetricLabelValueGaps["Group:FPS:"] == 15 && spectrum.MetricLabelValueGaps["FrameTime"] == 8,
+        Check(spectrum.FrameTimeGraphWidth == 160 && spectrum.FrameTimeGraphHeight == 30 && spectrum.FpsRefreshIntervalSeconds == .25m &&
+            spectrum.GroupedValuesGapPercent == 100 && spectrum.MetricLabelValueGaps["Group:CPU:"] == 20 &&
+            spectrum.MetricLabelValueGaps["Group:FPS:"] == 7 && spectrum.MetricLabelValueGaps["Group:1%Low:"] == 7 &&
+            spectrum.MetricLabelValueGaps["CurrentTime"] == 7 && spectrum.MetricLabelValueGaps["RamUsage"] == 50 &&
+            spectrum.MetricLabelValueGaps["VramUsage"] == 40 && spectrum.MetricLabelValueGaps["FrameTime"] == 8,
             "Spectrum stack uses the minimum refresh interval and preserves graph dimensions and custom metric/group gaps");
-        Check(spectrum.LabelOverrides["CurrentTime"] == "\U0001F552" && spectrum.LabelOverrides["FpsOnePercentLow"] == "1%:" &&
-            spectrum.LabelOverrides["AverageFps"] == "AVG:" && spectrum.LabelOverrides["FrameTimeGraph"] == "" &&
+        Check(spectrum.LabelOverrides["CurrentTime"] == "\U0001F552" && spectrum.LabelOverrides["FpsOnePercentLow"] == "" &&
+            spectrum.LabelOverrides["FrameTime"] == "," && spectrum.LabelOverrides["AverageFps"] == "AVG:" && spectrum.LabelOverrides["FrameTimeGraph"] == "" &&
             spectrum.ItemOrder == "CurrentTime,CpuTemperature,CpuUsage,GpuTemperature,GpuUsage,RamUsage,VramUsage,Fps,AverageFps,FpsOnePercentLow,FrameTime,FrameTimeGraph" &&
-            new[] { "Fps", "FpsOnePercentLow", "AverageFps" }.All(key => OsdMetricDefinitions.Group(spectrum, key) == "FPS:") &&
+            new[] { "Fps", "AverageFps" }.All(key => OsdMetricDefinitions.Group(spectrum, key) == "FPS:") &&
+            new[] { "FpsOnePercentLow", "FrameTime" }.All(key => OsdMetricDefinitions.Group(spectrum, key) == "1%Low:") &&
             OsdMetricDefinitions.Group(spectrum, "RamUsage") == "" && OsdMetricDefinitions.Group(spectrum, "VramUsage") == "",
             "Spectrum stack preserves the clock icon, captions, FPS grouping and display order");
         Check(new[] { "CpuTemperature", "CpuUsage", "GpuTemperature", "GpuUsage", "RamUsage", "VramUsage", "Fps" }
@@ -282,9 +285,9 @@ internal static class OsdMetricListTests
             Control<ComboBox>(form, "presetList").SelectedIndex = 3;
             Call(form, "LoadEmbeddedPreset_Click", null, EventArgs.Empty);
             var spectrumDraft = (OsdConfiguration)Call(form, "CreateConfigurationFromControls");
-            Check(previews == 1 && spectrumDraft.FrameTimeGraphWidth == 250 && spectrumDraft.FrameTimeGraphHeight == 30 &&
+            Check(previews == 1 && spectrumDraft.FrameTimeGraphWidth == 160 && spectrumDraft.FrameTimeGraphHeight == 30 &&
                 spectrumDraft.FpsRefreshIntervalSeconds == .25m &&
-                spectrumDraft.GroupedValuesGapPercent == 150 && spectrumDraft.ItemOrder == spectrumReloaded.ItemOrder &&
+                spectrumDraft.GroupedValuesGapPercent == 100 && spectrumDraft.ItemOrder == spectrumReloaded.ItemOrder &&
                 !spectrumDraft.Enabled && !spectrumDraft.HotkeyEnabled,
                 "loading Spectrum stack through the selector previews its layout while preserving activation and shortcut state");
             previews = 0;

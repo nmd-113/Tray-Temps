@@ -1,6 +1,6 @@
 # TrayTemps
 
-**Version 2.5.1.0** · [Changelog](CHANGELOG.md)
+**Version 2.5.1.1** · [Changelog](CHANGELOG.md)
 
 TrayTemps is a lightweight Windows utility for monitoring **CPU and GPU temperatures in the system tray**. Its main window shows temperatures, system load and hardware details, with an optional on-screen display (OSD), FPS counter and game FPS limiter.
 
@@ -48,13 +48,13 @@ In **Layout**, the order tree shows individual metrics and named groups. Up/Down
 
 All grouped metrics, including FPS and 1% Low, use one built-in space between value slots. **Grouped values gap** in Layout scales this from 100% to 200% for every pair. Individual labels use the same per-metric **Label/Value Gap** rules in standalone and grouped rows. A group caption uses its first enabled member's font and label color. Old presets and settings still load; legacy FPS gaps migrate to the common per-metric controls, while separate group captions and custom separators are ignored.
 
-Numeric values keep stable slots: four digits for FPS, three for temperatures/load, and at least `xx.xxGB` for RAM/VRAM. `N/A` uses only its actual text width, so unavailable readings do not reserve unused digit or unit space. The OSD can resize when data becomes available or unavailable; ordinary numeric updates retain stable positions. **Row spacing: 0** removes extra font leading while retaining glyph and outline clearance.
+FPS, average FPS and 1% Low reserve three digits; frametime reserves `xxx.xx ms`. Missing frame readings show `---` or `---.-- ms` in the same slot, so configuring the OSD outside a game shows its normal spacing. A metric expands when its formatted reading needs more digits and retains that width while readings remain available, avoiding repeated resizing around 1000. Missing readings, a new capture source or stopping capture reset the slot to three digits. Temperatures/load keep three-digit slots, RAM/VRAM reserve at least `xx.xxGB`, and unavailable sensor readings use compact `N/A` text. **Row spacing: 0** removes extra font leading while retaining glyph and outline clearance.
 
 ### Presets
 
 In **Presets**, choose **Classic stack**, **Horizontal dashboard**, **Minimal transparent**, or **Spectrum stack**, or load/save a custom JSON preset.
 
-**Spectrum stack** combines colored labels, a clock, CPU/GPU groups, RAM/VRAM, FPS statistics, and a 250 × 30 frametime graph in a single column over translucent black. Its FPS refresh interval is the minimum **0.25 seconds**.
+**Spectrum stack** combines colored labels, a clock, CPU/GPU groups, RAM/VRAM, separate FPS/average and 1% Low/frametime groups, and a 160 × 30 frametime graph in a single column over translucent black. Its FPS refresh interval is the minimum **0.25 seconds**.
 
 Fresh settings start with CPU/GPU temperatures selected, white 10 pt labels and values, and OSD off. Presets are loaded explicitly and preserve the current OSD enable state and shortcut. With OSD enabled, changes preview live; click **Save** to apply them or close the dialog to discard them.
 
@@ -64,9 +64,9 @@ Set **FPS refresh** independently from the hardware update interval, from **0.25
 
 **1% Low** can be selected independently of FPS, displayed separately, or assigned to any group. It shares the FPS monitoring session even when FPS is hidden and the limiter is off. Its label/value gap follows the same Layout rules as other metrics. Existing settings migrate their former CPU/GPU groups and enabled FPS/low pairing automatically, preserving saved labels, fonts, colors, and ordering.
 
-The value uses the latest 10 seconds of accepted frame intervals from the current FPS stream. After at least 100 intervals, it averages the slowest 1% (count rounded up) and converts that average to FPS. A 20 ms average gives 50 FPS. Calculation runs at most once per second. `N/A` indicates warming up, stale data or an unavailable complete window. Process/stream changes reset frame statistics; OSD OFF stops capture unless history recording still needs it. Different tools use different definitions of 1% low, so compare results using the same method.
+The value uses the latest 10 seconds of accepted frame intervals from the current FPS stream. After at least 100 intervals, it averages the slowest 1% (count rounded up) and converts that average to FPS. A 20 ms average gives 50 FPS. Calculation runs at most once per second. `---` indicates warming up, stale data or an unavailable complete window. Process/stream changes reset frame statistics; OSD OFF stops capture unless history recording still needs it. Different tools use different definitions of 1% low, so compare results using the same method.
 
-**Average FPS** uses the latest 10 seconds of accepted intervals, after a one-second warm-up. **Frametime** shows the mean accepted interval over the FPS refresh window in milliseconds. The **Frametime graph** shows ten seconds in 100 ms buckets, retaining peaks alongside averages. Set its width and height with Layout's **Graph size** controls: default **160 × 42**, width **80–800**, height **20–400**, in logical pixels. Dimensions scale with display DPI and fit the available screen space. All three metrics are off by default and use the same capture session.
+**Average FPS** uses the latest 10 seconds of accepted intervals, after a one-second warm-up. **Frametime** shows the mean accepted interval over the FPS refresh window in milliseconds. The **Frametime graph** shows ten seconds in 100 ms buckets, retaining peaks alongside averages as a thin trace over a transparent background. Subtle top and bottom guide lines keep the graph area visible without game samples. Set its width and height with Layout's **Graph size** controls: default **80 × 20**, width **20–800**, height **8–400**, in logical pixels. Dimensions scale with display DPI and fit the available screen space. Explicit saved dimensions are preserved. All three metrics are off by default and use the same capture session.
 
 Long frames can span several graph buckets; the line connects their completed samples without artificial breaks. Stale capture and process/stream resets clear the old curve. Faster graph updates reuse the unchanged OSD text and background, and stop when the graph is disabled.
 
@@ -75,6 +75,8 @@ Long frames can span several graph buckets; the line connects their completed sa
 Click the graph icon beside **Temperatures and usage** to open the resizable **Performance history** window. **Record history** is off by default; when checked, collection continues with the window closed and with OSD disabled. CPU/GPU temperatures and usage are always recorded; additional numeric metrics follow the OSD metric selections. The 1/5/10/30-minute selector changes only the displayed range. Recording can be paused without losing samples, and Clear empties the graphs. Up to 30 minutes stay in memory until TrayTemps exits; only the recording preference, range and window size are saved. Application/source changes and missing readings break graph lines.
 
 History scrolling adapts to the selected range and window width, with faster updates for short ranges and a lower redraw rate for long ranges. Data snapshots retain their existing refresh budget. Zero readings and isolated samples remain visible; paused, hidden and minimized views avoid unnecessary redraws.
+
+Hover over a history plot to inspect the nearest recorded values for its traces, with units and time relative to the latest edge. Frametime tooltips also show distinct peaks. Empty regions and missing-data/source-change gaps do not display held readings.
 
 ## FPS limiter
 

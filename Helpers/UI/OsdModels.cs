@@ -87,11 +87,11 @@ namespace TrayTemps
 
     public sealed class OsdConfiguration
     {
-        internal const int DefaultFrameTimeGraphWidth = 160;
-        internal const int MinFrameTimeGraphWidth = 80;
+        internal const int DefaultFrameTimeGraphWidth = 80;
+        internal const int MinFrameTimeGraphWidth = 20;
         internal const int MaxFrameTimeGraphWidth = 800;
-        internal const int DefaultFrameTimeGraphHeight = 42;
-        internal const int MinFrameTimeGraphHeight = 20;
+        internal const int DefaultFrameTimeGraphHeight = 20;
+        internal const int MinFrameTimeGraphHeight = 8;
         internal const int MaxFrameTimeGraphHeight = 400;
 
         internal static OsdConfiguration CreateAppDefault()

@@ -25,7 +25,7 @@
     "ShowAverageFps":  true,
     "ShowFrameTime":  true,
     "ShowFrameTimeGraph":  true,
-    "FrameTimeGraphWidth":  250,
+    "FrameTimeGraphWidth":  160,
     "FrameTimeGraphHeight":  30,
     "FpsRefreshIntervalSeconds":  0.25,
     "CombineTemperatureAndUsage":  false,
@@ -47,10 +47,10 @@
                            "RamUsage":  "RAM:",
                            "VramUsage":  "VRAM:",
                            "Fps":  "",
-                           "FpsOnePercentLow":  "1%:",
+                           "FpsOnePercentLow":  "",
                            "CurrentTime":  "🕒",
                            "AverageFps":  "AVG:",
-                           "FrameTime":  "Frametime:",
+                           "FrameTime":  ",",
                            "FrameTimeGraph":  ""
                        },
     "MetricGroups":  {
@@ -61,10 +61,10 @@
                          "GpuUsage":  "GPU:",
                          "VramUsage":  "",
                          "Fps":  "FPS:",
-                         "FpsOnePercentLow":  "FPS:",
+                         "FpsOnePercentLow":  "1%Low:",
                          "CurrentTime":  "",
                          "AverageFps":  "FPS:",
-                         "FrameTime":  ""
+                         "FrameTime":  "1%Low:"
                      },
     "GroupLabels":  {
 
@@ -151,19 +151,20 @@
                                  "FpsOnePercentLow":  10,
                                  "AverageFps":  10,
                                  "Group:CPU:":  20,
-                                 "CurrentTime":  5,
+                                 "CurrentTime":  7,
                                  "Group:GPU:":  20,
-                                 "RamUsage":  20,
-                                 "VramUsage":  10,
-                                 "Group:FPS:":  15,
-                                 "FrameTime":  8
+                                 "RamUsage":  50,
+                                 "VramUsage":  40,
+                                 "Group:FPS:":  7,
+                                 "FrameTime":  8,
+                                 "Group:1%Low:":  7
                              },
     "GroupSeparator":  null,
     "LabelValueSpacing":  10,
     "FpsLabelValueSpacing":  10,
     "RowsSpacing":  5,
     "ColumnsSpacing":  20,
-    "GroupedValuesGapPercent":  150,
+    "GroupedValuesGapPercent":  100,
     "ScreenMargin":  10,
     "ExternalSpacing":  5,
     "Columns":  1,
