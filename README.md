@@ -108,21 +108,26 @@ Full uninstall removes the verified installed executable, startup task, desktop 
 
 ## Screenshots
 
-### Main Window
+### Main Window & Settings
 
-![TrayTemps Main Window](https://www.naetech.ro/wp-content/uploads/2024/traytemps/traytemps-main-settings.png?v=2.3.0.4)
+![TrayTemps Main Menu](https://www.naetech.ro/wp-content/uploads/2024/traytemps/Main-Menu.png?v=2.5.1.1)
+![TrayTemps Settings Menu](https://www.naetech.ro/wp-content/uploads/2024/traytemps/Setting-Menu.png?v=2.5.1.1)
 
-### OSD Settings
+### OSD Settings Window & FPS limiter Window
 
-![TrayTemps OSD settings](https://www.naetech.ro/wp-content/uploads/2024/traytemps/traytemps-osd.png?v=2.3.0.4)
+![TrayTemps OSD Settings Window & FPS limiter Window](https://www.naetech.ro/wp-content/uploads/2024/traytemps/OSD-FPS.png?v=2.5.1.1)
 
-### Tray Icons
+### Tray Icons & Tray Menu
 
-![TrayTemps tray icons](https://www.naetech.ro/wp-content/uploads/2024/traytemps/traytemps-main-light.png?v=2.3.0.4)
+![TrayTemps Tray Icons & Tray Menu](https://www.naetech.ro/wp-content/uploads/2024/traytemps/Tray-Icons.png?v=2.5.1.1)
 
-### Hardware Information
+### Hardware Information & Performance History
 
-![TrayTemps hardware information](https://www.naetech.ro/wp-content/uploads/2024/traytemps/traytemps-hw-dialog.png?v=2.3.0.4)
+![TrayTemps hardware information](https://www.naetech.ro/wp-content/uploads/2024/traytemps/HW-Dialog-and-Performance-History.png?v=2.5.1.1)
+
+### OSD Profiles
+
+![TrayTemps OSD Profiles](https://www.naetech.ro/wp-content/uploads/2024/traytemps/OSD-Profiles.png?v=2.5.1.1)
 
 ## Build from source
 
