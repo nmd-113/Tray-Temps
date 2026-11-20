@@ -87,7 +87,6 @@ Games in custom folders can also be detected through recognized game SDK and gra
 - Targets supported **64-bit Direct3D 9/11/12, OpenGL and Vulkan** applications; compatibility varies by game and driver.
 - For Vulkan, enable the limiter **before launching the game** and run the game without administrator rights. TrayTemps itself may run elevated.
 - 32-bit attachment and elevated Vulkan targets are unsupported. Protected/anti-cheat games have not been verified.
-- Close standalone TrayFPS before enabling the limiter in TrayTemps.
 - Turning the limiter off removes its Vulkan registrations and releases ownership. Games that already loaded the layer continue in pass-through mode.
 - A rejected game leaves the previous target active. Repeated attempts to inject a rejected process are suppressed; restart that game or toggle the limiter off and on to retry.
 - When a game already has a different limiter engine loaded, restart the game before attaching the new engine.
